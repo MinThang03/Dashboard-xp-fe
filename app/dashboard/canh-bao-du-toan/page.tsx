@@ -3,9 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { AlertTriangle, AlertCircle, TrendingUp, XCircle, Download, Bell, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, AlertCircle, TrendingUp, XCircle, Download, Bell, CheckCircle2, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 interface CanhBao {
@@ -64,10 +65,47 @@ export default function CanhBaoDuToanPage() {
               <p className="text-red-100">Theo dõi và cảnh báo các khoản mục có nguy cơ vượt dự toán</p>
             </div>
           </div>
-          <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
-            <Download className="mr-2 h-4 w-4" />
-            Xuất báo cáo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+                  <Eye className="mr-2 h-4 w-4" />
+                  Xem tổng quan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Tổng quan cảnh báo dự toán</DialogTitle>
+                  <DialogDescription>Tóm tắt mức độ rủi ro và nhóm khoản mục cần ưu tiên xử lý.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 md:grid-cols-2 py-2">
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground mb-2">Phân bố cảnh báo</p>
+                    <div className="space-y-1 text-sm">
+                      <p>Nghiêm trọng: <strong className="text-red-600">{nghiemTrong}</strong></p>
+                      <p>Trung bình: <strong className="text-amber-600">{trungBinh}</strong></p>
+                      <p>Theo dõi: <strong className="text-blue-600">{theoDoi}</strong></p>
+                      <p>An toàn: <strong className="text-green-600">{anToan}</strong></p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground mb-2">Khoản mục vượt dự toán</p>
+                    <p className="text-2xl font-semibold text-red-600">
+                      {mockCanhBao.filter((c) => c.TyLeThucHien > 100).length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">trên tổng số {mockCanhBao.length} khoản mục theo dõi</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline">Đóng</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+              <Download className="mr-2 h-4 w-4" />
+              Xuất báo cáo
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Calendar, CheckCircle2, Clock, PartyPopper, Users, Landmark, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { FileText, Calendar, CheckCircle2, Clock, PartyPopper, Users, Landmark, BarChart3, Eye } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -51,9 +53,46 @@ export default function BaoCaoVanHoaPage() {
       {/* Header */}
       <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-primary via-accent to-secondary p-8 text-white">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <FileText className="h-10 w-10" />
-            <h1 className="text-3xl font-bold">Báo cáo Văn hóa</h1>
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <div className="flex items-center gap-3">
+              <FileText className="h-10 w-10" />
+              <h1 className="text-3xl font-bold">Báo cáo Văn hóa</h1>
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
+                  <Eye className="mr-2 h-4 w-4" />
+                  Xem tổng quan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Tổng quan báo cáo văn hóa</DialogTitle>
+                  <DialogDescription>Tổng hợp nhanh lễ hội, lượt tham gia, lượt tham quan và kinh phí theo kỳ.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 md:grid-cols-2 py-2">
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground">Lễ hội/sự kiện</p>
+                    <p className="text-2xl font-semibold text-indigo-600">{tongLeHoi}</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground">Người tham gia</p>
+                    <p className="text-2xl font-semibold text-purple-600">{tongNguoiThamGia.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground">Lượt tham quan di tích</p>
+                    <p className="text-2xl font-semibold text-pink-600">{tongDiTichThamQuan.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground">Tổng kinh phí</p>
+                    <p className="text-2xl font-semibold text-green-600">{tongKinhPhi}M</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline">Đóng</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
           <p className="text-indigo-50">Báo cáo hoạt động văn hóa văn nghệ định kỳ</p>
         </div>

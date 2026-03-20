@@ -557,13 +557,13 @@
   [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox']) {
     width: 100% !important;
     min-height: 42px;
-    border: 1px solid #c7d2e0 !important;
+    border: 2px solid #a8b6c9 !important;
     border-radius: 10px !important;
     background-color: #ffffff !important;
     color: #1e293b !important;
     font-weight: 500;
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.08),
+      0 2px 4px rgba(15, 23, 42, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
   }
 
@@ -597,9 +597,9 @@
   [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox']):focus-visible,
   [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox'])[data-state='open'],
   [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox'])[aria-expanded='true'] {
-    border-color: #1d4ed8 !important;
+    border-color: #1e40af !important;
     box-shadow:
-      0 0 0 3px rgba(37, 99, 235, 0.2),
+      0 0 0 3px rgba(37, 99, 235, 0.24),
       0 6px 12px -8px rgba(37, 99, 235, 0.5) !important;
     outline: none !important;
   }

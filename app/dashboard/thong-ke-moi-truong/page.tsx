@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -117,6 +118,40 @@ export default function ThongKeMoiTruongPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+                  <Eye className="mr-2 h-4 w-4" />
+                  Xem tổng quan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Tổng quan thống kê môi trường</DialogTitle>
+                  <DialogDescription>Thông tin tổng hợp các chỉ số không khí, nước, rác thải và báo cáo ô nhiễm.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 md:grid-cols-2 py-2">
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground">AQI trung bình</p>
+                    <p className="text-2xl font-semibold text-blue-600">48</p>
+                    <p className="text-sm text-muted-foreground">Mức đánh giá: Tốt</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground">Khối lượng rác thu gom/ngày</p>
+                    <p className="text-2xl font-semibold text-amber-600">{mockThongKeRac.tongKhoiLuong} kg</p>
+                    <p className="text-sm text-muted-foreground">Tỷ lệ phân loại: {mockThongKeRac.tyLePhanLoai}%</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70 md:col-span-2">
+                    <p className="text-sm text-muted-foreground">Tiến độ xử lý báo cáo ô nhiễm</p>
+                    <p className="text-2xl font-semibold text-green-600">{mockThongKeONhiem.tyLeXuLy}%</p>
+                    <p className="text-sm text-muted-foreground">Đã xử lý {mockThongKeONhiem.daXuLy}/{mockThongKeONhiem.tongBaoCao} báo cáo</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline">Đóng</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
               <SelectTrigger className="w-[150px] bg-white/20 border-white/30 text-white">
                 <SelectValue />

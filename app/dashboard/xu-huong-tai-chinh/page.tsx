@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, BarChart3, Zap, AlertCircle, Download, Brain, ArrowUp, ArrowDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { TrendingUp, BarChart3, Zap, AlertCircle, Download, Brain, ArrowUp, ArrowDown, Eye } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const duBaoThu = [
@@ -47,10 +48,45 @@ export default function XuHuongTaiChinhPage() {
               <p className="text-primary/80">Dự báo xu hướng tài chính bằng trí tuệ nhân tạo</p>
             </div>
           </div>
-          <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
-            <Download className="mr-2 h-4 w-4" />
-            Xuất dự báo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+                  <Eye className="mr-2 h-4 w-4" />
+                  Xem tổng quan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Tổng quan dự báo AI</DialogTitle>
+                  <DialogDescription>Tóm tắt xu hướng thu chi và mức độ tin cậy của mô hình dự báo.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 md:grid-cols-2 py-2">
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground mb-1">Dự báo thu tháng gần nhất</p>
+                    <p className="text-lg font-semibold text-green-600">{duBaoThu[1].duBao} triệu VNĐ</p>
+                    <p className="text-sm text-muted-foreground">Độ tin cậy: {duBaoThu[1].doTinCay}%</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground mb-1">Dự báo chi tháng gần nhất</p>
+                    <p className="text-lg font-semibold text-red-600">{duBaoChi[1].duBao} triệu VNĐ</p>
+                    <p className="text-sm text-muted-foreground">Độ tin cậy: {duBaoChi[1].doTinCay}%</p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70 md:col-span-2">
+                    <p className="text-sm text-muted-foreground">Rủi ro cần chú ý</p>
+                    <p className="text-2xl font-semibold text-amber-600">{canhBaoRuiRo.length} cảnh báo</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline">Đóng</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+              <Download className="mr-2 h-4 w-4" />
+              Xuất dự báo
+            </Button>
+          </div>
         </div>
       </div>
 

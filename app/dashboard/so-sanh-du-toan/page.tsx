@@ -3,8 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { BarChart3, TrendingUp, TrendingDown, Download, ArrowRight } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Download, ArrowRight, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 interface KhoanMuc {
@@ -61,10 +62,47 @@ export default function SoSanhDuToanPage() {
               <p className="text-purple-100">Phân tích và so sánh thu chi thực tế với dự toán đã lập</p>
             </div>
           </div>
-          <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
-            <Download className="mr-2 h-4 w-4" />
-            Xuất báo cáo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+                  <Eye className="mr-2 h-4 w-4" />
+                  Xem tổng quan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Tổng quan so sánh dự toán</DialogTitle>
+                  <DialogDescription>Tóm tắt nhanh tình hình thu chi và mức độ thực hiện theo kế hoạch.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 md:grid-cols-2 py-2">
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground mb-1">Tổng thu</p>
+                    <p className="text-lg font-semibold">{formatCurrency(tongThu.thucTe)}</p>
+                    <p className="text-sm text-muted-foreground">Dự toán: {formatCurrency(tongThu.duToan)}</p>
+                    <p className={`text-sm font-medium ${tongThu.thucTe >= tongThu.duToan ? 'text-green-600' : 'text-amber-600'}`}>
+                      Tỷ lệ thực hiện: {((tongThu.thucTe / tongThu.duToan) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-slate-50/70">
+                    <p className="text-sm text-muted-foreground mb-1">Tổng chi</p>
+                    <p className="text-lg font-semibold">{formatCurrency(tongChi.thucTe)}</p>
+                    <p className="text-sm text-muted-foreground">Dự toán: {formatCurrency(tongChi.duToan)}</p>
+                    <p className={`text-sm font-medium ${tongChi.thucTe <= tongChi.duToan ? 'text-green-600' : 'text-red-600'}`}>
+                      Tỷ lệ thực hiện: {((tongChi.thucTe / tongChi.duToan) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline">Đóng</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+              <Download className="mr-2 h-4 w-4" />
+              Xuất báo cáo
+            </Button>
+          </div>
         </div>
       </div>
 
