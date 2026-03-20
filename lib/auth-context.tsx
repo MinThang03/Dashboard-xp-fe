@@ -1,13 +1,15 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { authApi, clearAccessToken, setAccessToken, type AuthUserPayload } from '@/lib/api';
 
 export type UserRole = 'admin' | 'leader' | 'officer' | 'citizen';
 
 export interface User {
   id: string;
+  username: string;
   name: string;
-  email: string;
+  email?: string;
   role: UserRole;
   department?: string;
   avatar?: string;
@@ -16,75 +18,170 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
-  logout: () => void;
-  setUser: (user: User) => void;
+  login: (
+    identifier: string,
+    password: string,
+    expectedRole?: UserRole,
+  ) => Promise<{ requiresVerification?: boolean; email?: string; message?: string }>;
+  logout: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const MOCK_USERS: Record<string, User> = {
-  'admin@ubnd.vn': {
-    id: '1',
-    name: 'Nguyễn Văn Admin',
-    email: 'admin@ubnd.vn',
-    role: 'admin',
-    avatar: '👤',
-  },
-  'leader@ubnd.vn': {
-    id: '2',
-    name: 'Trần Thị Lãnh Đạo',
-    email: 'leader@ubnd.vn',
-    role: 'leader',
-    department: 'Chủ tịch UBND',
-    avatar: '👨‍💼',
-  },
-  'officer@ubnd.vn': {
-    id: '3',
-    name: 'Lê Văn Cán Bộ',
-    email: 'officer@ubnd.vn',
-    role: 'officer',
-    department: 'Địa chính - Xây dựng',
-    avatar: '👨‍💻',
-  },
-  'citizen@ubnd.vn': {
-    id: '4',
-    name: 'Phạm Công Dân',
-    email: 'citizen@ubnd.vn',
-    role: 'citizen',
-    avatar: '👤',
-  },
-};
+const USER_CACHE_KEY = 'dashboardxp_user';
+
+function mapRole(roleId: number): UserRole {
+  if (roleId === 1) return 'admin';
+  if (roleId === 2) return 'leader';
+  if (roleId === 3) return 'officer';
+  return 'citizen';
+}
+
+function toAppUser(user: AuthUserPayload): User {
+  // Generate avatar from first letters of name
+  const names = user.fullName.trim().split(/\s+/);
+  const avatar = names.map(n => n[0]).join('').toUpperCase().slice(0, 2) || '👤';
+  
+  return {
+    id: String(user.id),
+    username: user.username,
+    name: user.fullName,
+    email: user.email,
+    role: mapRole(user.roleId),
+    avatar,
+  };
+}
+
+function cacheUser(user: User | null) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!user) {
+    window.localStorage.removeItem(USER_CACHE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUserState] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (email: string, _password: string, role: UserRole) => {
+  const setUser = (nextUser: User | null) => {
+    setUserState(nextUser);
+    cacheUser(nextUser);
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initAuth = async () => {
+      if (typeof window !== 'undefined') {
+        const cachedUser = window.localStorage.getItem(USER_CACHE_KEY);
+        if (cachedUser) {
+          try {
+            const parsed = JSON.parse(cachedUser) as User;
+            if (isMounted) {
+              setUserState(parsed);
+            }
+          } catch {
+            window.localStorage.removeItem(USER_CACHE_KEY);
+          }
+        }
+      }
+
+      const me = await authApi.me();
+      if (me?.data) {
+        const appUser = toAppUser(me.data);
+        if (isMounted) {
+          setUser(appUser);
+        }
+      } else {
+        clearAccessToken();
+        if (isMounted) {
+          setUser(null);
+        }
+      }
+
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const login = async (identifier: string, password: string, expectedRole?: UserRole) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    const mockUser = MOCK_USERS[email];
-    if (mockUser && mockUser.role === role) {
-      setUser(mockUser);
-    } else {
-      throw new Error('Invalid credentials');
+
+    try {
+      const response = await authApi.login(identifier, password);
+      const verificationPayload = response?.data as {
+        requiresVerification?: boolean;
+        email?: string;
+        message?: string;
+      };
+
+      if (response?.success && verificationPayload?.requiresVerification) {
+        clearAccessToken();
+        setUser(null);
+        return {
+          requiresVerification: true,
+          email: verificationPayload.email,
+          message: verificationPayload.message,
+        };
+      }
+
+      const accessToken = response?.data?.accessToken;
+      const payloadUser = response?.data?.user;
+
+      if (!response?.success || !accessToken || !payloadUser) {
+        throw new Error(response?.message || response?.error || 'Đăng nhập thất bại');
+      }
+
+      const appUser = toAppUser(payloadUser);
+
+      if (expectedRole && appUser.role !== expectedRole) {
+        throw new Error('Tài khoản không đúng vai trò đã chọn');
+      }
+
+      setAccessToken(accessToken);
+      setUser(appUser);
+      return { requiresVerification: false };
+    } catch (error) {
+      clearAccessToken();
+      setUser(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
-  const logout = () => {
-    setUser(null);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // no-op
     }
+
+    clearAccessToken();
+    setUser(null);
   };
+
+  const value = useMemo(
+    () => ({ user, isLoading, login, logout, setUser }),
+    [user, isLoading],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, setUser }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

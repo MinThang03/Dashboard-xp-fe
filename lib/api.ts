@@ -1,22 +1,154 @@
 // API Configuration
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006/api';
+const ACCESS_TOKEN_KEY = 'dashboardxp_access_token';
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface AuthUserPayload {
+  id: number;
+  username: string;
+  fullName: string;
+  email?: string;
+  roleId: number;
+  isActive: boolean;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  user: AuthUserPayload;
+}
+
+export interface LoginNeedsVerificationResponse {
+  requiresVerification: true;
+  email?: string;
+  message: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  fullName: string;
+  email: string;
+  password: string;
+  roleId?: number;
+}
+
+export interface RegisterResponse {
+  message: string;
+  email: string;
+  requiresVerification: true;
+}
+
+function getAccessToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function setAccessToken(token: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+export function clearAccessToken() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+}
+
+async function parseJsonSafely(response: Response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      clearAccessToken();
+      return null;
+    }
+
+    const data = await parseJsonSafely(response);
+    if (typeof data?.accessToken !== 'string') {
+      clearAccessToken();
+      return null;
+    }
+
+    setAccessToken(data.accessToken);
+    return data.accessToken;
+  } catch {
+    clearAccessToken();
+    return null;
+  }
+}
 
 // Generic API call handler
 async function apiCall<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
+  allowRetry = true,
 ): Promise<{ success: boolean; data?: T; error?: string; message?: string }> {
   try {
+    const token = getAccessToken();
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options?.headers,
       },
     });
 
-    const data = await response.json();
-    return data;
+    if (response.status === 401 && allowRetry) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        return apiCall<T>(endpoint, options, false);
+      }
+    }
+
+    const data = await parseJsonSafely(response);
+
+    if (typeof data?.success === 'boolean') {
+      return data as ApiResponse<T>;
+    }
+
+    if (response.ok) {
+      return {
+        success: true,
+        data: data as T,
+      };
+    }
+
+    return {
+      success: false,
+      error: data?.error || 'Request failed',
+      message: data?.message || data?.error || `HTTP ${response.status}`,
+    };
   } catch (error) {
     console.error('API Error:', error);
     return {
@@ -26,6 +158,36 @@ async function apiCall<T>(
     };
   }
 }
+
+export const authApi = {
+  login: (identifier: string, password: string) => {
+    return apiCall<LoginResponse | LoginNeedsVerificationResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, password }),
+    });
+  },
+  register: (payload: RegisterRequest) => {
+    return apiCall<RegisterResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+  verifyOtp: (email: string, otp: string) => {
+    return apiCall<{ message: string; success: true }>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  },
+  resendOtp: (email: string) => {
+    return apiCall<{ message: string; success: true }>('/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+  me: () => apiCall<AuthUserPayload>('/auth/me'),
+  logout: () => apiCall('/auth/logout', { method: 'POST' }),
+  refresh: () => apiCall<{ accessToken: string }>('/auth/refresh', { method: 'POST' }),
+};
 
 // ============== HỒ SƠ NGHIỆP VỤ ==============
 export const hoSoApi = {
@@ -629,6 +791,7 @@ export const sanPhamOCOPApi = {
 
 // Export all
 export const api = {
+  auth: authApi,
   hoSo: hoSoApi,
   vanBan: vanBanApi,
   quyetDinh: quyetDinhApi,

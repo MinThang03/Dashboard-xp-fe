@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useAuth, type UserRole } from '@/lib/auth-context';
+import { useAuth, type UserRole, type User } from '@/lib/auth-context';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
