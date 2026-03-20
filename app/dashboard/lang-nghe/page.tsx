@@ -671,6 +671,10 @@ export default function LangNghePage() {
                   <Label className="text-muted-foreground text-xs">Điện thoại</Label>
                   <p className="font-medium">{selectedRecord.DienThoai}</p>
                 </div>
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-muted-foreground text-xs">Tình trạng</Label>
+                  <div>{getStatusBadge(selectedRecord.TrangThai)}</div>
+                </div>
               </div>
 
               {selectedRecord.GhiChu && (

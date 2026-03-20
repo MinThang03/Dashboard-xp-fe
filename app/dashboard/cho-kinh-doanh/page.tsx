@@ -208,11 +208,16 @@ export default function ChoKinhDoanhPage() {
     MaDiemKD: '',
     TenDiemKD: '',
     LoaiHinh: 'Chợ truyền thống',
+    NgayThanhLap: '',
     DiaChi: '',
     DienTich: 0,
     SoGianHang: 0,
     BanQuanLy: '',
     SoDienThoai: '',
+    GiayPhep: '',
+    NgayCapPhep: '',
+    NgayHetHan: '',
+    ThuPhiThang: 0,
     TrangThai: 'Hoạt động',
     CoSoHaTang: 'Tốt',
     AnNinhTratTu: 'Ổn định',
@@ -255,11 +260,16 @@ export default function ChoKinhDoanhPage() {
       MaDiemKD: record.MaDiemKD,
       TenDiemKD: record.TenDiemKD,
       LoaiHinh: record.LoaiHinh,
+      NgayThanhLap: record.NgayThanhLap,
       DiaChi: record.DiaChi,
       DienTich: record.DienTich,
       SoGianHang: record.SoGianHang,
       BanQuanLy: record.BanQuanLy,
       SoDienThoai: record.SoDienThoai,
+      GiayPhep: record.GiayPhep,
+      NgayCapPhep: record.NgayCapPhep,
+      NgayHetHan: record.NgayHetHan,
+      ThuPhiThang: record.ThuPhiThang,
       TrangThai: record.TrangThai,
       CoSoHaTang: record.CoSoHaTang,
       AnNinhTratTu: record.AnNinhTratTu,
@@ -274,11 +284,16 @@ export default function ChoKinhDoanhPage() {
       MaDiemKD: '',
       TenDiemKD: '',
       LoaiHinh: 'Chợ truyền thống',
+      NgayThanhLap: '',
       DiaChi: '',
       DienTich: 0,
       SoGianHang: 0,
       BanQuanLy: '',
       SoDienThoai: '',
+      GiayPhep: '',
+      NgayCapPhep: '',
+      NgayHetHan: '',
+      ThuPhiThang: 0,
       TrangThai: 'Hoạt động',
       CoSoHaTang: 'Tốt',
       AnNinhTratTu: 'Ổn định',
@@ -778,6 +793,14 @@ export default function ChoKinhDoanhPage() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Thu phí/tháng (VNĐ)</Label>
+              <Input
+                type="number"
+                value={formData.ThuPhiThang}
+                onChange={(e) => setFormData({...formData, ThuPhiThang: parseInt(e.target.value) || 0})}
+              />
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Cơ sở hạ tầng</Label>
@@ -955,6 +978,14 @@ export default function ChoKinhDoanhPage() {
                   onChange={(e) => setFormData({...formData, NgayHetHan: e.target.value})}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Thu phí/tháng (VNĐ)</Label>
+              <Input
+                type="number"
+                value={formData.ThuPhiThang}
+                onChange={(e) => setFormData({...formData, ThuPhiThang: parseInt(e.target.value) || 0})}
+              />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">

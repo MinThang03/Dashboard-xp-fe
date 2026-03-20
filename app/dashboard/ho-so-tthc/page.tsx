@@ -339,7 +339,7 @@ export default function HoSoTTHCPage() {
         <div className="bg-gradient-to-r from-red-600 via-purple-600 to-blue-900 rounded-2xl p-8 text-white">
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">Hồ sơ Thủ tục Hành chính</h1>
-            <p className="text-red-100">Quản lý người dùng</p>
+            <p className="text-red-100">Tiếp nhận, xử lý và theo dõi hồ sơ thủ tục hành chính</p>
           </div>
 
           {/* Stats Cards in Header */}
@@ -367,7 +367,7 @@ export default function HoSoTTHCPage() {
             <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-white/70 text-sm font-semibold mb-3">KHÔNG HOẠT ĐỘNG</p>
+                  <p className="text-white/70 text-sm font-semibold mb-3">ĐANG XỬ LÝ</p>
                   <p className="text-4xl font-bold text-white">{stats.processing}</p>
                 </div>
                 <Clock className="w-6 h-6 text-white/50" />
@@ -480,7 +480,7 @@ export default function HoSoTTHCPage() {
         {/* Table with Horizontal Scroll */}
         <Card className="bg-white overflow-hidden">
           <div className="w-full overflow-x-auto">
-            <table className="w-[500px]">
+            <table className="min-w-[1280px] w-full">
               <thead className="bg-slate-100 border-b border-slate-200">
                 <tr>
                   <th className="text-left px-3  font-semibold text-xs text-slate-500 whitespace-nowrap">Mã hồ sơ</th>
@@ -620,6 +620,10 @@ export default function HoSoTTHCPage() {
               <div>
                 <Label className="text-xs text-slate-500">Hạn xử lý</Label>
                 <p className="font-medium">{formatDateTime(selectedHoSo.HanXuLy)}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-slate-500">Cán bộ xử lý</Label>
+                <p className="font-medium">{selectedHoSo.CanBoXuLy || 'Chưa phân công'}</p>
               </div>
               <div>
                 <Label className="text-xs text-slate-500">Trạng thái</Label>
@@ -785,6 +789,10 @@ export default function HoSoTTHCPage() {
             <div>
               <Label>Hạn xử lý</Label>
               <Input type="datetime-local" value={formData.HanXuLy} onChange={(e) => setFormData({...formData, HanXuLy: e.target.value})} />
+            </div>
+            <div>
+              <Label>Cán bộ xử lý</Label>
+              <Input placeholder="Nhập cán bộ phụ trách" value={formData.CanBoXuLy} onChange={(e) => setFormData({...formData, CanBoXuLy: e.target.value})} />
             </div>
             <div>
               <Label>Phí/Lệ phí (VNĐ)</Label>

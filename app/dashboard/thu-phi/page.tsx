@@ -348,6 +348,29 @@ export default function ThuPhiPage() {
                   <p className="font-medium">{selectedItem.NguoiThu}</p>
                 </div>
               </div>
+              {selectedItem.MoTa && (
+                <div className="pt-2 border-t">
+                  <p className="text-sm text-muted-foreground">Mô tả</p>
+                  <p className="text-sm">{selectedItem.MoTa}</p>
+                </div>
+              )}
+              <div className="pt-2 border-t">
+                <p className="text-sm font-medium mb-2">Thông tin người nộp</p>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Họ tên: </span>
+                    <span className="font-medium">{selectedItem.TenNguoiNop || 'Chưa cập nhật'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">CCCD: </span>
+                    <span className="font-medium">{selectedItem.CCCDNguoiNop || 'Chưa cập nhật'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Địa chỉ: </span>
+                    <span className="font-medium">{selectedItem.DiaChiNguoiNop || 'Chưa cập nhật'}</span>
+                  </div>
+                </div>
+              </div>
               <div className="pt-4 border-t">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Đơn giá:</span>

@@ -273,6 +273,10 @@ export default function ThamDinhThucDiaPage() {
                   <Label>Ghi chú</Label>
                   <Textarea placeholder="Nhập ghi chú" />
                 </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Hình ảnh hồ sơ ban đầu</Label>
+                  <Input type="file" accept="image/*" multiple />
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
@@ -568,6 +572,27 @@ export default function ThamDinhThucDiaPage() {
                             <DialogDescription>Mã: {item.MaThamDinh}</DialogDescription>
                           </DialogHeader>
                           <div className="grid grid-cols-2 gap-4 py-4">
+                            <div className="space-y-2 col-span-2">
+                              <Label>Địa chỉ</Label>
+                              <Input defaultValue={item.DiaChi} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Loại thẩm định</Label>
+                              <Select defaultValue={item.LoaiThamDinh}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {loaiThamDinhOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Cán bộ thẩm định</Label>
+                              <Input defaultValue={item.CanBoThamDinh} />
+                            </div>
+                            <div className="space-y-2 col-span-2">
+                              <Label>Đơn vị thẩm định</Label>
+                              <Input defaultValue={item.DonViThamDinh} />
+                            </div>
                             <div className="space-y-2">
                               <Label>Trạng thái</Label>
                               <Select defaultValue={item.TrangThai}>
@@ -593,6 +618,10 @@ export default function ThamDinhThucDiaPage() {
                             <div className="space-y-2">
                               <Label>Số hình ảnh chứng cứ</Label>
                               <Input type="number" defaultValue={item.HinhAnhChungCu} />
+                            </div>
+                            <div className="space-y-2 col-span-2">
+                              <Label>Thêm hình ảnh kết quả thẩm định</Label>
+                              <Input type="file" accept="image/*" multiple />
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Mô tả sai lệch (nếu có)</Label>

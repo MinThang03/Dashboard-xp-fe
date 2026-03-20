@@ -697,7 +697,7 @@ export default function XayDungTraiPhepPage() {
                                 </div>
                               </div>
                             </div>
-                            {(item.BienPhapXuLy || item.SoQuyetDinhXP) && (
+                            {(item.BienPhapXuLy || item.SoQuyetDinhXP || item.ThoiHanThaoGo || item.DaCuongChe || item.NgayCuongChe) && (
                               <div className="col-span-2 border-t pt-4 mt-2">
                                 <h4 className="font-semibold mb-3">Biện pháp xử lý</h4>
                                 <div className="grid grid-cols-2 gap-4">
@@ -725,6 +725,10 @@ export default function XayDungTraiPhepPage() {
                                       <p className="font-medium">{item.ThoiHanThaoGo}</p>
                                     </div>
                                   )}
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Tình trạng cưỡng chế</p>
+                                    <p className="font-medium">{item.DaCuongChe ? 'Đã cưỡng chế' : 'Chưa cưỡng chế'}</p>
+                                  </div>
                                   {item.DaCuongChe && (
                                     <div className="space-y-1">
                                       <p className="text-sm text-muted-foreground">Ngày cưỡng chế</p>
@@ -762,6 +766,50 @@ export default function XayDungTraiPhepPage() {
                             <DialogDescription>Mã vụ: {item.MaVuViec}</DialogDescription>
                           </DialogHeader>
                           <div className="grid grid-cols-2 gap-4 py-4">
+                            <div className="space-y-2 col-span-2">
+                              <Label>Địa chỉ vi phạm</Label>
+                              <Input value={formData.DiaChi} onChange={(e) => setFormData({ ...formData, DiaChi: e.target.value })} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Loại vi phạm</Label>
+                              <Select value={formData.LoaiViPham} onValueChange={(v) => setFormData({ ...formData, LoaiViPham: v })}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {loaiViPhamOptions.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Diện tích vi phạm (m²)</Label>
+                              <Input type="number" value={formData.DienTichViPham} onChange={(e) => setFormData({ ...formData, DienTichViPham: parseFloat(e.target.value) || 0 })} />
+                            </div>
+                            <div className="space-y-2 col-span-2">
+                              <Label>Mô tả vi phạm</Label>
+                              <Textarea value={formData.MoTaViPham} onChange={(e) => setFormData({ ...formData, MoTaViPham: e.target.value })} rows={2} />
+                            </div>
+                            <div className="col-span-2 border-t pt-4">
+                              <h4 className="font-semibold mb-3">Chủ công trình</h4>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Họ tên</Label>
+                                  <Input value={formData.ChuCongTrinh} onChange={(e) => setFormData({ ...formData, ChuCongTrinh: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>CCCD</Label>
+                                  <Input value={formData.CCCD} onChange={(e) => setFormData({ ...formData, CCCD: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Số điện thoại</Label>
+                                  <Input value={formData.SoDienThoai} onChange={(e) => setFormData({ ...formData, SoDienThoai: e.target.value })} />
+                                </div>
+                              </div>
+                            </div>
                             <div className="space-y-2">
                               <Label>Trạng thái</Label>
                               <Select value={formData.TrangThai} onValueChange={(v) => setFormData({ ...formData, TrangThai: v })}>
@@ -809,8 +857,15 @@ export default function XayDungTraiPhepPage() {
                               <Input type="date" value={formData.ThoiHanThaoGo} onChange={(e) => setFormData({ ...formData, ThoiHanThaoGo: e.target.value })} />
                             </div>
                             <div className="space-y-2">
+                              <Label>Đã cưỡng chế?</Label>
+                              <div className="flex items-center gap-2 h-10">
+                                <input type="checkbox" checked={formData.DaCuongChe} onChange={(e) => setFormData({ ...formData, DaCuongChe: e.target.checked })} />
+                                <span className="text-sm">Đánh dấu cưỡng chế</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
                               <Label>Ngày cưỡng chế</Label>
-                              <Input type="date" value={formData.NgayCuongChe} onChange={(e) => setFormData({ ...formData, NgayCuongChe: e.target.value })} />
+                              <Input type="date" value={formData.NgayCuongChe} onChange={(e) => setFormData({ ...formData, NgayCuongChe: e.target.value })} disabled={!formData.DaCuongChe} />
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Kết quả xử lý</Label>

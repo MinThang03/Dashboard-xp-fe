@@ -424,8 +424,16 @@ export default function HoNgheoPage() {
                   <p className="font-medium">{selectedItem.ChuHo}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Số nhân khẩu</p>
-                  <p className="font-medium">{selectedItem.SoNhanKhau} người</p>
+                  <p className="text-sm text-muted-foreground">Số thành viên</p>
+                  <p className="font-medium">{selectedItem.SoThanhVien || selectedItem.SoNhanKhau || 0} người</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Số hộ khẩu</p>
+                  <p className="font-medium">{selectedItem.SoHoKhau || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">CCCD</p>
+                  <p className="font-medium">{selectedItem.CCCD || 'Chưa cập nhật'}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Địa chỉ</p>
@@ -445,9 +453,25 @@ export default function HoNgheoPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Năm xác nhận</p>
-                  <p className="font-medium">{selectedItem.NamXacNhan}</p>
+                  <p className="font-medium">{selectedItem.NamDanhGia || selectedItem.NamXacNhan || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Đang hưởng chính sách</p>
+                  <p className="font-medium">{selectedItem.DangHuongChinhSach ? 'Có' : 'Không'}</p>
                 </div>
               </div>
+              {selectedItem.LyDoNgheo && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">Lý do nghèo</p>
+                  <p className="text-sm">{selectedItem.LyDoNgheo}</p>
+                </div>
+              )}
+              {selectedItem.ChinhSachHuong && (
+                <div className="pt-2">
+                  <p className="text-sm text-muted-foreground">Chính sách đang hưởng</p>
+                  <p className="text-sm">{selectedItem.ChinhSachHuong}</p>
+                </div>
+              )}
               {selectedItem.GhiChu && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground">Ghi chú</p>

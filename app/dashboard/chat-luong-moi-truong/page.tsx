@@ -327,6 +327,15 @@ export default function ChatLuongMoiTruongPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Mức đánh giá</Label>
+                    <Select>
+                      <SelectTrigger><SelectValue placeholder="Chọn mức đánh giá" /></SelectTrigger>
+                      <SelectContent>
+                        {mucDanhGiaOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Ghi chú</Label>
                     <Textarea placeholder="Nhập ghi chú" />
@@ -554,6 +563,12 @@ export default function ChatLuongMoiTruongPage() {
                             <div className="space-y-1">
                               <p className="text-sm text-muted-foreground">Tần suất đo</p>
                               <p className="font-medium">{item.TanSuatDo}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Trạng thái thiết bị</p>
+                              <Badge variant={item.TrangThaiThietBi === 'Hoạt động' ? 'secondary' : 'destructive'}>
+                                {item.TrangThaiThietBi}
+                              </Badge>
                             </div>
                             <div className="space-y-1 col-span-2">
                               <p className="text-sm text-muted-foreground">Thời gian cập nhật</p>

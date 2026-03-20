@@ -649,7 +649,7 @@ export default function HoKinhDoanhPage() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-muted-foreground text-xs">Trạng thái</Label>
-                    <div>{getStatusBadge(selectedRecord.TrangThai)}</div>
+                    <div>{selectedRecord.TrangThai ? getStatusBadge(selectedRecord.TrangThai) : <Badge variant="outline">Chưa cập nhật</Badge>}</div>
                   </div>
                 </div>
               </div>
@@ -674,7 +674,7 @@ export default function HoKinhDoanhPage() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-muted-foreground text-xs">Email</Label>
-                    <p className="font-medium">{selectedRecord.Email}</p>
+                    <p className="font-medium">{selectedRecord.Email || 'Chưa cập nhật'}</p>
                   </div>
                   <div className="space-y-1 col-span-2">
                     <Label className="text-muted-foreground text-xs">Địa chỉ thường trú</Label>

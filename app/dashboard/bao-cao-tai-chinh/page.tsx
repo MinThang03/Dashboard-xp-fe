@@ -361,6 +361,10 @@ export default function BaoCaoTaiChinhPage() {
                   <p className="text-sm text-muted-foreground">Người lập</p>
                   <p className="font-medium">{selectedReport.NguoiLap}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Trạng thái</p>
+                  <p className="font-medium">{selectedReport.TrangThai || 'Chưa cập nhật'}</p>
+                </div>
               </div>
 
               {selectedReport.SoLieuTaiChinh && (

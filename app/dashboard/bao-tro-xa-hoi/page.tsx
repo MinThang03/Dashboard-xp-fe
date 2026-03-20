@@ -417,6 +417,10 @@ export default function BaoTroXaHoiPage() {
                   <p className="font-medium">{selectedItem.NgaySinh}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Giới tính</p>
+                  <p className="font-medium">{selectedItem.GioiTinh || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">CCCD</p>
                   <p className="font-medium">{selectedItem.CCCD}</p>
                 </div>
@@ -431,6 +435,18 @@ export default function BaoTroXaHoiPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Thời hạn</p>
                   <p className="font-medium">{selectedItem.ThoiHanTroCap}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Ngày bắt đầu hưởng</p>
+                  <p className="font-medium">{selectedItem.NgayBatDau || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tình trạng</p>
+                  <p className="font-medium">{selectedItem.TinhTrang || 'Đang hưởng'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Người giám hộ</p>
+                  <p className="font-medium">{selectedItem.NguoiGiamHo || 'Không có'}</p>
                 </div>
               </div>
             </div>
