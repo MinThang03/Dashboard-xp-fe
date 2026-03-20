@@ -426,6 +426,14 @@ export default function ViecLamPage() {
                   <p className="font-medium">{selectedItem.KinhNghiem}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Nghề nghiệp mong muốn</p>
+                  <p className="font-medium">{selectedItem.NgheNghiepMongMuon || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Mức lương mong muốn</p>
+                  <p className="font-medium">{selectedItem.MucLuongMongMuon || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">Lý do thất nghiệp</p>
                   <p className="font-medium">{selectedItem.LyDoThatNghiep}</p>
                 </div>

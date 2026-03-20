@@ -429,6 +429,10 @@ export default function NguoiCoCongPage() {
                   <p className="font-medium">{selectedItem.NgaySinh}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Giới tính</p>
+                  <p className="font-medium">{selectedItem.GioiTinh || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">CCCD</p>
                   <p className="font-medium">{selectedItem.CCCD}</p>
                 </div>
@@ -444,7 +448,33 @@ export default function NguoiCoCongPage() {
                   <p className="text-sm text-muted-foreground">Mức trợ cấp</p>
                   <p className="font-semibold text-primary text-lg">{formatCurrency(selectedItem.MucHuongHangThang)}/tháng</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Hạng thương binh</p>
+                  <p className="font-medium">{selectedItem.HangThuongBinh || 'Không áp dụng'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tỷ lệ mất sức lao động</p>
+                  <p className="font-medium">{selectedItem.TyLeMatSucLaoDong ? `${selectedItem.TyLeMatSucLaoDong}%` : 'Chưa cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Danh hiệu</p>
+                  <p className="font-medium">{selectedItem.DanhHieu || 'Chưa cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Ngày bắt đầu hưởng</p>
+                  <p className="font-medium">{selectedItem.NgayHuong || 'Chưa cập nhật'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Tình trạng</p>
+                  <p className="font-medium">{selectedItem.TinhTrang || 'Đang hưởng'}</p>
+                </div>
               </div>
+              {selectedItem.GhiChu && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">Ghi chú</p>
+                  <p className="font-medium">{selectedItem.GhiChu}</p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

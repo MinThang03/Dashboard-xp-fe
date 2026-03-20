@@ -440,6 +440,10 @@ export default function GiaiNganPage() {
                             <DialogDescription>Mã: {item.MaDuAn}</DialogDescription>
                           </DialogHeader>
                           <div className="grid grid-cols-2 gap-4 py-4">
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Mã dự án</p>
+                              <p className="font-medium">{item.MaDuAn}</p>
+                            </div>
                             <div className="space-y-1 col-span-2">
                               <p className="text-sm text-muted-foreground">Tên dự án</p>
                               <p className="font-medium">{item.TenDuAn}</p>
@@ -451,6 +455,10 @@ export default function GiaiNganPage() {
                             <div className="space-y-1">
                               <p className="text-sm text-muted-foreground">Trạng thái</p>
                               {getTrangThaiBadge(item.TrangThai)}
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Tiến độ (%)</p>
+                              <p className="font-medium">{item.TienDo}%</p>
                             </div>
                             <div className="space-y-1 col-span-2">
                               <p className="text-sm text-muted-foreground">Đơn vị thực hiện</p>
@@ -505,6 +513,12 @@ export default function GiaiNganPage() {
                               <div className="space-y-1 col-span-2">
                                 <p className="text-sm text-muted-foreground">Ghi chú</p>
                                 <p className="font-medium">{item.GhiChu}</p>
+                              </div>
+                            )}
+                            {!item.GhiChu && (
+                              <div className="space-y-1 col-span-2">
+                                <p className="text-sm text-muted-foreground">Ghi chú</p>
+                                <p className="font-medium">Không có ghi chú</p>
                               </div>
                             )}
                           </div>
