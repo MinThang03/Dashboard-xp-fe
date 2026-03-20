@@ -204,10 +204,10 @@ export default function ThamDinhThucDiaPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-secondary via-primary to-secondary rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
+      <div className="bg-gradient-to-r from-secondary via-primary to-secondary rounded-lg p-4 sm:p-5 xl:p-6 text-white">
+        <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Map className="h-8 w-8" />
             <div>
@@ -217,7 +217,7 @@ export default function ThamDinhThucDiaPage() {
           </div>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-white text-blue-600 hover:bg-white/90">
+              <Button className="w-full 2xl:w-auto bg-white text-blue-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
                 Tạo hồ sơ thẩm định
               </Button>

@@ -246,10 +246,10 @@ export default function ChatLuongMoiTruongPage() {
   const filteredData = getCurrentData();
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-status-success via-secondary to-status-success rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
+      <div className="bg-gradient-to-r from-status-success via-secondary to-status-success rounded-lg p-4 sm:p-5 xl:p-6 text-white">
+        <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Activity className="h-8 w-8" />
             <div>
@@ -257,7 +257,7 @@ export default function ChatLuongMoiTruongPage() {
               <p className="text-green-100">Theo dõi chất lượng không khí, nước, đất theo thời gian thực</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full 2xl:w-auto flex-col sm:flex-row gap-2">
             <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
               <RefreshCw className="mr-2 h-4 w-4" />
               Cập nhật

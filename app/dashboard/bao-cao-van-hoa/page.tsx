@@ -49,18 +49,18 @@ export default function BaoCaoVanHoaPage() {
   const tongKinhPhi = baoCaoThang.reduce((sum, m) => sum + m.KinhPhi, 0);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-primary via-accent to-secondary p-8 text-white">
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-primary via-accent to-secondary p-4 sm:p-5 xl:p-6 text-white">
         <div className="relative z-10">
-          <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-3">
               <FileText className="h-10 w-10" />
               <h1 className="text-3xl font-bold">Báo cáo Văn hóa</h1>
             </div>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
+                <Button variant="secondary" className="w-full 2xl:w-auto bg-white/20 hover:bg-white/30 text-white border-white/30">
                   <Eye className="mr-2 h-4 w-4" />
                   Xem tổng quan
                 </Button>

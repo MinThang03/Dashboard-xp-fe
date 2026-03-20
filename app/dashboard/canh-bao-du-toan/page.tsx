@@ -55,9 +55,9 @@ export default function CanhBaoDuToanPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-status-danger via-primary to-status-danger rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
+      <div className="bg-gradient-to-r from-status-danger via-primary to-status-danger rounded-lg p-4 sm:p-5 xl:p-6 text-white">
+        <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-8 w-8" />
             <div>
@@ -65,7 +65,7 @@ export default function CanhBaoDuToanPage() {
               <p className="text-red-100">Theo dõi và cảnh báo các khoản mục có nguy cơ vượt dự toán</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
@@ -124,7 +124,7 @@ export default function CanhBaoDuToanPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Nghiêm trọng</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <XCircle className="h-5 w-5 text-red-600" />
               <span className="text-2xl font-bold">{nghiemTrong}</span>
             </div>
@@ -136,7 +136,7 @@ export default function CanhBaoDuToanPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Trung bình</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
               <span className="text-2xl font-bold">{trungBinh}</span>
             </div>
@@ -148,7 +148,7 @@ export default function CanhBaoDuToanPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Theo dõi</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Bell className="h-5 w-5 text-blue-500" />
               <span className="text-2xl font-bold">{theoDoi}</span>
             </div>
@@ -160,7 +160,7 @@ export default function CanhBaoDuToanPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">An toàn</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <span className="text-2xl font-bold">{anToan}</span>
             </div>
@@ -201,7 +201,7 @@ export default function CanhBaoDuToanPage() {
               <div key={item.MaKhoanMuc} className="border rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <span className="font-semibold">{item.TenKhoanMuc}</span>
                       {getMucDoBadge(item.MucDo)}
                     </div>

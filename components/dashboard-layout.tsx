@@ -464,15 +464,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <div 
+      <div
         className={cn(
-          'flex flex-col flex-1 transition-all duration-300',
-          sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
+          'flex flex-col w-full min-w-0 transition-all duration-300',
+          sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'
         )}
       >
         {/* Top Bar - nền trắng, viền/dải rõ hơn theo palette */}
-        <header className="bg-card h-16 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 border-b-2 border-primary">
-          <div className="flex-1 flex items-center gap-4">
+        <header className="bg-card h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 border-b-2 border-primary">
+          <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-4">
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
@@ -484,8 +484,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Button>
             
             {/* Tên đơn vị */}
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold text-foreground">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground truncate">
                 Ủy ban nhân dân xã/phường
               </h2>
               <p className="text-xs text-muted-foreground hidden sm:block">
@@ -494,7 +494,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 shrink-0">
             {/* Notification Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

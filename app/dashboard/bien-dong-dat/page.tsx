@@ -244,9 +244,9 @@ export default function BienDongDatPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl space-y-4 sm:space-y-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-status-success via-secondary to-status-success p-6 sm:p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-status-success via-secondary to-status-success p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -261,7 +261,7 @@ export default function BienDongDatPage() {
             </div>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto bg-white text-status-success hover:bg-white/90">
+                <Button className="w-full 2xl:w-auto bg-white text-status-success hover:bg-white/90">
                   <Plus className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Thêm biến động</span>
                   <span className="sm:hidden">Thêm</span>

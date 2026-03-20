@@ -86,7 +86,7 @@ export default function HoSoTonDongPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -104,7 +104,7 @@ export default function HoSoTonDongPage() {
       </div>
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-status-warning via-primary to-status-warning p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-status-warning via-primary to-status-warning p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">
@@ -117,7 +117,7 @@ export default function HoSoTonDongPage() {
               </div>
               <p className="text-white/90">Báo cáo hồ sơ tồn đọng chưa xử lý theo lĩnh vực</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row gap-2 sm:gap-3">
               <Button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0" onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" />
                 Xuất báo cáo
@@ -294,7 +294,7 @@ export default function HoSoTonDongPage() {
           </DialogHeader>
           {selectedItem && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
                 <h3 className="font-semibold">{selectedItem.TenNghiepVu}</h3>
                 {getMucDoQuaHanBadge(selectedItem.MucDoQuaHan)}
               </div>

@@ -379,85 +379,85 @@ export default function KhamBenhPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl space-y-4 sm:space-y-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-6 sm:p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 sm:p-3 bg-white/20 backdrop-blur-sm rounded-xl">
                   <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Khám chữa bệnh</h1>
+                <h1 className="text-xl sm:text-2xl xl:text-3xl font-bold">Khám chữa bệnh</h1>
               </div>
-              <p className="text-sm sm:text-base text-white/90">Quản lý khám chữa bệnh ban đầu tại trạm y tế</p>
+              <p className="text-xs sm:text-sm xl:text-base text-white/90">Quản lý khám chữa bệnh ban đầu tại trạm y tế</p>
             </div>
-            <Button className="w-full sm:w-auto bg-white text-primary hover:bg-white/90" onClick={handleAdd}>
+            <Button className="w-full 2xl:w-auto bg-white text-primary hover:bg-white/90" onClick={handleAdd}>
               <Plus className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Tiếp nhận bệnh nhân</span>
-              <span className="sm:hidden">Tiếp nhận</span>
+              <span className="hidden md:inline">Tiếp nhận bệnh nhân</span>
+              <span className="md:hidden">Tiếp nhận</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 xl:gap-4">
+        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 sm:p-3 bg-secondary/10 rounded-xl">
               <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.today}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Lượt khám hôm nay</p>
+          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.today}</p>
+          <p className="text-xs text-muted-foreground">Lượt khám hôm nay</p>
         </Card>
 
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
+        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 sm:p-3 bg-status-warning/10 rounded-xl">
               <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-status-warning" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.waiting}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Đang chờ khám</p>
+          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.waiting}</p>
+          <p className="text-xs text-muted-foreground">Đang chờ khám</p>
         </Card>
 
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
+        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 sm:p-3 bg-primary/10 rounded-xl">
               <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.processing}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Đang theo dõi</p>
+          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.processing}</p>
+          <p className="text-xs text-muted-foreground">Đang theo dõi</p>
         </Card>
 
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
+        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 sm:p-3 bg-status-success/10 rounded-xl">
               <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-status-success" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.completed}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Hoàn thành</p>
+          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.completed}</p>
+          <p className="text-xs text-muted-foreground">Hoàn thành</p>
         </Card>
 
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
+        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 sm:p-3 bg-status-danger/10 rounded-xl">
               <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-status-danger" />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.transferred}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Chuyển viện</p>
+          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.transferred}</p>
+          <p className="text-xs text-muted-foreground">Chuyển viện</p>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="p-4 border-0 shadow-lg">
+      <Card className="p-3 border-0 shadow-lg">
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
           <div className="flex-1 min-w-full sm:min-w-[250px] relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
@@ -485,9 +485,9 @@ export default function KhamBenhPage() {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full sm:w-[180px] h-10 sm:h-11"
+            className="w-full sm:w-[170px] h-10"
           />
-          <Button variant="outline" className="w-full sm:w-auto h-10 sm:h-11">
+          <Button variant="outline" className="w-full sm:w-auto h-10">
             <Download className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Xuất Excel</span>
             <span className="sm:hidden">Xuất</span>
@@ -501,16 +501,16 @@ export default function KhamBenhPage() {
           <table className="w-full">
             <thead className="bg-slate-50 border-b">
               <tr>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm">Mã phiếu</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm">Bệnh nhân</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm hidden md:table-cell">Tuổi/GT</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm hidden lg:table-cell">BHYT</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm hidden xl:table-cell">Triệu chứng</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm hidden lg:table-cell">Chẩn đoán</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm hidden xl:table-cell">Bác sĩ</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm hidden md:table-cell">Giờ khám</th>
-                <th className="text-left p-3 sm:p-4 font-semibold text-xs sm:text-sm">Trạng thái</th>
-                <th className="text-right p-3 sm:p-4 font-semibold text-xs sm:text-sm">Thao tác</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm">Mã phiếu</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm">Bệnh nhân</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm hidden md:table-cell">Tuổi/GT</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm hidden lg:table-cell">BHYT</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm hidden xl:table-cell">Triệu chứng</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm hidden lg:table-cell">Chẩn đoán</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm hidden xl:table-cell">Bác sĩ</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm hidden md:table-cell">Giờ khám</th>
+                <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-sm">Trạng thái</th>
+                <th className="text-right p-2 sm:p-3 font-semibold text-xs sm:text-sm">Thao tác</th>
               </tr>
             </thead>
             <tbody>

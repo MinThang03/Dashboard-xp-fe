@@ -227,9 +227,9 @@ export default function HoSoDiTichPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-accent via-status-warning to-accent p-8 text-white">
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-accent via-status-warning to-accent p-4 sm:p-5 xl:p-6 text-white">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
             <FileText className="h-10 w-10" />

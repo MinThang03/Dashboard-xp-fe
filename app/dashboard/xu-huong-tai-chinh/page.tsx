@@ -38,9 +38,9 @@ const canhBaoRuiRo = [
 
 export default function XuHuongTaiChinhPage() {
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
+      <div className="bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 rounded-lg p-4 sm:p-5 xl:p-6 text-white">
+        <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Brain className="h-8 w-8" />
             <div>
@@ -48,7 +48,7 @@ export default function XuHuongTaiChinhPage() {
               <p className="text-primary/80">Dự báo xu hướng tài chính bằng trí tuệ nhân tạo</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
@@ -96,7 +96,7 @@ export default function XuHuongTaiChinhPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Độ chính xác</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Zap className="h-5 w-5 text-purple-500" />
               <span className="text-2xl font-bold">92%</span>
             </div>
@@ -108,7 +108,7 @@ export default function XuHuongTaiChinhPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Xu hướng tháng sau</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-500" />
               <span className="text-2xl font-bold text-green-600">+8%</span>
             </div>
@@ -120,7 +120,7 @@ export default function XuHuongTaiChinhPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Cảnh báo rủi ro</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
               <span className="text-2xl font-bold">{canhBaoRuiRo.length}</span>
             </div>
@@ -132,7 +132,7 @@ export default function XuHuongTaiChinhPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Báo cáo AI</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <BarChart3 className="h-5 w-5 text-secondary" />
               <span className="text-2xl font-bold">15</span>
             </div>
@@ -193,7 +193,7 @@ export default function XuHuongTaiChinhPage() {
               <div key={idx} className="border rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <span className="font-semibold">{item.chiTieu}</span>
                       <Badge className={item.xuHuong === 'Tăng' ? 'bg-status-success' : 'bg-status-danger'}>
                         {item.xuHuong === 'Tăng' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}

@@ -170,7 +170,7 @@ export default function BaoCaoTaiChinhPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -188,10 +188,10 @@ export default function BaoCaoTaiChinhPage() {
       </div>
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -201,7 +201,7 @@ export default function BaoCaoTaiChinhPage() {
               </div>
               <p className="text-white/90">Tạo và xuất báo cáo tài chính định kỳ</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row gap-2 sm:gap-3">
               <Button className="bg-white text-indigo-600 hover:bg-white/90" onClick={handleAdd}>
                 <Plus className="w-4 h-4 mr-2" />
                 Tạo báo cáo

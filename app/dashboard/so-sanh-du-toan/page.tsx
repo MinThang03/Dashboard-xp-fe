@@ -52,9 +52,9 @@ export default function SoSanhDuToanPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-primary via-secondary to-primary rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
+      <div className="bg-gradient-to-r from-primary via-secondary to-primary rounded-lg p-4 sm:p-5 xl:p-6 text-white">
+        <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <BarChart3 className="h-8 w-8" />
             <div>
@@ -62,7 +62,7 @@ export default function SoSanhDuToanPage() {
               <p className="text-purple-100">Phân tích và so sánh thu chi thực tế với dự toán đã lập</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="secondary" className="bg-white/20 hover:bg-white/30">

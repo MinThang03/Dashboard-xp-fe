@@ -116,9 +116,9 @@ export default function AnNinhTratTuPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-secondary via-muted to-secondary rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-secondary via-muted to-secondary rounded-lg p-4 sm:p-5 xl:p-6 text-white">
         <div className="flex items-center gap-3">
           <Shield className="h-8 w-8" />
           <div>

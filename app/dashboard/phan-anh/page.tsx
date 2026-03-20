@@ -158,7 +158,7 @@ export default function PhanAnhPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -176,10 +176,10 @@ export default function PhanAnhPage() {
       </div>
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -189,12 +189,12 @@ export default function PhanAnhPage() {
               </div>
               <p className="text-white/90">Tiếp nhận và xử lý phản ánh từ nhân dân</p>
             </div>
-            <div className="flex gap-3">
-              <Button className="bg-white text-orange-600 hover:bg-white/90" onClick={handleAdd}>
+            <div className="flex w-full 2xl:w-auto flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button className="w-full sm:w-auto bg-white text-orange-600 hover:bg-white/90" onClick={handleAdd}>
                 <Plus className="w-4 h-4 mr-2" />
                 Tiếp nhận
               </Button>
-              <Button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0" onClick={handleExport}>
+              <Button className="w-full sm:w-auto bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0" onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" />
                 Xuất báo cáo
               </Button>

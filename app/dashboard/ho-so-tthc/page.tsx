@@ -332,18 +332,18 @@ export default function HoSoTTHCPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3">
-      <div className="max-w-7xl mx-auto space-y-3">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-3 sm:px-4 lg:px-5 py-3 sm:py-4">
+      <div className="w-full space-y-3 sm:space-y-4">
         
         {/* Header with Stats */}
-        <div className="bg-gradient-to-r from-red-600 via-purple-600 to-blue-900 rounded-2xl p-8 text-white">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Hồ sơ Thủ tục Hành chính</h1>
+        <div className="bg-gradient-to-r from-red-600 via-purple-600 to-blue-900 rounded-2xl p-4 sm:p-5 xl:p-6 text-white">
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl xl:text-4xl font-bold mb-2">Hồ sơ Thủ tục Hành chính</h1>
             <p className="text-red-100">Tiếp nhận, xử lý và theo dõi hồ sơ thủ tục hành chính</p>
           </div>
 
           {/* Stats Cards in Header */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-5 gap-4">
             <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -400,7 +400,7 @@ export default function HoSoTTHCPage() {
         <Card className="p-3 bg-white">
           <div className="space-y-2">
             {/* Search and Filters */}
-            <div className="flex flex-col lg:flex-row gap-2">
+            <div className="flex flex-col 2xl:flex-row gap-2">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-2 w-3 h-3 text-slate-400" />
                 <Input
@@ -412,7 +412,7 @@ export default function HoSoTTHCPage() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="lg:w-48 bg-slate-50 text-sm h-8 py-1">
+                <SelectTrigger className="2xl:w-48 bg-slate-50 text-sm h-8 py-1">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -425,7 +425,7 @@ export default function HoSoTTHCPage() {
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="lg:w-48 bg-slate-50 text-sm h-8 py-1">
+                <SelectTrigger className="2xl:w-48 bg-slate-50 text-sm h-8 py-1">
                   <SelectValue placeholder="Loại thủ tục" />
                 </SelectTrigger>
                 <SelectContent>

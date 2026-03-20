@@ -205,12 +205,12 @@ export default function ChungThucPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl space-y-4 sm:space-y-6">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary via-accent to-primary p-6 sm:p-8 text-white">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary via-accent to-primary p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col 2xl:flex-row items-start 2xl:items-center justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 sm:p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -220,7 +220,7 @@ export default function ChungThucPage() {
               </div>
               <p className="text-sm sm:text-base text-white/90">Quản lý hồ sơ chứng thực chữ ký, bản sao và xác nhận giấy tờ</p>
             </div>
-            <Button className="bg-white text-primary hover:bg-white/90 w-full sm:w-auto" onClick={handleAdd}>
+            <Button className="bg-white text-primary hover:bg-white/90 w-full 2xl:w-auto" onClick={handleAdd}>
               <Plus className="w-4 h-4 mr-2" />
               Tạo hồ sơ mới
             </Button>
