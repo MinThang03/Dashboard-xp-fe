@@ -508,6 +508,126 @@
   }
 }
 
+@layer components {
+  [data-slot='dialog-overlay'] {
+    background: rgba(15, 23, 42, 0.58) !important;
+    backdrop-filter: blur(2px);
+  }
+
+  [data-slot='dialog-content'] {
+    width: 96vw !important;
+    max-width: 1180px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    border: 1px solid #cfd8e3 !important;
+    border-radius: 14px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+    box-shadow:
+      0 32px 60px -18px rgba(15, 23, 42, 0.45),
+      0 12px 24px -12px rgba(15, 23, 42, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  }
+
+  [data-slot='dialog-header'] {
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  [data-slot='dialog-footer'] {
+    padding-top: 0.9rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  [data-slot='dialog-content'] label {
+    color: #334155 !important;
+    font-weight: 600;
+  }
+
+  [data-slot='dialog-content'] input,
+  [data-slot='dialog-content'] textarea,
+  [data-slot='dialog-content'] select {
+    border: 1px solid #c7d2e0 !important;
+    border-radius: 10px !important;
+    background-color: #ffffff !important;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  }
+
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox']) {
+    width: 100% !important;
+    min-height: 42px;
+    border: 1px solid #c7d2e0 !important;
+    border-radius: 10px !important;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    font-weight: 500;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  }
+
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox']) svg {
+    color: #475569 !important;
+    opacity: 0.95 !important;
+  }
+
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox'])[data-placeholder],
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox']) [data-slot='select-value'][data-placeholder] {
+    color: #64748b !important;
+  }
+
+  [data-slot='dialog-content'] input::placeholder,
+  [data-slot='dialog-content'] textarea::placeholder {
+    color: #64748b !important;
+    opacity: 1;
+  }
+
+  [data-slot='dialog-content'] input:focus-visible,
+  [data-slot='dialog-content'] textarea:focus-visible,
+  [data-slot='dialog-content'] select:focus-visible,
+  [data-slot='dialog-content'] select:focus {
+    border-color: #1d4ed8 !important;
+    box-shadow:
+      0 0 0 3px rgba(37, 99, 235, 0.2),
+      0 6px 12px -8px rgba(37, 99, 235, 0.5) !important;
+    outline: none !important;
+  }
+
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox']):focus-visible,
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox'])[data-state='open'],
+  [data-slot='dialog-content'] :is([data-slot='select-trigger'], button[role='combobox'])[aria-expanded='true'] {
+    border-color: #1d4ed8 !important;
+    box-shadow:
+      0 0 0 3px rgba(37, 99, 235, 0.2),
+      0 6px 12px -8px rgba(37, 99, 235, 0.5) !important;
+    outline: none !important;
+  }
+
+  [data-slot='select-content'] {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    box-shadow:
+      0 18px 30px -12px rgba(15, 23, 42, 0.35),
+      0 6px 12px -8px rgba(15, 23, 42, 0.2) !important;
+  }
+
+  [data-slot='select-item'] {
+    border-radius: 8px;
+    color: #0f172a;
+  }
+
+  [data-slot='select-item'][data-highlighted] {
+    background: #eff6ff !important;
+    color: #1e3a8a !important;
+  }
+
+  [data-slot='dialog-content'] button[data-slot='button'] {
+    border-radius: 10px !important;
+  }
+}
+
 /* Custom animations for smooth transitions */
 @keyframes slideInFromTop {
   0% {
