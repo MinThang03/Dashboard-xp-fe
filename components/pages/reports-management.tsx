@@ -110,16 +110,16 @@ export function ReportsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Báo cáo & Phân tích</h1>
           <p className="text-muted-foreground mt-1">
             Tổng hợp và xem xét các báo cáo định kỳ từ các phòng ban
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:flex-nowrap">
           <Button variant="outline" size="sm">
             <Filter className="w-4 h-4 mr-2" />
             Lọc nâng cao
@@ -208,7 +208,7 @@ export function ReportsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -219,7 +219,7 @@ export function ReportsPage() {
           />
         </div>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full xl:w-[160px]">
             <SelectValue placeholder="Loại báo cáo" />
           </SelectTrigger>
           <SelectContent>
@@ -232,7 +232,7 @@ export function ReportsPage() {
           </SelectContent>
         </Select>
         <Select value={filterField} onValueChange={setFilterField}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full xl:w-[200px]">
             <SelectValue placeholder="Lĩnh vực" />
           </SelectTrigger>
           <SelectContent>
@@ -246,7 +246,7 @@ export function ReportsPage() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full xl:w-[160px]">
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>

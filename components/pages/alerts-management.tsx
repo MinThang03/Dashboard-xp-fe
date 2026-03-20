@@ -134,16 +134,16 @@ export function AlertsManagementPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Cảnh báo & Điểm nóng</h1>
           <p className="text-muted-foreground mt-1">
             Theo dõi và xử lý các cảnh báo, vấn đề cần chú ý
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:flex-nowrap">
           <Button variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-2" />
             Làm mới
@@ -225,9 +225,9 @@ export function AlertsManagementPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full xl:w-[180px]">
             <SelectValue placeholder="Loại cảnh báo" />
           </SelectTrigger>
           <SelectContent>
@@ -239,7 +239,7 @@ export function AlertsManagementPage() {
         </Select>
 
         <Select value={filterField} onValueChange={setFilterField}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full xl:w-[200px]">
             <SelectValue placeholder="Lĩnh vực" />
           </SelectTrigger>
           <SelectContent>
@@ -253,7 +253,7 @@ export function AlertsManagementPage() {
         </Select>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full xl:w-[180px]">
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>

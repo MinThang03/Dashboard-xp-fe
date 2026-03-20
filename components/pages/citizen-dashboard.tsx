@@ -147,7 +147,7 @@ export function CitizenDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3 border-b border-border">
+      <div className="flex gap-3 overflow-x-auto border-b border-border pb-1">
         {[
           { id: 'submissions', label: 'Hồ sơ của tôi', icon: FileText },
           { id: 'services', label: 'Tra cứu dịch vụ', icon: MessageSquare },
@@ -175,7 +175,7 @@ export function CitizenDashboard() {
       {activeTab === 'submissions' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Nộp hồ sơ mới
             </Button>

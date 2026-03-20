@@ -225,9 +225,9 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Breadcrumb */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <button
             onClick={() => router.push('/dashboard')}
@@ -246,10 +246,10 @@ export default function FeedbackPage() {
       </div>
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-4 text-white sm:p-6 lg:p-8">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -259,13 +259,13 @@ export default function FeedbackPage() {
               </div>
               <p className="text-white/90">Tiếp nhận và xử lý phản hồi từ người dân</p>
             </div>
-            <div className="flex gap-3">
-              <Button className="bg-white text-blue-600 hover:bg-white/90" onClick={handleAdd}>
+            <div className="flex w-full flex-wrap gap-3 xl:w-auto xl:flex-nowrap">
+              <Button className="w-full bg-white text-blue-600 hover:bg-white/90 sm:w-auto" onClick={handleAdd}>
                 <Plus className="w-4 h-4 mr-2" />
                 Thêm phản hồi
               </Button>
               <Button
-                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0"
+                className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0 sm:w-auto"
                 onClick={handleExport}
               >
                 <Download className="w-4 h-4 mr-2" />

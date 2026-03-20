@@ -182,9 +182,9 @@ export function AdminDashboardPremium() {
   });
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Premium Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-4 text-white sm:p-6 lg:p-8">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -197,12 +197,12 @@ export function AdminDashboardPremium() {
               </div>
               <p className="text-white/90 text-lg">Quản lý hệ thống và người dùng</p>
             </div>
-            <div className="flex gap-3">
-              <Button className="bg-white text-purple-600 hover:bg-white/90" onClick={() => setDialogOpen(true)}>
+            <div className="flex w-full flex-wrap gap-3 xl:w-auto xl:flex-nowrap">
+              <Button className="w-full bg-white text-purple-600 hover:bg-white/90 sm:w-auto" onClick={() => setDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Thêm người dùng
               </Button>
-              <Button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0">
+              <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-0 sm:w-auto">
                 <Settings className="w-4 h-4 mr-2" />
                 Cài đặt
               </Button>

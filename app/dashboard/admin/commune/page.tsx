@@ -220,8 +220,8 @@ export default function CommunePage() {
       </div>
 
       {/* Search and Add Button */}
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Tìm kiếm xã phường..."
@@ -231,7 +231,7 @@ export default function CommunePage() {
           />
         </div>
         <Button
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
           onClick={openNewDialog}
         >
           <Plus className="w-4 h-4 mr-2" />

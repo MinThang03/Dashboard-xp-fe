@@ -40,16 +40,16 @@ export function FieldMonitoringPage() {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Giám sát 10 Lĩnh vực</h1>
           <p className="text-muted-foreground mt-1">
             Theo dõi tình hình hoạt động của tất cả các lĩnh vực
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:flex-nowrap">
           <Button variant="outline" size="sm">
             <Filter className="w-4 h-4 mr-2" />
             Lọc
@@ -66,7 +66,7 @@ export function FieldMonitoringPage() {
       </div>
 
       {/* Time Range Selector */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(['week', 'month', 'quarter', 'year'] as const).map((range) => (
           <Button
             key={range}

@@ -10,7 +10,7 @@ export default function TrackPage() {
   const [caseId, setCaseId] = useState('');
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">
           Tra cứu hồ sơ của tôi
@@ -20,13 +20,13 @@ export default function TrackPage() {
         </p>
       </div>
 
-      <Card className="bg-card border-border p-8">
+      <Card className="bg-card border-border p-4 sm:p-6 lg:p-8">
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground block mb-2">
               Mã hồ sơ
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -36,7 +36,7 @@ export default function TrackPage() {
                   className="pl-10 bg-input border-border"
                 />
               </div>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto">
                 Tra cứu
               </Button>
             </div>

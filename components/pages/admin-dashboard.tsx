@@ -150,7 +150,7 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Page Header with Stats */}
-      <div className="rounded-lg bg-gradient-to-r from-red-900 via-purple-950 to-blue-950 px-6 py-8 border border-white/20 shadow-lg">
+      <div className="rounded-lg bg-gradient-to-r from-red-900 via-purple-950 to-blue-950 border border-white/20 px-4 py-5 shadow-lg sm:px-6 sm:py-8">
         <h1 className="text-3xl font-bold text-white">
           Quản trị hệ thống
         </h1>
@@ -187,7 +187,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3 border-b border-border">
+      <div className="flex gap-3 overflow-x-auto border-b border-border pb-1">
         {[
           { id: 'users', label: 'Quản lý người dùng', icon: Users },
         ].map((tab) => {
@@ -206,8 +206,8 @@ export function AdminDashboard() {
 
       {/* Content */}
       <div className="space-y-4">
-        <div className="flex gap-3">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Tìm kiếm người dùng..."
@@ -216,7 +216,7 @@ export function AdminDashboard() {
               className="pl-10 bg-input border-border"
             />
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setDialogOpen(true)}>
+          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={() => setDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Thêm người dùng
           </Button>

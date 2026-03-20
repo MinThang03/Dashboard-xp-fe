@@ -219,11 +219,11 @@ export default function RolesPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Header with Add Button */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-4 text-white sm:p-6 lg:p-8">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Shield className="w-8 h-8" />
@@ -233,7 +233,7 @@ export default function RolesPage() {
           </div>
           <Button
             onClick={() => setAddRoleDialogOpen(true)}
-            className="bg-white text-primary hover:bg-white/90"
+            className="w-full bg-white text-primary hover:bg-white/90 sm:w-auto"
           >
             <Plus className="w-4 h-4 mr-2" />
             Thêm vai trò

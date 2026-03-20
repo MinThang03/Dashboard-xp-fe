@@ -151,9 +151,9 @@ export function CitizenDashboardPremium() {
   );
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
       {/* Premium Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-secondary p-8 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-secondary p-4 text-white sm:p-6 lg:p-8">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -166,7 +166,7 @@ export function CitizenDashboardPremium() {
               </div>
               <p className="text-white/90 text-lg">Nộp hồ sơ, theo dõi và phản ánh ý kiến</p>
             </div>
-            <Button className="bg-white text-green-600 hover:bg-white/90">
+            <Button className="w-full bg-white text-green-600 hover:bg-white/90 sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Nộp hồ sơ mới
             </Button>
@@ -221,7 +221,7 @@ export function CitizenDashboardPremium() {
 
       {/* Tabs */}
       <Card className="p-2 border-0 shadow-lg">
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto">
           <Button
             onClick={() => setActiveTab('submissions')}
             className={`flex-1 ${activeTab === 'submissions' ? 'bg-primary text-white' : 'bg-transparent text-foreground hover:bg-slate-100'}`}
