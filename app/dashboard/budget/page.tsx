@@ -2,49 +2,42 @@
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, TrendingUp, TrendingDown, Download, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { AlertTriangle, Download, AlertCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
-
-const budgetData = [
-  { month: 'T1', allocated: 500, spent: 420 },
-  { month: 'T2', allocated: 500, spent: 480 },
-  { month: 'T3', allocated: 500, spent: 450 },
-  { month: 'T4', allocated: 500, spent: 510 },
-  { month: 'T5', allocated: 500, spent: 480 },
-  { month: 'T6', allocated: 500, spent: 490 },
-];
-
-const departmentBudget = [
-  { name: 'Địa chính - Xây dựng', allocated: 1500, spent: 1200, status: 'normal' },
-  { name: 'An ninh - Quốc phòng', allocated: 2000, spent: 1950, status: 'warning' },
-  { name: 'Tư pháp - Hộ tịch', allocated: 1000, spent: 850, status: 'normal' },
-  { name: 'Lao động - An sinh', allocated: 800, spent: 750, status: 'normal' },
-  { name: 'Tài chính - Kế toán', allocated: 1200, spent: 1100, status: 'normal' },
-  { name: 'Y tế - Giáo dục', allocated: 900, spent: 920, status: 'over' },
-];
+import { getBudgetMonitoringSnapshot } from '@/lib/frontend-dss';
 
 export default function BudgetPage() {
-  const totalAllocated = 7400;
-  const totalSpent = 6770;
-  const totalRemaining = totalAllocated - totalSpent;
-  const percentageUsed = Math.round((totalSpent / totalAllocated) * 100);
-  const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const {
+    budgetData,
+    departmentBudget,
+    totalAllocated,
+    totalSpent,
+    totalRemaining,
+    percentageUsed,
+    overBudgetCount,
+    warningCount,
+  } = useMemo(() => getBudgetMonitoringSnapshot(), []);
   const [showAlert, setShowAlert] = useState(true);
+
+  const topRiskDepartment = useMemo(
+    () => [...departmentBudget].sort((a, b) => (b.spent / b.allocated) - (a.spent / a.allocated))[0],
+    [departmentBudget],
+  );
+
+  const topRiskPercent = topRiskDepartment
+    ? Math.round((topRiskDepartment.spent / topRiskDepartment.allocated) * 100)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -71,7 +64,10 @@ export default function BudgetPage() {
         <Alert className="bg-status-danger/10 border-status-danger/30">
           <AlertCircle className="h-4 w-4 text-status-danger" />
           <AlertDescription className="text-status-danger">
-            <strong>Cảnh báo:</strong> Bộ phận "Y tế - Giáo dục" đã vượt 2% ngân sách được cấp. Cần kiểm tra và điều chỉnh.
+            <strong>Cảnh báo:</strong> Bộ phận "{topRiskDepartment?.name}" đã sử dụng {topRiskPercent}% ngân sách.
+            {topRiskPercent >= 100
+              ? ' Mức chi đã vượt dự toán, cần điều chỉnh ngay.'
+              : ' Đang sát ngưỡng rủi ro, cần theo dõi sát và tối ưu chi.'}
             <button
               onClick={() => setShowAlert(false)}
               className="ml-2 underline hover:no-underline"
@@ -114,9 +110,9 @@ export default function BudgetPage() {
 
         <Card className="bg-card border-border p-6">
           <p className="text-sm text-muted-foreground">Vượt ngân sách</p>
-          <p className="text-3xl font-bold text-status-danger mt-2">1</p>
+          <p className="text-3xl font-bold text-status-danger mt-2">{overBudgetCount + warningCount}</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Bộ phận cần kiểm soát
+            Bộ phận cần kiểm soát sát
           </p>
         </Card>
       </div>

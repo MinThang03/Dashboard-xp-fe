@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ import {
   Trash2,
   UserPlus,
 } from 'lucide-react';
+import { hoKhauApi } from '@/lib/api';
 
 interface HoKhau {
   id: string;
@@ -51,29 +52,6 @@ interface ThanhVienHoKhau {
   soDienThoai: string;
 }
 
-const mockData: HoKhau[] = [
-  {
-    id: 'HK001',
-    soHoKhau: 'HK-2024-001',
-    chuHo: 'Nguyễn Văn A',
-    diaChi: 'Số 10, Đường ABC, Phường 1',
-    soThanhVien: 4,
-    loai: 'thuong-tru',
-    ngayDangKy: '2024-01-10',
-    trangThai: 'active',
-  },
-  {
-    id: 'HK002',
-    soHoKhau: 'TT-2024-015',
-    chuHo: 'Trần Thị B',
-    diaChi: 'Số 25, Đường XYZ, Phường 2',
-    soThanhVien: 2,
-    loai: 'tam-tru',
-    ngayDangKy: '2024-01-15',
-    trangThai: 'active',
-  },
-];
-
 const loaiLabels = {
   'thuong-tru': { label: 'Thường trú', color: 'bg-green-500/10 text-green-700' },
   'tam-tru': { label: 'Tạm trú', color: 'bg-blue-500/10 text-blue-700' },
@@ -81,6 +59,7 @@ const loaiLabels = {
 };
 
 export default function HoKhauPage() {
+  const [hoKhauList, setHoKhauList] = useState<HoKhau[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -98,14 +77,51 @@ export default function HoKhauPage() {
     soDienThoai: '',
   });
 
-  const stats = {
-    total: 245,
-    thuongTru: 198,
-    tamTru: 35,
-    tamVang: 12,
+  const mapLoaiToUi = (value: string): HoKhau['loai'] => {
+    if (value === 'Tạm trú') return 'tam-tru';
+    if (value === 'Tạm vắng') return 'tam-vang';
+    return 'thuong-tru';
   };
 
-  const filteredData = mockData.filter((item) =>
+  const mapLoaiToDb = (value: HoKhau['loai']): string => {
+    if (value === 'tam-tru') return 'Tạm trú';
+    if (value === 'tam-vang') return 'Tạm vắng';
+    return 'Thường trú';
+  };
+
+  const loadHoKhau = async () => {
+    const result = await hoKhauApi.getList({ page: 1, limit: 500 });
+    if (result.success && Array.isArray(result.data)) {
+      const mapped = result.data.map((item: any) => ({
+        id: item.MaHoKhau,
+        soHoKhau: item.SoHoKhau,
+        chuHo: item.ChuHo,
+        cccd: item.CCCDChuHo || '',
+        ngaySinh: item.NgaySinhChuHo || '',
+        gioiTinh: item.GioiTinhChuHo || 'Nam',
+        soDienThoai: item.SoDienThoaiChuHo || '',
+        diaChi: item.DiaChiThuongTru,
+        soThanhVien: Number(item.SoThanhVien || 0),
+        loai: mapLoaiToUi(item.LoaiHoKhau),
+        ngayDangKy: item.NgayDangKy,
+        trangThai: item.TrangThai === 'Hoạt động' ? 'active' : item.TrangThai === 'Tạm dừng' ? 'pending' : 'inactive',
+      } as HoKhau));
+      setHoKhauList(mapped);
+    }
+  };
+
+  useEffect(() => {
+    loadHoKhau();
+  }, []);
+
+  const stats = {
+    total: hoKhauList.length,
+    thuongTru: hoKhauList.filter((item) => item.loai === 'thuong-tru').length,
+    tamTru: hoKhauList.filter((item) => item.loai === 'tam-tru').length,
+    tamVang: hoKhauList.filter((item) => item.loai === 'tam-vang').length,
+  };
+
+  const filteredData = hoKhauList.filter((item) =>
     item.soHoKhau.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.chuHo.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.diaChi.toLowerCase().includes(searchQuery.toLowerCase())
@@ -116,15 +132,29 @@ export default function HoKhauPage() {
     setIsViewOpen(true);
   };
 
-  const handleEdit = (item: HoKhau) => {
+  const handleEdit = async (item: HoKhau) => {
     setSelectedItem(item);
     setFormData({ ...item });
-    // TODO: Load thành viên từ API
-    setThanhVienList([]);
+    const members = await hoKhauApi.getMembers(item.id);
+    if (members.success && Array.isArray(members.data)) {
+      const mappedMembers = members.data.map((tv: any) => ({
+        id: tv.MaThanhVien,
+        hoTen: tv.HoTen,
+        cccd: tv.CCCD || '',
+        ngaySinh: tv.NgaySinh || '',
+        gioiTinh: tv.GioiTinh || 'Nam',
+        quanHe: tv.QuanHeChuHo || '',
+        soDienThoai: tv.SoDienThoai || '',
+      }));
+      setThanhVienList(mappedMembers);
+    } else {
+      setThanhVienList([]);
+    }
     setIsEditOpen(true);
   };
 
   const handleAdd = () => {
+    setSelectedItem(null);
     setFormData({
       soHoKhau: '',
       chuHo: '',
@@ -142,10 +172,84 @@ export default function HoKhauPage() {
     setIsAddOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData, 'Thành viên:', thanhVienList);
-    setIsEditOpen(false);
-    setIsAddOpen(false);
+  const handleSave = async () => {
+    try {
+      if (!String(formData.soHoKhau || '').trim()) {
+        alert('Vui lòng nhập số hộ khẩu');
+        return;
+      }
+
+      if (!String(formData.chuHo || '').trim()) {
+        alert('Vui lòng nhập tên chủ hộ');
+        return;
+      }
+
+      if (!String(formData.diaChi || '').trim()) {
+        alert('Vui lòng nhập địa chỉ thường trú');
+        return;
+      }
+
+      const generatedMaHoKhau = `HK${Date.now().toString().slice(-10)}`;
+      const maHoKhau = formData.id || formData.MaHoKhau || generatedMaHoKhau;
+      const payload = {
+        MaHoKhau: maHoKhau,
+        SoHoKhau: formData.soHoKhau,
+        ChuHo: formData.chuHo,
+        CCCDChuHo: formData.cccd || null,
+        NgaySinhChuHo: formData.ngaySinh || null,
+        GioiTinhChuHo: formData.gioiTinh || null,
+        SoDienThoaiChuHo: formData.soDienThoai || null,
+        DiaChiThuongTru: formData.diaChi,
+        SoThanhVien: thanhVienList.length || Number(formData.soThanhVien || 1),
+        LoaiHoKhau: mapLoaiToDb(formData.loai || 'thuong-tru'),
+        NgayDangKy: formData.ngayDangKy,
+        GhiChu: formData.ghiChu || '',
+      };
+
+      const result = (formData.id || formData.MaHoKhau)
+        ? await hoKhauApi.update(maHoKhau, payload)
+        : await hoKhauApi.create(payload);
+
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể lưu hộ khẩu');
+      }
+
+      for (const tv of thanhVienList) {
+        if (!tv.id) {
+          const addMemberRes = await hoKhauApi.addMember(maHoKhau, {
+            HoTen: tv.hoTen,
+            CCCD: tv.cccd,
+            NgaySinh: tv.ngaySinh || null,
+            GioiTinh: tv.gioiTinh,
+            QuanHeChuHo: tv.quanHe,
+            SoDienThoai: tv.soDienThoai || null,
+          });
+          if (!addMemberRes?.success) {
+            throw new Error(addMemberRes?.message || 'Không thể thêm thành viên hộ khẩu');
+          }
+        }
+      }
+
+      await loadHoKhau();
+      setIsEditOpen(false);
+      setIsAddOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Lưu hộ khẩu thất bại');
+    }
+  };
+
+  const handleDeleteHoKhau = async (item: HoKhau) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa hộ khẩu ${item.soHoKhau}?`)) {
+      try {
+        const result = await hoKhauApi.delete(item.id);
+        if (!result?.success) {
+          throw new Error(result?.message || 'Không thể xóa hộ khẩu');
+        }
+        await loadHoKhau();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Xóa hộ khẩu thất bại');
+      }
+    }
   };
 
   const handleAddMember = () => {
@@ -166,17 +270,24 @@ export default function HoKhauPage() {
       return;
     }
     
-    const newMember = {
+    const newMember: ThanhVienHoKhau = {
       ...memberFormData,
-      id: Date.now(),
     };
     
     setThanhVienList([...thanhVienList, newMember]);
     setIsAddMemberOpen(false);
   };
 
-  const handleDeleteMember = (index: number) => {
+  const handleDeleteMember = async (index: number) => {
     if (confirm('Bạn có chắc chắn muốn xóa thành viên này?')) {
+      const selected = thanhVienList[index];
+      if (selected?.id) {
+        const result = await hoKhauApi.deleteMember(selected.id);
+        if (!result?.success) {
+          alert(result?.message || 'Không thể xóa thành viên hộ khẩu');
+          return;
+        }
+      }
       setThanhVienList(thanhVienList.filter((_, i) => i !== index));
     }
   };
@@ -326,6 +437,14 @@ export default function HoKhauPage() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteHoKhau(item)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -393,6 +512,14 @@ export default function HoKhauPage() {
             <div className="bg-slate-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Thông tin chủ hộ</h3>
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="edit_soHoKhau">Số hộ khẩu *</Label>
+                  <Input
+                    id="edit_soHoKhau"
+                    value={formData.soHoKhau || ''}
+                    onChange={(e) => setFormData({ ...formData, soHoKhau: e.target.value })}
+                  />
+                </div>
                 <div>
                   <Label htmlFor="edit_chuHo">Tên chủ hộ *</Label>
                   <Input
@@ -555,6 +682,15 @@ export default function HoKhauPage() {
             <div className="bg-slate-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-4">Thông tin chủ hộ</h3>
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="add_soHoKhau">Số hộ khẩu *</Label>
+                  <Input
+                    id="add_soHoKhau"
+                    value={formData.soHoKhau || ''}
+                    onChange={(e) => setFormData({ ...formData, soHoKhau: e.target.value })}
+                    placeholder="Nhập số hộ khẩu"
+                  />
+                </div>
                 <div>
                   <Label htmlFor="add_chuHo">Tên chủ hộ *</Label>
                   <Input

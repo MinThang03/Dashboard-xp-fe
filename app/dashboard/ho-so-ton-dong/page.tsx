@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,15 @@ import {
   Calendar,
 } from 'lucide-react';
 import { mockHoSoTonDong, mockThongKeHoSoTonDong } from '@/lib/mock-data';
+import {
+  ALERT_PERIOD_LABELS,
+  ALERT_RISK_LABELS,
+  type AlertPeriod,
+  type AlertRiskLevel,
+  filterSignalsByCommonFilters,
+  getBacklogAlerts,
+  getBacklogSnapshot,
+} from '@/lib/frontend-dss';
 
 export default function HoSoTonDongPage() {
   const router = useRouter();
@@ -37,6 +48,14 @@ export default function HoSoTonDongPage() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
+  const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
+
+  const backlogSnapshot = getBacklogSnapshot();
+  const backlogSignals = filterSignalsByCommonFilters(getBacklogAlerts(), {
+    period: filterPeriod,
+    risk: filterRisk,
+  });
 
   // Lọc dữ liệu
   const filteredData = mockHoSoTonDong.filter(hs =>
@@ -135,7 +154,7 @@ export default function HoSoTonDongPage() {
               <AlertTriangle className="w-6 h-6 text-red-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold">{mockThongKeHoSoTonDong.TongHoSoTonDong}</p>
+          <p className="text-3xl font-bold">{backlogSnapshot.tongHoSoTonDong}</p>
           <p className="text-sm text-muted-foreground">Hồ sơ tồn đọng</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">
@@ -144,7 +163,7 @@ export default function HoSoTonDongPage() {
               <XCircle className="w-6 h-6 text-red-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-red-600">{mockThongKeHoSoTonDong.QuaHan}</p>
+          <p className="text-3xl font-bold text-red-600">{backlogSnapshot.quaHan}</p>
           <p className="text-sm text-muted-foreground">Quá hạn xử lý</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">
@@ -153,7 +172,7 @@ export default function HoSoTonDongPage() {
               <Clock className="w-6 h-6 text-amber-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-amber-600">{mockThongKeHoSoTonDong.TrongHan}</p>
+          <p className="text-3xl font-bold text-amber-600">{backlogSnapshot.trongHan}</p>
           <p className="text-sm text-muted-foreground">Trong hạn xử lý</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">
@@ -162,17 +181,65 @@ export default function HoSoTonDongPage() {
               <TrendingDown className="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-green-600">-15%</p>
+          <p className="text-3xl font-bold text-green-600">{backlogSnapshot.trendDelta}%</p>
           <p className="text-sm text-muted-foreground">Giảm so tháng trước</p>
         </Card>
       </div>
+
+      <Card className="p-4 border-0 shadow-lg">
+        <div className="flex flex-col md:flex-row gap-3">
+          <Select value={filterPeriod} onValueChange={(v) => setFilterPeriod(v as AlertPeriod)}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Thời gian" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(ALERT_PERIOD_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterRisk} onValueChange={(v) => setFilterRisk(v as AlertRiskLevel | 'all')}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Mức độ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả mức độ</SelectItem>
+              {Object.entries(ALERT_RISK_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      {backlogSignals.map((signal) => (
+        <Alert
+          key={signal.id}
+          className={
+            signal.level === 'critical'
+              ? 'bg-red-50 border-red-200'
+              : signal.level === 'warning'
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-blue-50 border-blue-200'
+          }
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{signal.title}:</strong> {signal.description}
+          </AlertDescription>
+        </Alert>
+      ))}
 
       {/* Thống kê theo lĩnh vực và cán bộ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6 border-0 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Theo lĩnh vực</h3>
           <div className="space-y-3">
-            {mockThongKeHoSoTonDong.TheoLinhVuc.map((item, index) => (
+            {backlogSnapshot.theoLinhVuc.map((item, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
                   <p className="font-medium">{item.LinhVuc}</p>
@@ -192,7 +259,7 @@ export default function HoSoTonDongPage() {
         <Card className="p-6 border-0 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Theo cán bộ xử lý</h3>
           <div className="space-y-3">
-            {mockThongKeHoSoTonDong.TheoCanBo.map((item, index) => (
+            {backlogSnapshot.theoCanBo.map((item, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">

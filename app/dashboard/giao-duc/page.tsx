@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ import {
   Target,
   Award,
 } from 'lucide-react';
+import { coSoGiaoDucApi, lopHocApi } from '@/lib/api';
 
 // Dashboard data
 const dashboardData = {
@@ -71,12 +72,87 @@ const dashboardData = {
 export default function GiaoDucPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [dashboardDataState, setDashboardDataState] = useState<any>(null);
 
-  const filteredSchools = dashboardData.schools.filter(school => {
+  const data = dashboardDataState || dashboardData;
+
+  const filteredSchools = data.schools.filter((school: any) => {
     const matchSearch = school.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchType = typeFilter === 'all' || school.type === typeFilter;
     return matchSearch && matchType;
   });
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      const [coSoRes, lopRes] = await Promise.all([
+        coSoGiaoDucApi.getList({ page: 1, limit: 500 }),
+        lopHocApi.getList({ page: 1, limit: 500 }),
+      ]);
+
+      if (!coSoRes.success || !Array.isArray(coSoRes.data)) {
+        return;
+      }
+
+      const coSo = coSoRes.data;
+      const lopHoc = Array.isArray(lopRes.data) ? lopRes.data : [];
+
+      const schools = coSo.map((item: any) => ({
+        name: item.TenTruong || item.TenCoSo || 'Chưa đặt tên',
+        type: item.LoaiTruong || item.LoaiHinh || 'Khác',
+        students: Number(item.SoHocSinh || 0),
+        teachers: Number(item.SoGiaoVien || 0),
+        attendance: 0,
+        standard: Boolean(item.DatChuan ?? item.TrangThai ?? false),
+      }));
+
+      const attendanceByType = new Map<string, { total: number; count: number }>();
+      for (const lop of lopHoc) {
+        const key = lop.LoaiTruong || 'Khác';
+        const current = attendanceByType.get(key) || { total: 0, count: 0 };
+        current.total += Number(lop.TyLeDiHoc || 0);
+        current.count += 1;
+        attendanceByType.set(key, current);
+      }
+
+      const totalStudents = schools.reduce((sum: number, s: any) => sum + s.students, 0);
+      const totalTeachers = schools.reduce((sum: number, s: any) => sum + s.teachers, 0);
+      const totalClassrooms = coSo.reduce((sum: number, s: any) => sum + Number(s.SoPhongHoc || 0), 0);
+      const avgAttendanceRaw = lopHoc.length
+        ? lopHoc.reduce((sum: number, lop: any) => sum + Number(lop.TyLeDiHoc || 0), 0) / lopHoc.length
+        : 0;
+
+      const byType = Array.from(new Set(schools.map((s: any) => s.type))).map((type: string) => {
+        const items = schools.filter((s: any) => s.type === type);
+        const attendance = attendanceByType.get(type);
+        return {
+          type,
+          schools: items.length,
+          students: items.reduce((sum: number, s: any) => sum + s.students, 0),
+          teachers: items.reduce((sum: number, s: any) => sum + s.teachers, 0),
+          attendance: attendance && attendance.count > 0 ? Number((attendance.total / attendance.count).toFixed(1)) : 0,
+          icon: type === 'Mầm non' ? Baby : type === 'Tiểu học' ? BookOpen : GraduationCap,
+        };
+      });
+
+      setDashboardDataState({
+        ...dashboardData,
+        overview: {
+          totalSchools: schools.length,
+          totalClassrooms,
+          totalStudents,
+          totalTeachers,
+          avgAttendance: Number(avgAttendanceRaw.toFixed(1)),
+          nationalStandardRate: schools.length > 0
+            ? Math.round((schools.filter((s: any) => s.standard).length / schools.length) * 100)
+            : 0,
+        },
+        schools,
+        byType,
+      });
+    };
+
+    loadDashboard();
+  }, []);
 
   const getSchoolIcon = (type: string) => {
     switch (type) {
@@ -119,7 +195,7 @@ export default function GiaoDucPage() {
               <School className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{dashboardData.overview.totalSchools}</p>
+              <p className="text-2xl font-bold">{data.overview.totalSchools}</p>
               <p className="text-xs text-muted-foreground">Trường học</p>
             </div>
           </div>
@@ -131,7 +207,7 @@ export default function GiaoDucPage() {
               <Building2 className="w-5 h-5 text-cyan-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{dashboardData.overview.totalClassrooms}</p>
+              <p className="text-2xl font-bold">{data.overview.totalClassrooms}</p>
               <p className="text-xs text-muted-foreground">Phòng học</p>
             </div>
           </div>
@@ -143,7 +219,7 @@ export default function GiaoDucPage() {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{dashboardData.overview.totalStudents.toLocaleString()}</p>
+              <p className="text-2xl font-bold">{data.overview.totalStudents.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">Học sinh</p>
             </div>
           </div>
@@ -155,7 +231,7 @@ export default function GiaoDucPage() {
               <GraduationCap className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{dashboardData.overview.totalTeachers}</p>
+              <p className="text-2xl font-bold">{data.overview.totalTeachers}</p>
               <p className="text-xs text-muted-foreground">Giáo viên</p>
             </div>
           </div>
@@ -167,7 +243,7 @@ export default function GiaoDucPage() {
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-600">{dashboardData.overview.avgAttendance}%</p>
+              <p className="text-2xl font-bold text-green-600">{data.overview.avgAttendance}%</p>
               <p className="text-xs text-muted-foreground">Tỷ lệ đi học</p>
             </div>
           </div>
@@ -179,7 +255,7 @@ export default function GiaoDucPage() {
               <Award className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-600">{dashboardData.overview.nationalStandardRate}%</p>
+              <p className="text-2xl font-bold text-amber-600">{data.overview.nationalStandardRate}%</p>
               <p className="text-xs text-muted-foreground">Đạt chuẩn QG</p>
             </div>
           </div>
@@ -195,7 +271,7 @@ export default function GiaoDucPage() {
             Thống kê theo cấp học
           </h3>
           <div className="space-y-4">
-            {dashboardData.byType.map((item, index) => {
+            {data.byType.map((item: any, index: number) => {
               const Icon = item.icon;
               return (
                 <div key={index} className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
@@ -235,7 +311,7 @@ export default function GiaoDucPage() {
             Chỉ số KPI
           </h3>
           <div className="space-y-4">
-            {dashboardData.kpi.map((kpi, index) => {
+            {data.kpi.map((kpi: any, index: number) => {
               const percentage = kpi.unit === '%' ? kpi.value : (kpi.value / kpi.target) * 100;
               const isGood = kpi.value >= kpi.target || (kpi.name === 'Tỷ lệ HS/GV' && kpi.value <= kpi.target);
               return (
@@ -338,7 +414,7 @@ export default function GiaoDucPage() {
             Hoạt động gần đây
           </h3>
           <div className="space-y-4">
-            {dashboardData.recentActivity.map((activity, index) => (
+            {data.recentActivity.map((activity: any, index: number) => (
               <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
                 <div className={`p-2 rounded-full ${
                   activity.status === 'success' ? 'bg-green-500/10' :
@@ -420,11 +496,11 @@ export default function GiaoDucPage() {
             <h4 className="font-semibold">Phân bổ học sinh</h4>
           </div>
           <div className="space-y-2">
-            {dashboardData.byType.map((item, index) => (
+            {data.byType.map((item: any, index: number) => (
               <div key={index} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{item.type}</span>
                 <span className="font-semibold">
-                  {((item.students / dashboardData.overview.totalStudents) * 100).toFixed(1)}%
+                  {data.overview.totalStudents > 0 ? ((item.students / data.overview.totalStudents) * 100).toFixed(1) : '0.0'}%
                 </span>
               </div>
             ))}

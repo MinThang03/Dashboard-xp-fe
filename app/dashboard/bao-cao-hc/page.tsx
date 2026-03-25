@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,16 +23,20 @@ import {
   Plus,
   Download,
   Eye,
+  Edit,
+  Trash2,
   Filter,
   Home,
   ArrowLeft,
   CheckCircle2,
   Clock,
 } from 'lucide-react';
-import { mockBaoCaoHanhChinh } from '@/lib/mock-data';
+import { baoCaoApi } from '@/lib/api';
 
 export default function BaoCaoHCPage() {
   const router = useRouter();
+  const [reports, setReports] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -44,21 +48,39 @@ export default function BaoCaoHCPage() {
     KyBaoCao: '',
     NgayLap: new Date().toISOString().split('T')[0],
     NguoiLap: '',
+    GhiChu: '',
+    SoLieuThongKeText: '{"TongHoSo":0}',
     SoLieuThongKe: {},
   });
 
+  const loadData = async () => {
+    const result = await baoCaoApi.getList({ page: 1, limit: 500, search: searchQuery || undefined });
+    if (result.success && Array.isArray(result.data)) {
+      setReports(result.data);
+      setLoadError('');
+      return;
+    }
+
+    setReports([]);
+    setLoadError(result?.message || 'Không thể tải danh sách báo cáo hành chính');
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Tính toán thống kê từ dữ liệu thực
   const stats = {
-    baoCaoThang: mockBaoCaoHanhChinh.filter(bc => bc.LoaiBaoCao === 'Báo cáo tháng' || bc.LoaiBaoCao === 'Báo cáo tuần' || bc.LoaiBaoCao === 'Báo cáo định kỳ').length,
-    baoCaoQuy: mockBaoCaoHanhChinh.filter(bc => bc.LoaiBaoCao === 'Báo cáo quý').length,
-    baoCaoNam: mockBaoCaoHanhChinh.filter(bc => bc.LoaiBaoCao === 'Báo cáo năm').length,
-    daDuyet: mockBaoCaoHanhChinh.filter(bc => bc.TrangThai === 'Đã duyệt').length,
+    baoCaoThang: reports.filter(bc => bc.LoaiBaoCao === 'Báo cáo tháng' || bc.LoaiBaoCao === 'Báo cáo tuần' || bc.LoaiBaoCao === 'Báo cáo định kỳ').length,
+    baoCaoQuy: reports.filter(bc => bc.LoaiBaoCao === 'Báo cáo quý').length,
+    baoCaoNam: reports.filter(bc => bc.LoaiBaoCao === 'Báo cáo năm').length,
+    daDuyet: reports.filter(bc => bc.TrangThai === 'Đã duyệt' || bc.TrangThai === 'Đã hoàn thành').length,
   };
 
   // Lọc dữ liệu theo tìm kiếm
-  const filteredData = mockBaoCaoHanhChinh.filter(bc =>
-    bc.TenBaoCao.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    bc.KyBaoCao.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredData = reports.filter(bc =>
+    (bc.TieuDe || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bc.ThangNam || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (report: any) => {
@@ -71,9 +93,9 @@ export default function BaoCaoHCPage() {
       ['Mã BC', 'Tên báo cáo', 'Loại BC', 'Kỳ BC', 'Ngày lập', 'Trạng thái'],
       ...filteredData.map(bc => [
         bc.MaBaoCao,
-        bc.TenBaoCao,
+        bc.TieuDe,
         bc.LoaiBaoCao,
-        bc.KyBaoCao,
+        bc.ThangNam,
         bc.NgayLap,
         bc.TrangThai
       ])
@@ -87,21 +109,113 @@ export default function BaoCaoHCPage() {
   };
 
   const handleAdd = () => {
-    setIsAddOpen(true);
-  };
-
-  const handleSave = () => {
-    console.log('Saving new report:', formData);
-    // TODO: Gửi dữ liệu lên server
-    setIsAddOpen(false);
+    setSelectedReport(null);
     setFormData({
       TenBaoCao: '',
       LoaiBaoCao: 'Báo cáo tháng',
       KyBaoCao: '',
       NgayLap: new Date().toISOString().split('T')[0],
       NguoiLap: '',
+      GhiChu: '',
+      SoLieuThongKeText: '{"TongHoSo":0}',
       SoLieuThongKe: {},
     });
+    setIsAddOpen(true);
+  };
+
+  const handleEdit = (report: any) => {
+    setSelectedReport(report);
+    setFormData({
+      TenBaoCao: report.TieuDe || '',
+      LoaiBaoCao: report.LoaiBaoCao || 'Báo cáo tháng',
+      KyBaoCao: report.ThangNam || '',
+      NgayLap: report.NgayLap ? String(report.NgayLap).split('T')[0] : new Date().toISOString().split('T')[0],
+      NguoiLap: report.NguoiLapText ? String(report.NguoiLapText) : '',
+      GhiChu: report.GhiChu || '',
+      SoLieuThongKeText: report.SoLieuThongKe ? JSON.stringify(report.SoLieuThongKe, null, 2) : '{"TongHoSo":0}',
+      SoLieuThongKe: report.SoLieuThongKe || {},
+    });
+    setIsAddOpen(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      const tieuDe = String(formData.TenBaoCao || '').trim();
+      const thangNam = String(formData.KyBaoCao || '').trim();
+      const nguoiLap = String(formData.NguoiLap || '').trim();
+      const ghiChu = String(formData.GhiChu || '').trim();
+
+      if (!tieuDe) {
+        alert('Vui lòng nhập tên báo cáo');
+        return;
+      }
+
+      if (thangNam.length > 7) {
+        alert('Kỳ báo cáo tối đa 7 ký tự. Ví dụ: 2026-03 hoặc Q1/2026');
+        return;
+      }
+
+      let parsedStats: any = null;
+      if (String(formData.SoLieuThongKeText || '').trim()) {
+        try {
+          parsedStats = JSON.parse(formData.SoLieuThongKeText);
+        } catch {
+          alert('Số liệu thống kê phải là JSON hợp lệ');
+          return;
+        }
+      }
+
+      const payload = {
+        TieuDe: tieuDe,
+        LoaiBaoCao: formData.LoaiBaoCao,
+        ThangNam: thangNam || null,
+        NgayLap: formData.NgayLap || null,
+        TrangThai: 'Chờ duyệt',
+        NoiDung: null,
+        NguoiLapText: nguoiLap || null,
+        SoLieuThongKe: parsedStats,
+        GhiChu: ghiChu || null,
+      };
+
+      const result = selectedReport?.MaBaoCao
+        ? await baoCaoApi.update(selectedReport.MaBaoCao, payload)
+        : await baoCaoApi.create(payload);
+
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể lưu báo cáo hành chính');
+      }
+
+      await loadData();
+      setIsAddOpen(false);
+      setSelectedReport(null);
+      setFormData({
+        TenBaoCao: '',
+        LoaiBaoCao: 'Báo cáo tháng',
+        KyBaoCao: '',
+        NgayLap: new Date().toISOString().split('T')[0],
+        NguoiLap: '',
+        GhiChu: '',
+        SoLieuThongKeText: '{"TongHoSo":0}',
+        SoLieuThongKe: {},
+      });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Lưu báo cáo hành chính thất bại');
+    }
+  };
+
+  const handleDelete = async (report: any) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa báo cáo ${report.TieuDe || report.TenBaoCao}?`)) {
+      return;
+    }
+    try {
+      const result = await baoCaoApi.delete(report.MaBaoCao);
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể xóa báo cáo hành chính');
+      }
+      await loadData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Xóa báo cáo hành chính thất bại');
+    }
   };
 
   const handleFilter = () => {
@@ -109,11 +223,11 @@ export default function BaoCaoHCPage() {
   };
 
   const handleDownload = (item: any) => {
-    const content = `Báo cáo: ${item.TenBaoCao}\nMã: ${item.MaBaoCao}\nKỳ: ${item.KyBaoCao}\nNgày lập: ${item.NgayLap}`;
+    const content = `Báo cáo: ${item.TieuDe}\nMã: ${item.MaBaoCao}\nKỳ: ${item.ThangNam}\nNgày lập: ${item.NgayLap}`;
     const blob = new Blob([content], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `${item.MaBaoCao}-${item.TenBaoCao}.txt`;
+    link.download = `${item.MaBaoCao}-${item.TieuDe}.txt`;
     link.click();
   };
 
@@ -145,6 +259,12 @@ export default function BaoCaoHCPage() {
           Quay lại
         </Button>
       </div>
+
+      {loadError && (
+        <Card className="p-4 border border-red-200 bg-red-50 text-red-700">
+          {loadError}
+        </Card>
+      )}
 
       {/* Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-secondary to-primary p-4 sm:p-5 xl:p-6 text-white">
@@ -263,19 +383,25 @@ export default function BaoCaoHCPage() {
                     <span className="font-semibold text-primary">BC-{String(bc.MaBaoCao).padStart(3, '0')}</span>
                   </td>
                   <td className="p-4 max-w-xs">
-                    <p className="font-medium truncate">{bc.TenBaoCao}</p>
-                    <p className="text-xs text-muted-foreground">{bc.NguoiLap}</p>
+                    <p className="font-medium truncate">{bc.TieuDe}</p>
+                    <p className="text-xs text-muted-foreground">{bc.NguoiLapText || 'Không có người lập'}</p>
                   </td>
                   <td className="p-4">
                     <Badge variant="outline">{bc.LoaiBaoCao}</Badge>
                   </td>
-                  <td className="p-4">{bc.KyBaoCao}</td>
+                  <td className="p-4">{bc.ThangNam || '-'}</td>
                   <td className="p-4 text-sm text-muted-foreground">{bc.NgayLap}</td>
                   <td className="p-4">{getStatusBadge(bc.TrangThai)}</td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleView(bc)}>
                         <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(bc)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700" onClick={() => handleDelete(bc)}>
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleDownload(bc)}>
                         <Download className="w-4 h-4" />
@@ -295,7 +421,7 @@ export default function BaoCaoHCPage() {
           <DialogHeader>
             <DialogTitle>Chi tiết báo cáo</DialogTitle>
             <DialogDescription>
-              {selectedReport?.TenBaoCao}
+              {selectedReport?.TieuDe}
             </DialogDescription>
           </DialogHeader>
           {selectedReport && (
@@ -307,7 +433,7 @@ export default function BaoCaoHCPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Kỳ báo cáo</p>
-                  <p className="font-medium">{selectedReport.KyBaoCao}</p>
+                  <p className="font-medium">{selectedReport.ThangNam || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Ngày lập</p>
@@ -315,7 +441,7 @@ export default function BaoCaoHCPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Người lập</p>
-                  <p className="font-medium">{selectedReport.NguoiLap}</p>
+                  <p className="font-medium">{selectedReport.NguoiLapText || 'Không xác định'}</p>
                 </div>
               </div>
 
@@ -346,7 +472,7 @@ export default function BaoCaoHCPage() {
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="w-[95vw] max-w-sm sm:max-w-2xl md:max-w-3xl h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="mb-4">
-            <DialogTitle>Tạo báo cáo hành chính</DialogTitle>
+            <DialogTitle>{selectedReport ? 'Cập nhật báo cáo hành chính' : 'Tạo báo cáo hành chính'}</DialogTitle>
             <DialogDescription>
               Nhập thông tin chi tiết cho báo cáo mới
             </DialogDescription>
@@ -384,7 +510,7 @@ export default function BaoCaoHCPage() {
               <div>
                 <label className="text-sm font-medium">Kỳ báo cáo</label>
                 <Input
-                  placeholder="Ví dụ: Tháng 1/2026"
+                  placeholder="Ví dụ: 2026-03 hoặc Q1/2026"
                   value={formData.KyBaoCao}
                   onChange={(e) => setFormData({ ...formData, KyBaoCao: e.target.value })}
                   className="h-11 px-4 mt-1"
@@ -419,7 +545,19 @@ export default function BaoCaoHCPage() {
               <label className="text-sm font-medium">Ghi chú</label>
               <Textarea
                 placeholder="Nhập ghi chú thêm..."
+                value={formData.GhiChu}
+                onChange={(e) => setFormData({ ...formData, GhiChu: e.target.value })}
                 className="mt-1 min-h-20 resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Số liệu thống kê (JSON)</label>
+              <Textarea
+                placeholder='{"TongHoSo": 120, "TyLeDungHan": 96}'
+                value={formData.SoLieuThongKeText}
+                onChange={(e) => setFormData({ ...formData, SoLieuThongKeText: e.target.value })}
+                className="mt-1 min-h-24 font-mono text-xs resize-y"
               />
             </div>
           </div>
@@ -436,7 +574,7 @@ export default function BaoCaoHCPage() {
               onClick={handleSave}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Tạo báo cáo
+              {selectedReport ? 'Lưu thay đổi' : 'Tạo báo cáo'}
             </Button>
           </div>
         </DialogContent>

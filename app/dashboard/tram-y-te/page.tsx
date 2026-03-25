@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockTramYTe, mockNhanVienYTe, formatDate, formatDateTime } from '@/lib/mock-data';
+import { mockNhanVienYTe, formatDate, formatDateTime } from '@/lib/mock-data';
+import { tramYTeApi } from '@/lib/api';
 import {
   Stethoscope,
   Users,
@@ -46,6 +47,7 @@ export default function TramYTePage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [nhanVienList, setNhanVienList] = useState<any[]>([]);
+  const [tramList, setTramList] = useState<any[]>([]);
   const [isNhanVienDialogOpen, setIsNhanVienDialogOpen] = useState(false);
   const [editingNhanVienIndex, setEditingNhanVienIndex] = useState<number | null>(null);
   const [nhanVienForm, setNhanVienForm] = useState({
@@ -56,7 +58,7 @@ export default function TramYTePage() {
     TrangThaiLamViec: 'Đang làm việc',
   });
 
-  const filteredData = mockTramYTe.filter((item) => {
+  const filteredData = tramList.filter((item) => {
     const search = searchQuery.toLowerCase();
     return (
       item.TenTram.toLowerCase().includes(search) ||
@@ -64,6 +66,17 @@ export default function TramYTePage() {
       item.SoDienThoai.includes(search)
     );
   });
+
+  const loadData = async () => {
+    const response = await tramYTeApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setTramList(response.data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleView = (item: any) => {
     setSelectedItem(item);
@@ -140,17 +153,33 @@ export default function TramYTePage() {
     setIsNhanVienDialogOpen(false);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', { ...formData, NhanVien: nhanVienList, SoNhanVien: nhanVienList.length || formData.SoNhanVien });
-    // TODO: API call to save
+  const handleSave = async () => {
+    const payload = {
+      TenTram: formData.TenTram,
+      DiaChi: formData.DiaChi,
+      SoDienThoai: formData.SoDienThoai,
+      SoNhanVien: nhanVienList.length || Number(formData.SoNhanVien || 0),
+      SoLuotKhamThang: Number(formData.SoLuotKhamThang || 0),
+      TrangThai: formData.TrangThai === 1 || formData.TrangThai === true,
+      GhiChu: formData.GhiChu || null,
+      NgayTao: formData.NgayTao || new Date().toISOString(),
+    };
+
+    if (selectedItem?.MaTram) {
+      await tramYTeApi.update(selectedItem.MaTram, payload);
+    } else {
+      await tramYTeApi.create(payload);
+    }
+
+    await loadData();
     setIsEditOpen(false);
     setIsAddOpen(false);
   };
 
-  const handleDelete = (item: any) => {
+  const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa trạm y tế ${item.TenTram}?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      await tramYTeApi.delete(item.MaTram);
+      await loadData();
     }
   };
 
@@ -158,8 +187,8 @@ export default function TramYTePage() {
     return mockNhanVienYTe.filter((nv) => nv.MaTram === maTram);
   };
 
-  const totalNhanVien = mockTramYTe.reduce((sum, tram) => sum + tram.SoNhanVien, 0);
-  const totalLuotKham = mockTramYTe.reduce((sum, tram) => sum + tram.SoLuotKhamThang, 0);
+  const totalNhanVien = tramList.reduce((sum, tram) => sum + Number(tram.SoNhanVien || 0), 0);
+  const totalLuotKham = tramList.reduce((sum, tram) => sum + Number(tram.SoLuotKhamThang || 0), 0);
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
@@ -194,7 +223,7 @@ export default function TramYTePage() {
             </div>
             <Badge className="bg-red-500/10 text-red-700 border-0">Tổng</Badge>
           </div>
-          <p className="text-3xl font-bold">{mockTramYTe.length}</p>
+          <p className="text-3xl font-bold">{tramList.length}</p>
           <p className="text-sm text-muted-foreground">Trạm y tế</p>
         </Card>
 
@@ -227,7 +256,7 @@ export default function TramYTePage() {
             </div>
             <Badge className="bg-primary/10 text-primary border-0">Hoạt động</Badge>
           </div>
-          <p className="text-3xl font-bold">{mockTramYTe.filter(t => t.TrangThai === 1).length}</p>
+          <p className="text-3xl font-bold">{tramList.filter(t => t.TrangThai === 1 || t.TrangThai === true).length}</p>
           <p className="text-sm text-muted-foreground">Trạm hoạt động</p>
         </Card>
       </div>

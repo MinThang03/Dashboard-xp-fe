@@ -36,11 +36,21 @@ import {
   MapPin,
   Calendar,
 } from 'lucide-react';
-import { ALERTS, FIELD_STATISTICS, Alert } from '@/lib/leader-data';
+import { FIELD_STATISTICS, Alert } from '@/lib/leader-data';
+import {
+  ALERT_PERIOD_LABELS,
+  ALERT_RISK_LABELS,
+  type AlertPeriod,
+  type AlertRiskLevel,
+  filterOperationalAlerts,
+  getOperationalAlerts,
+} from '@/lib/frontend-dss';
 
 export function AlertsManagementPage() {
-  const [alerts, setAlerts] = useState(ALERTS);
+  const [alerts, setAlerts] = useState<Alert[]>(() => getOperationalAlerts());
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
+  const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterField, setFilterField] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -57,7 +67,12 @@ export function AlertsManagementPage() {
   };
 
   // Filter alerts
-  const filteredAlerts = alerts.filter((alert) => {
+  const commonFilteredAlerts = filterOperationalAlerts(alerts, {
+    period: filterPeriod,
+    risk: filterRisk,
+  });
+
+  const filteredAlerts = commonFilteredAlerts.filter((alert) => {
     const matchType = filterType === 'all' || alert.type === filterType;
     const matchField = filterField === 'all' || alert.fieldCode === filterField;
     const matchStatus = filterStatus === 'all' || alert.status === filterStatus;
@@ -144,7 +159,7 @@ export function AlertsManagementPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:flex-nowrap">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setAlerts(getOperationalAlerts())}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Làm mới
           </Button>
@@ -226,6 +241,33 @@ export function AlertsManagementPage() {
 
       {/* Filters */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+        <Select value={filterPeriod} onValueChange={(v) => setFilterPeriod(v as AlertPeriod)}>
+          <SelectTrigger className="w-full xl:w-[180px]">
+            <SelectValue placeholder="Thời gian" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(ALERT_PERIOD_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={filterRisk} onValueChange={(v) => setFilterRisk(v as AlertRiskLevel | 'all')}>
+          <SelectTrigger className="w-full xl:w-[180px]">
+            <SelectValue placeholder="Mức độ rủi ro" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả mức độ</SelectItem>
+            {Object.entries(ALERT_RISK_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-full xl:w-[180px]">
             <SelectValue placeholder="Loại cảnh báo" />
@@ -298,9 +340,9 @@ export function AlertsManagementPage() {
                             <div className="space-y-2 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Badge className={colors.badge}>
-                                  {alert.type === 'critical' && 'Nghiêm trọng'}
-                                  {alert.type === 'warning' && 'Cảnh báo'}
-                                  {alert.type === 'info' && 'Thông tin'}
+                                  {alert.type === 'critical' && ALERT_RISK_LABELS.critical}
+                                  {alert.type === 'warning' && ALERT_RISK_LABELS.warning}
+                                  {alert.type === 'info' && ALERT_RISK_LABELS.info}
                                 </Badge>
                                 {getStatusBadge(alert.status)}
                                 {getPriorityBadge(alert.priority)}
@@ -362,9 +404,9 @@ export function AlertsManagementPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Badge className={getAlertColor(selectedAlert.type).badge}>
-                    {selectedAlert.type === 'critical' && 'Nghiêm trọng'}
-                    {selectedAlert.type === 'warning' && 'Cảnh báo'}
-                    {selectedAlert.type === 'info' && 'Thông tin'}
+                    {selectedAlert.type === 'critical' && ALERT_RISK_LABELS.critical}
+                    {selectedAlert.type === 'warning' && ALERT_RISK_LABELS.warning}
+                    {selectedAlert.type === 'info' && ALERT_RISK_LABELS.info}
                   </Badge>
                   {getStatusBadge(selectedAlert.status)}
                   {getPriorityBadge(selectedAlert.priority)}

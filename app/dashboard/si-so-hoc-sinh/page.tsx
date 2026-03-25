@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
+import { lopHocApi } from '@/lib/api';
 
 // Mock data cho sĩ số học sinh
 const mockSiSoHS = [
@@ -203,6 +204,7 @@ export default function SiSoHocSinhPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<SiSoHS | null>(null);
+  const [records, setRecords] = useState<SiSoHS[]>(mockSiSoHS as SiSoHS[]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -213,7 +215,7 @@ export default function SiSoHocSinhPage() {
   });
 
   // Filter data
-  const filteredData = mockSiSoHS.filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchSearch = 
       item.MaLop.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenLop.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -228,13 +230,46 @@ export default function SiSoHocSinhPage() {
 
   // Stats
   const stats = {
-    totalStudents: mockSiSoHS.reduce((sum, t) => sum + t.SiSoHienTai, 0),
-    present: mockSiSoHS.reduce((sum, t) => sum + t.CoMatHomNay, 0),
-    absentWithPermission: mockSiSoHS.reduce((sum, t) => sum + t.VangCoPhep, 0),
-    absentWithoutPermission: mockSiSoHS.reduce((sum, t) => sum + t.VangKhongPhep, 0),
-    avgRate: (mockSiSoHS.reduce((sum, t) => sum + t.TyLeDiHoc, 0) / mockSiSoHS.length).toFixed(1),
-    totalClasses: mockSiSoHS.length,
+    totalStudents: records.reduce((sum, t) => sum + Number(t.SiSoHienTai || 0), 0),
+    present: records.reduce((sum, t) => sum + Number(t.CoMatHomNay || 0), 0),
+    absentWithPermission: records.reduce((sum, t) => sum + Number(t.VangCoPhep || 0), 0),
+    absentWithoutPermission: records.reduce((sum, t) => sum + Number(t.VangKhongPhep || 0), 0),
+    avgRate: records.length > 0 ? (records.reduce((sum, t) => sum + Number(t.TyLeDiHoc || 0), 0) / records.length).toFixed(1) : '0.0',
+    totalClasses: records.length,
   };
+
+  const mapRecord = (item: any): SiSoHS => ({
+    MaSiSo: item.MaLop,
+    MaLop: item.MaLopCode || item.MaLop?.toString() || '',
+    TenLop: item.TenLop || '',
+    TenTruong: item.TenTruong || '',
+    MaTruong: item.MaTruong || '',
+    LoaiTruong: item.LoaiTruong || '',
+    GiaoVienChuNhiem: item.GiaoVienChuNhiem || '',
+    NamHoc: item.NamHoc || '',
+    HocKy: Number(item.HocKy || 1),
+    SiSoDauNam: Number(item.SiSoDauNam || item.SoHocSinh || 0),
+    SiSoHienTai: Number(item.SiSoHienTai || item.SoHocSinh || 0),
+    Nam: Number(item.Nam || 0),
+    Nu: Number(item.Nu || 0),
+    CoMatHomNay: Number(item.CoMatHomNay || 0),
+    VangCoPhep: Number(item.VangCoPhep || 0),
+    VangKhongPhep: Number(item.VangKhongPhep || 0),
+    TyLeDiHoc: Number(item.TyLeDiHoc || 0),
+    NgayCapNhat: item.NgayCapNhat ? String(item.NgayCapNhat).slice(0, 10) : '',
+    GhiChu: item.GhiChu || '',
+  });
+
+  const loadData = async () => {
+    const response = await lopHocApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data.map(mapRecord));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Handlers
   const handleView = (record: SiSoHS) => {
@@ -253,8 +288,22 @@ export default function SiSoHocSinhPage() {
     setEditDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    if (!selectedRecord) return;
+
+    const total = selectedRecord.SiSoHienTai || 0;
+    const tyLeDiHoc = total > 0 ? (Number(formData.CoMatHomNay || 0) / total) * 100 : 0;
+
+    await lopHocApi.update(selectedRecord.MaSiSo, {
+      CoMatHomNay: Number(formData.CoMatHomNay || 0),
+      VangCoPhep: Number(formData.VangCoPhep || 0),
+      VangKhongPhep: Number(formData.VangKhongPhep || 0),
+      TyLeDiHoc: Number(tyLeDiHoc.toFixed(2)),
+      NgayCapNhat: new Date().toISOString().slice(0, 10),
+      GhiChu: formData.GhiChu,
+    });
+
+    await loadData();
     setEditDialogOpen(false);
   };
 
@@ -284,7 +333,9 @@ export default function SiSoHocSinhPage() {
     }
   };
 
-  const schools = [...new Set(mockSiSoHS.map(s => ({ id: s.MaTruong, name: s.TenTruong })))];
+  const schools = Array.from(
+    new Map(records.map((s) => [s.MaTruong, { id: s.MaTruong, name: s.TenTruong }])).values(),
+  );
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ import {
   Clock,
   Eye,
   Edit,
+  Trash2,
   X,
   Activity,
   Pill,
@@ -43,7 +44,8 @@ import {
   Heart,
   Thermometer,
 } from 'lucide-react';
-import { mockPhieuKham, formatDateTime } from '@/lib/mock-data';
+import { formatDateTime } from '@/lib/mock-data';
+import { phieuKhamApi } from '@/lib/api';
 
 // Extended mock data for PhieuKham
 const mockPhieuKhamFull = [
@@ -234,6 +236,7 @@ export default function KhamBenhPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedPhieu, setSelectedPhieu] = useState<PhieuKham | null>(null);
+  const [records, setRecords] = useState<PhieuKham[]>(mockPhieuKhamFull as PhieuKham[]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -263,7 +266,7 @@ export default function KhamBenhPage() {
   });
 
   // Filter data
-  const filteredData = mockPhieuKhamFull.filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchSearch = 
       item.MaPhieu.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenBenhNhan.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -279,12 +282,53 @@ export default function KhamBenhPage() {
   // Stats
   const today = new Date().toISOString().split('T')[0];
   const stats = {
-    today: mockPhieuKhamFull.filter(p => p.NgayKham.startsWith('2024-01-20')).length, // Demo date
-    waiting: mockPhieuKhamFull.filter(p => p.MaTrangThai === 'CHO_KHAM').length,
-    processing: mockPhieuKhamFull.filter(p => p.MaTrangThai === 'DANG_XU_LY').length,
-    completed: mockPhieuKhamFull.filter(p => p.MaTrangThai === 'HOAN_THANH').length,
-    transferred: mockPhieuKhamFull.filter(p => p.MaTrangThai === 'CHUYEN_VIEN').length,
+    today: records.filter(p => (p.NgayKham || '').startsWith(today)).length,
+    waiting: records.filter(p => p.MaTrangThai === 'CHO_KHAM').length,
+    processing: records.filter(p => p.MaTrangThai === 'DANG_XU_LY').length,
+    completed: records.filter(p => p.MaTrangThai === 'HOAN_THANH').length,
+    transferred: records.filter(p => p.MaTrangThai === 'CHUYEN_VIEN').length,
   };
+
+  const mapRecord = (item: any): PhieuKham => ({
+    MaPhieuKham: item.MaPhieuKham,
+    MaPhieu: item.MaPhieu || '',
+    MaBenhNhan: Number(item.MaBenhNhan || item.MaCongDan || 0),
+    TenBenhNhan: item.TenBenhNhan || item.HoTenBenhNhan || '',
+    NgaySinh: item.NgaySinh ? String(item.NgaySinh).slice(0, 10) : '',
+    GioiTinh: item.GioiTinh || 'Nam',
+    CCCD: item.CCCD || '',
+    SoDienThoai: item.SoDienThoai || '',
+    DiaChi: item.DiaChi || '',
+    MaBHYT: item.MaBHYT || '',
+    NgayKham: item.NgayKham ? String(item.NgayKham).replace('T', ' ').slice(0, 19) : '',
+    TrieuChung: item.TrieuChung || '',
+    NhietDo: Number(item.NhietDo || 0),
+    HuyetAp: item.HuyetAp || '',
+    NhipTim: Number(item.NhipTim || 0),
+    CanNang: Number(item.CanNang || 0),
+    ChieuCao: Number(item.ChieuCao || 0),
+    ChuanDoan: item.ChuanDoan || item.ChanDoan || '',
+    PhuongPhapDieuTri: item.PhuongPhapDieuTri || '',
+    DonThuoc: item.DonThuoc || '',
+    BacSiKham: item.BacSiKham || '',
+    MaTrangThai: item.MaTrangThai || 'DANG_XU_LY',
+    TrangThai: item.TrangThai || '',
+    NgayTaiKham: item.NgayTaiKham ? String(item.NgayTaiKham).slice(0, 10) : null,
+    PhiKham: Number(item.PhiKham || item.ChiPhi || 0),
+    BHYTChiTra: Number(item.BHYTChiTra || 0),
+    GhiChu: item.GhiChu || '',
+  });
+
+  const loadData = async () => {
+    const response = await phieuKhamApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data.map(mapRecord));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Handlers
   const handleView = (phieu: PhieuKham) => {
@@ -323,7 +367,7 @@ export default function KhamBenhPage() {
   };
 
   const handleAdd = () => {
-    const newMaPhieu = `PK-${new Date().getFullYear()}-${String(mockPhieuKhamFull.length + 1).padStart(4, '0')}`;
+    const newMaPhieu = `PK-${new Date().getFullYear()}-${String(records.length + 1).padStart(4, '0')}`;
     setFormData({
       MaPhieu: newMaPhieu,
       TenBenhNhan: '',
@@ -352,10 +396,39 @@ export default function KhamBenhPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    const payload = {
+      ...formData,
+      HoTenBenhNhan: formData.TenBenhNhan,
+      ChanDoan: formData.ChuanDoan,
+      ChiPhi: Number(formData.PhiKham || 0),
+      NgayKham: new Date().toISOString().slice(0, 10),
+      NgaySinh: formData.NgaySinh || null,
+      NgayTaiKham: formData.NgayTaiKham || null,
+      MaTrangThai: formData.MaTrangThai,
+      TrangThai: formData.MaTrangThai,
+    };
+
+    if (selectedPhieu?.MaPhieuKham) {
+      await phieuKhamApi.update(selectedPhieu.MaPhieuKham, payload);
+    } else {
+      await phieuKhamApi.create(payload);
+    }
+
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (phieu: PhieuKham) => {
+    if (!phieu.MaPhieuKham) {
+      return;
+    }
+
+    if (confirm(`Bạn có chắc chắn muốn xóa phiếu khám ${phieu.MaPhieu}?`)) {
+      await phieuKhamApi.delete(phieu.MaPhieuKham);
+      await loadData();
+    }
   };
 
   // Helper functions
@@ -580,6 +653,15 @@ export default function KhamBenhPage() {
                           title="Cập nhật"
                         >
                           <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          onClick={() => handleDelete(phieu)}
+                          title="Xóa"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </td>

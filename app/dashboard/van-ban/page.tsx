@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { mockVanBan, formatDate, formatDateTime } from '@/lib/mock-data';
+import { formatDate, formatDateTime } from '@/lib/mock-data';
+import { vanBanApi } from '@/lib/api';
 import {
   FileText,
   Download,
@@ -33,6 +34,7 @@ import {
 } from 'lucide-react';
 
 export default function VanBanPage() {
+  const [vanBanList, setVanBanList] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
@@ -42,7 +44,18 @@ export default function VanBanPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
-  const filteredData = mockVanBan.filter((item) => {
+  const loadData = async () => {
+    const result = await vanBanApi.getList({ page: 1, limit: 500 });
+    if (result.success && Array.isArray(result.data)) {
+      setVanBanList(result.data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filteredData = vanBanList.filter((item) => {
     const search = searchQuery.toLowerCase();
     const matchesSearch =
       item.SoKyHieu.toLowerCase().includes(search) ||
@@ -65,6 +78,7 @@ export default function VanBanPage() {
   };
 
   const handleAdd = () => {
+    setSelectedItem(null);
     setFormData({
       SoKyHieu: '',
       TrichYeu: '',
@@ -82,23 +96,43 @@ export default function VanBanPage() {
     setIsAddOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    setIsEditOpen(false);
-    setIsAddOpen(false);
+  const handleSave = async () => {
+    try {
+      const result = selectedItem?.MaVanBan
+        ? await vanBanApi.update(selectedItem.MaVanBan, formData)
+        : await vanBanApi.create(formData);
+
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể lưu văn bản');
+      }
+
+      await loadData();
+      setIsEditOpen(false);
+      setIsAddOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Lưu văn bản thất bại');
+    }
   };
 
-  const handleDelete = (item: any) => {
+  const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa văn bản ${item.SoKyHieu}?`)) {
-      console.log('Deleting:', item);
+      try {
+        const result = await vanBanApi.delete(item.MaVanBan);
+        if (!result?.success) {
+          throw new Error(result?.message || 'Không thể xóa văn bản');
+        }
+        await loadData();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Xóa văn bản thất bại');
+      }
     }
   };
 
   const stats = {
-    den: mockVanBan.filter(v => v.LoaiVanBan === 'Đến').length,
-    di: mockVanBan.filter(v => v.LoaiVanBan === 'Đi').length,
-    dangXuLy: mockVanBan.filter(v => v.TrangThai === 'Đang xử lý').length,
-    hoanThanh: mockVanBan.filter(v => v.TrangThai === 'Hoàn thành').length,
+    den: vanBanList.filter(v => v.LoaiVanBan === 'Đến').length,
+    di: vanBanList.filter(v => v.LoaiVanBan === 'Đi').length,
+    dangXuLy: vanBanList.filter(v => v.TrangThai === 'Đang xử lý').length,
+    hoanThanh: vanBanList.filter(v => v.TrangThai === 'Hoàn thành').length,
   };
 
 

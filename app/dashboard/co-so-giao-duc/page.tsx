@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   Clock,
   Eye,
   Edit,
+  Trash2,
   X,
   AlertTriangle,
   GraduationCap,
@@ -42,6 +43,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
+import { coSoGiaoDucApi } from '@/lib/api';
 
 // Mock data cho cơ sở giáo dục
 const mockCoSoGD = [
@@ -190,6 +192,7 @@ export default function CoSoGiaoDucPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CoSoGD | null>(null);
+  const [records, setRecords] = useState<CoSoGD[]>(mockCoSoGD as CoSoGD[]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -214,7 +217,7 @@ export default function CoSoGiaoDucPage() {
   });
 
   // Filter data
-  const filteredData = mockCoSoGD.filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchSearch = 
       item.MaTruong.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenTruong.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -228,12 +231,46 @@ export default function CoSoGiaoDucPage() {
 
   // Stats
   const stats = {
-    total: mockCoSoGD.length,
-    totalRooms: mockCoSoGD.reduce((sum, t) => sum + t.SoPhongHoc, 0),
-    totalStudents: mockCoSoGD.reduce((sum, t) => sum + t.SoHocSinh, 0),
-    totalTeachers: mockCoSoGD.reduce((sum, t) => sum + t.SoGiaoVien, 0),
-    standard: mockCoSoGD.filter(t => t.DatChuan).length,
+    total: records.length,
+    totalRooms: records.reduce((sum, t) => sum + Number(t.SoPhongHoc || 0), 0),
+    totalStudents: records.reduce((sum, t) => sum + Number(t.SoHocSinh || 0), 0),
+    totalTeachers: records.reduce((sum, t) => sum + Number(t.SoGiaoVien || 0), 0),
+    standard: records.filter(t => t.DatChuan).length,
   };
+
+  const mapRecord = (item: any): CoSoGD => ({
+    MaCoSo: item.MaCoSo,
+    MaTruong: item.MaTruong || '',
+    TenTruong: item.TenTruong || item.TenCoSo || '',
+    LoaiTruong: item.LoaiTruong || item.LoaiHinh || 'Mầm non',
+    DiaChi: item.DiaChi || '',
+    DienThoai: item.DienThoai || item.SoDienThoai || '',
+    Email: item.Email || '',
+    HieuTruong: item.HieuTruong || '',
+    NamThanhLap: Number(item.NamThanhLap || 2020),
+    DienTich: Number(item.DienTich || 0),
+    SoPhongHoc: Number(item.SoPhongHoc || 0),
+    SoPhongChucNang: Number(item.SoPhongChucNang || 0),
+    SoGiaoVien: Number(item.SoGiaoVien || 0),
+    SoHocSinh: Number(item.SoHocSinh || 0),
+    TrangThietBi: item.TrangThietBi || 'Đầy đủ',
+    TinhTrangCoSo: item.TinhTrangCoSo || 'Tốt',
+    DatChuan: item.DatChuan ?? true,
+    XepLoai: item.XepLoai || '',
+    NgayCapNhat: item.NgayCapNhat ? String(item.NgayCapNhat).slice(0, 10) : '',
+    GhiChu: item.GhiChu || '',
+  });
+
+  const loadData = async () => {
+    const response = await coSoGiaoDucApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data.map(mapRecord));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Handlers
   const handleView = (record: CoSoGD) => {
@@ -290,10 +327,37 @@ export default function CoSoGiaoDucPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    const payload = {
+      ...formData,
+      TenCoSo: formData.TenTruong,
+      LoaiHinh: formData.LoaiTruong,
+      SoDienThoai: formData.DienThoai,
+      TrangThai: formData.TinhTrangCoSo !== 'Xuống cấp',
+      NgayTao: new Date().toISOString(),
+      NgayCapNhat: new Date().toISOString().slice(0, 10),
+    };
+
+    if (selectedRecord?.MaCoSo) {
+      await coSoGiaoDucApi.update(selectedRecord.MaCoSo, payload);
+    } else {
+      await coSoGiaoDucApi.create(payload);
+    }
+
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: CoSoGD) => {
+    if (!record.MaCoSo) {
+      return;
+    }
+
+    if (confirm(`Bạn có chắc chắn muốn xóa cơ sở ${record.TenTruong}?`)) {
+      await coSoGiaoDucApi.delete(record.MaCoSo);
+      await loadData();
+    }
   };
 
   // Helper functions
@@ -507,6 +571,15 @@ export default function CoSoGiaoDucPage() {
                         title="Chỉnh sửa"
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(record)}
+                        title="Xóa"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

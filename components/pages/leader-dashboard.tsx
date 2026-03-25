@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -66,6 +66,7 @@ import {
   getHighPriorityAlerts,
 } from '@/lib/dashboard-stats';
 import { FIELD_STATISTICS, OVERALL_STATISTICS, ALERTS, OFFICER_KPI_DATA, FIELD_KPI_DETAILED } from '@/lib/leader-data';
+import { getLeaderSignalSnapshot } from '@/lib/frontend-dss';
 
 // Radar data cho KPI theo lĩnh vực
 const radarData = FIELD_STATISTICS.map((field) => ({
@@ -79,13 +80,50 @@ export function LeaderDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
   const [selectedField, setSelectedField] = useState<string | null>(null);
+  const leaderSignals = useMemo(() => getLeaderSignalSnapshot(), []);
+  const highPriorityAlerts = getHighPriorityAlerts();
+  const periodOptions = [
+    { value: 'week', label: '7 ngày' },
+    { value: 'month', label: 'Tháng này' },
+    { value: 'quarter', label: 'Quý này' },
+  ] as const;
+  const periodLabel = periodOptions.find((option) => option.value === selectedPeriod)?.label ?? 'Tháng này';
+
+  const criticalModules = useMemo(() => {
+    return [...MODULE_STATISTICS]
+      .sort((a, b) => b.overdue - a.overdue)
+      .slice(0, 4)
+      .map((module) => ({
+        id: module.id,
+        name: module.name,
+        overdue: module.overdue,
+        completionRate: module.total > 0 ? Math.round((module.completed / module.total) * 100) : 0,
+      }));
+  }, []);
+
+  const executiveRecommendations = useMemo(() => {
+    const recommendations: string[] = [];
+
+    if (SUMMARY_STATS.overdueCases > 40) {
+      recommendations.push('Cần điều phối xử lý nhóm hồ sơ trễ hạn trước 16:00 hôm nay.');
+    }
+    if (leaderSignals.tongRuiRoHienTai >= 7) {
+      recommendations.push('Ưu tiên họp ngắn 15 phút với 3 đơn vị rủi ro cao để chốt kế hoạch can thiệp.');
+    }
+    if (leaderSignals.doTinCayDuBao < 80) {
+      recommendations.push('Cần bổ sung dữ liệu cập nhật từ các phòng ban để nâng độ tin cậy dự báo.');
+    }
+    if (recommendations.length === 0) {
+      recommendations.push('Trạng thái ổn định, duy trì giám sát cảnh báo mức trung bình và cập nhật theo ca.');
+    }
+
+    return recommendations;
+  }, [leaderSignals.doTinCayDuBao, leaderSignals.tongRuiRoHienTai]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => setIsRefreshing(false), 1000);
   };
-
-  const highPriorityAlerts = getHighPriorityAlerts();
 
   return (
     <div className="space-y-6">
@@ -125,6 +163,84 @@ export function LeaderDashboard() {
           </Button>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Bộ lọc giám sát</h2>
+            <Badge variant="secondary">{periodLabel}</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {periodOptions.map((period) => (
+              <Button
+                key={period.value}
+                size="sm"
+                variant={selectedPeriod === period.value ? 'default' : 'outline'}
+                onClick={() => setSelectedPeriod(period.value)}
+              >
+                {period.label}
+              </Button>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Đang hiển thị ưu tiên điều hành theo khung thời gian {periodLabel.toLowerCase()}.
+          </p>
+        </Card>
+
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Ưu tiên 24h</h2>
+            <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+              {highPriorityAlerts.length} mục
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {highPriorityAlerts.slice(0, 3).map((alert) => (
+              <div key={alert.id} className="rounded-md border border-border p-3">
+                <p className="font-medium text-sm text-foreground">{alert.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">{alert.module}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Khuyến nghị điều hành</h2>
+            <Badge variant="outline">Tổng hợp AI</Badge>
+          </div>
+          <div className="space-y-3">
+            {executiveRecommendations.map((recommendation) => (
+              <div key={recommendation} className="flex items-start gap-2 text-sm text-muted-foreground">
+                <ChevronRight className="w-4 h-4 mt-0.5 text-primary" />
+                <span>{recommendation}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Lĩnh vực cần tập trung</h2>
+            <p className="text-sm text-muted-foreground">Xếp hạng theo số hồ sơ trễ hạn để lãnh đạo theo dõi nhanh.</p>
+          </div>
+          <Badge variant="secondary">Top 4</Badge>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {criticalModules.map((module) => (
+            <div key={module.id} className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium text-foreground line-clamp-1">{module.name}</p>
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                <span>Trễ hạn: {module.overdue}</span>
+                <span>Hoàn thành {module.completionRate}%</span>
+              </div>
+              <Progress value={module.completionRate} className="h-2 mt-2" />
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* KPI Cards - Tổng quan nhanh */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -217,6 +333,46 @@ export function LeaderDashboard() {
               <Users className="w-6 h-6 text-purple-600" />
             </div>
           </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-muted-foreground text-sm font-medium">Độ tin cậy dự báo</p>
+              <p className="text-3xl font-bold text-foreground">{leaderSignals.doTinCayDuBao}%</p>
+            </div>
+            <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
+              <Zap className="w-6 h-6 text-indigo-600" />
+            </div>
+          </div>
+          <Progress value={leaderSignals.doTinCayDuBao} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-2">Tổng hợp từ mô hình dự báo thu/chi và xu hướng KPI.</p>
+        </Card>
+
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-muted-foreground text-sm font-medium">Xu hướng rủi ro 7 ngày</p>
+              <p className="text-3xl font-bold text-foreground">{leaderSignals.tongRuiRoHienTai}</p>
+            </div>
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+              <Activity className="w-6 h-6 text-amber-600" />
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={90}>
+            <LineChart data={leaderSignals.xuHuongRuiRo7Ngay}>
+              <Line type="monotone" dataKey="diemRuiRo" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1a1a2e',
+                  border: '1px solid #2a2a3e',
+                  borderRadius: '8px',
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </Card>
       </div>
 

@@ -1,42 +1,18 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TrendingUp, BarChart3, Zap, AlertCircle, Download, Brain, ArrowUp, ArrowDown, Eye } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const duBaoThu = [
-  { thang: 'T2/26', thucTe: 450, duBao: 448, doTinCay: 92 },
-  { thang: 'T3/26', thucTe: null, duBao: 480, doTinCay: 92 },
-  { thang: 'T4/26', thucTe: null, duBao: 510, doTinCay: 89 },
-  { thang: 'T5/26', thucTe: null, duBao: 495, doTinCay: 87 },
-  { thang: 'T6/26', thucTe: null, duBao: 520, doTinCay: 85 }
-];
-
-const duBaoChi = [
-  { thang: 'T2/26', thucTe: 420, duBao: 422, doTinCay: 90 },
-  { thang: 'T3/26', thucTe: null, duBao: 440, doTinCay: 90 },
-  { thang: 'T4/26', thucTe: null, duBao: 460, doTinCay: 88 },
-  { thang: 'T5/26', thucTe: null, duBao: 450, doTinCay: 86 },
-  { thang: 'T6/26', thucTe: null, duBao: 470, doTinCay: 84 }
-];
-
-const xuHuongChiTieu = [
-  { chiTieu: 'Thu ngân sách', thangTruoc: 450, duBaoThangSau: 480, xuHuong: 'Tăng', tyLe: 6.7, doTinCay: 92 },
-  { chiTieu: 'Chi ngân sách', thangTruoc: 420, duBaoThangSau: 440, xuHuong: 'Tăng', tyLe: 4.8, doTinCay: 90 },
-  { chiTieu: 'Cân đối NS', thangTruoc: 30, duBaoThangSau: 40, xuHuong: 'Tăng', tyLe: 33.3, doTinCay: 88 },
-  { chiTieu: 'Tỷ lệ thu/chi', thangTruoc: 107.1, duBaoThangSau: 109.1, xuHuong: 'Tăng', tyLe: 1.9, doTinCay: 91 },
-  { chiTieu: 'Chi đầu tư', thangTruoc: 150, duBaoThangSau: 165, xuHuong: 'Tăng', tyLe: 10, doTinCay: 85 }
-];
-
-const canhBaoRuiRo = [
-  { loai: 'Vượt dự toán', mota: 'Khoản mục sửa chữa hạ tầng có nguy cơ vượt 6%', mucDo: 'Cao' },
-  { loai: 'Giảm thu', mota: 'Thu phí hành chính dự kiến giảm 3% tháng sau', mucDo: 'Trung bình' }
-];
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getFinancialDssSnapshot } from '@/lib/frontend-dss';
 
 export default function XuHuongTaiChinhPage() {
+  const snapshot = useMemo(() => getFinancialDssSnapshot(), []);
+  const { duBaoThu, duBaoChi, xuHuongChiTieu, canhBaoRuiRo, doChinhXac, xuHuongThangSau, soBaoCaoAi } = snapshot;
+
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       <div className="bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 rounded-lg p-4 sm:p-5 xl:p-6 text-white">
@@ -98,7 +74,7 @@ export default function XuHuongTaiChinhPage() {
           <CardContent>
             <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Zap className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">92%</span>
+              <span className="text-2xl font-bold">{doChinhXac}%</span>
             </div>
           </CardContent>
         </Card>
@@ -110,7 +86,7 @@ export default function XuHuongTaiChinhPage() {
           <CardContent>
             <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold text-green-600">+8%</span>
+              <span className="text-2xl font-bold text-green-600">{xuHuongThangSau > 0 ? '+' : ''}{xuHuongThangSau}%</span>
             </div>
           </CardContent>
         </Card>
@@ -134,7 +110,7 @@ export default function XuHuongTaiChinhPage() {
           <CardContent>
             <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <BarChart3 className="h-5 w-5 text-secondary" />
-              <span className="text-2xl font-bold">15</span>
+              <span className="text-2xl font-bold">{soBaoCaoAi}</span>
             </div>
           </CardContent>
         </Card>
@@ -231,7 +207,7 @@ export default function XuHuongTaiChinhPage() {
           <div className="space-y-3">
             {canhBaoRuiRo.map((item, idx) => (
               <div key={idx} className="flex items-start gap-3 p-3 border rounded-lg bg-amber-50">
-                <AlertCircle className={`h-5 w-5 mt-0.5 ${item.mucDo === 'Cao' ? 'text-red-500' : 'text-amber-500'}`} />
+                <AlertCircle className={`h-5 w-5 mt-0.5 ${item.mucDo === 'Cao' ? 'text-red-500' : item.mucDo === 'Trung bình' ? 'text-amber-500' : 'text-blue-500'}`} />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold">{item.loai}</span>

@@ -16,6 +16,14 @@ import {
   Eye, Edit, AlertTriangle, Calendar, User, FileText, ClipboardList, 
   XCircle, RotateCw, Send
 } from 'lucide-react';
+import {
+  ALERT_PERIOD_LABELS,
+  ALERT_RISK_LABELS,
+  type AlertPeriod,
+  type AlertRiskLevel,
+  filterSignalsByCommonFilters,
+  getRedBookAlerts,
+} from '@/lib/frontend-dss';
 
 // Mock data hồ sơ cấp sổ đỏ
 interface HoSoCapSoDo {
@@ -222,6 +230,8 @@ export default function CapSoDoPage() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
+  const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
 
   const filteredData = mockCapSoDo.filter((item) => {
     const matchesSearch =
@@ -242,6 +252,11 @@ export default function CapSoDoPage() {
     tuChoi: mockCapSoDo.filter(r => r.TrangThai === 'Từ chối').length,
     tyLeHoanThanh: ((mockCapSoDo.filter(r => r.TrangThai === 'Đã cấp').length / mockCapSoDo.length) * 100).toFixed(1)
   };
+
+  const redBookSignals = filterSignalsByCommonFilters(getRedBookAlerts(stats.boSungHS), {
+    period: filterPeriod,
+    risk: filterRisk,
+  });
 
   const getTrangThaiBadge = (trangThai: string) => {
     switch (trangThai) {
@@ -765,21 +780,64 @@ export default function CapSoDoPage() {
       </Card>
 
       {/* Cảnh báo hồ sơ cần bổ sung */}
-      {stats.boSungHS > 0 && (
-        <Card className="border-l-4 border-l-orange-500">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-3">
+            <Select value={filterPeriod} onValueChange={(v) => setFilterPeriod(v as AlertPeriod)}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Thời gian" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(ALERT_PERIOD_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterRisk} onValueChange={(v) => setFilterRisk(v as AlertRiskLevel | 'all')}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Mức độ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả mức độ</SelectItem>
+                {Object.entries(ALERT_RISK_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {redBookSignals.map((signal) => (
+        <Card
+          key={signal.id}
+          className={
+            signal.level === 'critical'
+              ? 'border-l-4 border-l-red-500'
+              : signal.level === 'warning'
+                ? 'border-l-4 border-l-orange-500'
+                : 'border-l-4 border-l-blue-500'
+          }
+        >
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-600">
+            <CardTitle
+              className={
+                signal.level === 'critical'
+                  ? 'flex items-center gap-2 text-red-600'
+                  : signal.level === 'warning'
+                    ? 'flex items-center gap-2 text-orange-600'
+                    : 'flex items-center gap-2 text-blue-600'
+              }
+            >
               <AlertTriangle className="h-5 w-5" />
-              Hồ sơ cần bổ sung
+              {signal.title}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              Có <strong>{stats.boSungHS}</strong> hồ sơ đang chờ công dân bổ sung giấy tờ. Cần thông báo và hướng dẫn.
-            </p>
+            <p className="text-muted-foreground">{signal.description}</p>
           </CardContent>
         </Card>
-      )}
+      ))}
     </div>
   );
 }

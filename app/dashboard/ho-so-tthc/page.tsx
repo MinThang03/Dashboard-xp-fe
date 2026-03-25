@@ -40,6 +40,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/mock-data';
+import { hoSoTthcApi } from '@/lib/api';
 
 // Extended mock data for TTHC
 const mockHoSoTTHC = [
@@ -167,6 +168,7 @@ const mockHoSoTTHC = [
 
 interface HoSoTTHC {
   MaHoSo: string;
+  MaLoaiThuTuc?: number;
   TenThuTuc: string;
   MaCongDan: number;
   TenCongDan: string;
@@ -194,8 +196,9 @@ export default function HoSoTTHCPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [hoSoList, setHoSoList] = useState<HoSoTTHC[]>(mockHoSoTTHC);
-  const [filteredData, setFilteredData] = useState<HoSoTTHC[]>(mockHoSoTTHC);
+  const [hoSoList, setHoSoList] = useState<HoSoTTHC[]>([]);
+  const [filteredData, setFilteredData] = useState<HoSoTTHC[]>([]);
+  const [loaiThuTucList, setLoaiThuTucList] = useState<any[]>([]);
   
   // Dialog states
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -206,6 +209,7 @@ export default function HoSoTTHCPage() {
   // Form state
   const [formData, setFormData] = useState({
     MaHoSo: '',
+    MaLoaiThuTuc: '',
     TenThuTuc: '',
     TenCongDan: '',
     CCCD: '',
@@ -214,12 +218,116 @@ export default function HoSoTTHCPage() {
     DiaChiLienHe: '',
     LoaiThuTuc: '',
     LinhVuc: 'Tư pháp',
-    MaTrangThai: 'MOI_TAO',
+    MaTrangThai: 'DA_TIEP_NHAN',
     HanXuLy: '',
     CanBoXuLy: '',
     PhiLePhi: 0,
     GhiChu: '',
   });
+
+  const mapStatusToCode = (status: string) => {
+    if (status === 'Đã tiếp nhận') return 'DA_TIEP_NHAN';
+    if (status === 'Hoàn thành') return 'HOAN_THANH';
+    if (status === 'Đang xử lý') return 'DANG_XU_LY';
+    if (status === 'Chờ bổ sung') return 'CHO_BO_SUNG';
+    if (status === 'Từ chối') return 'TU_CHOI';
+    return 'DA_TIEP_NHAN';
+  };
+
+  const mapCodeToStatus = (status: string) => {
+    if (status === 'DA_TIEP_NHAN') return 'Đã tiếp nhận';
+    if (status === 'HOAN_THANH') return 'Hoàn thành';
+    if (status === 'DANG_XU_LY') return 'Đang xử lý';
+    if (status === 'CHO_BO_SUNG') return 'Chờ bổ sung';
+    if (status === 'TU_CHOI') return 'Từ chối';
+    return 'Đã tiếp nhận';
+  };
+
+  const cleanText = (value: string, maxLength: number) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+      return '';
+    }
+    return normalized.slice(0, maxLength);
+  };
+
+  const mapFromApi = (item: any): HoSoTTHC => {
+    const loaiThuTuc = loaiThuTucList.find((l) => l.MaLoaiThuTuc === item.MaLoaiThuTuc);
+    const tenThuTuc = item.TenThuTuc || loaiThuTuc?.TenThuTuc || `Thủ tục #${item.MaLoaiThuTuc}`;
+    return {
+      MaHoSo: item.MaHoSo,
+      MaLoaiThuTuc: item.MaLoaiThuTuc,
+      TenThuTuc: tenThuTuc,
+      MaCongDan: 0,
+      TenCongDan: item.NguoiNop || '',
+      CCCD: item.CCCD || '',
+      SoDienThoai: item.SoDienThoai || '',
+      Email: item.Email || '',
+      DiaChiLienHe: item.DiaChiLienHe || '',
+      LoaiThuTuc: tenThuTuc,
+      LinhVuc: item.LinhVuc || 'Tư pháp',
+      MaTrangThai: mapStatusToCode(item.TrangThai || ''),
+      TrangThai: item.TrangThai || 'Đã tiếp nhận',
+      NgayTiepNhan: item.NgayNop || '',
+      HanXuLy: item.NgayHenTra || '',
+      NgayHenTra: item.NgayHenTra || '',
+      NgayHoanThanh: item.NgayHoanThanh || null,
+      CanBoTiepNhan: '',
+      CanBoXuLy: item.CanBoXuLy ? String(item.CanBoXuLy) : '',
+      KetQuaXuLy: item.KetQua || '',
+      PhiLePhi: Number(item.PhiLePhi || 0),
+      GhiChu: item.GhiChu || '',
+      SoBienNhan: item.SoHoSo || item.MaHoSo,
+    };
+  };
+
+  const loadData = async () => {
+    const [hoSoRes, loaiRes] = await Promise.all([
+      hoSoTthcApi.getList({ page: 1, limit: 500 }),
+      hoSoTthcApi.getLoaiThuTuc(),
+    ]);
+
+    const loaiData = loaiRes.success && Array.isArray(loaiRes.data) ? loaiRes.data : [];
+    setLoaiThuTucList(loaiData);
+
+    if (hoSoRes.success && Array.isArray(hoSoRes.data)) {
+      const mapped = hoSoRes.data.map((item: any) => {
+        const loaiThuTuc = loaiData.find((l: any) => l.MaLoaiThuTuc === item.MaLoaiThuTuc);
+        const tenThuTuc = item.TenThuTuc || loaiThuTuc?.TenThuTuc || `Thủ tục #${item.MaLoaiThuTuc}`;
+        return {
+          MaHoSo: item.MaHoSo,
+          MaLoaiThuTuc: item.MaLoaiThuTuc,
+          TenThuTuc: tenThuTuc,
+          MaCongDan: 0,
+          TenCongDan: item.NguoiNop || '',
+          CCCD: item.CCCD || '',
+          SoDienThoai: item.SoDienThoai || '',
+          Email: item.Email || '',
+          DiaChiLienHe: item.DiaChiLienHe || '',
+          LoaiThuTuc: tenThuTuc,
+          LinhVuc: item.LinhVuc || 'Tư pháp',
+          MaTrangThai: mapStatusToCode(item.TrangThai || ''),
+          TrangThai: item.TrangThai || 'Đã tiếp nhận',
+          NgayTiepNhan: item.NgayNop || '',
+          HanXuLy: item.NgayHenTra || '',
+          NgayHenTra: item.NgayHenTra || '',
+          NgayHoanThanh: item.NgayHoanThanh || null,
+          CanBoTiepNhan: '',
+          CanBoXuLy: item.CanBoXuLy ? String(item.CanBoXuLy) : '',
+          KetQuaXuLy: item.KetQua || '',
+          PhiLePhi: Number(item.PhiLePhi || 0),
+          GhiChu: item.GhiChu || '',
+          SoBienNhan: item.SoHoSo || item.MaHoSo,
+        } as HoSoTTHC;
+      });
+      setHoSoList(mapped);
+      setFilteredData(mapped);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Update filter when inputs change
   useEffect(() => {
@@ -241,10 +349,10 @@ export default function HoSoTTHCPage() {
   // Stats
   const stats = {
     total: hoSoList.length,
-    pending: hoSoList.filter((h) => h.MaTrangThai === 'MOI_TAO' || h.MaTrangThai === 'CHO_DUYET').length,
+    pending: hoSoList.filter((h) => h.MaTrangThai === 'DA_TIEP_NHAN' || h.MaTrangThai === 'CHO_BO_SUNG').length,
     processing: hoSoList.filter((h) => h.MaTrangThai === 'DANG_XU_LY').length,
     completed: hoSoList.filter((h) => h.MaTrangThai === 'HOAN_THANH').length,
-    overdue: hoSoList.filter((h) => h.MaTrangThai === 'QUA_HAN').length,
+    overdue: hoSoList.filter((h) => h.MaTrangThai === 'TU_CHOI').length,
   };
 
   // Handlers
@@ -257,6 +365,7 @@ export default function HoSoTTHCPage() {
     setSelectedHoSo(hoSo);
     setFormData({
       MaHoSo: hoSo.MaHoSo,
+      MaLoaiThuTuc: hoSo.MaLoaiThuTuc ? String(hoSo.MaLoaiThuTuc) : '',
       TenThuTuc: hoSo.TenThuTuc,
       TenCongDan: hoSo.TenCongDan,
       CCCD: hoSo.CCCD,
@@ -275,9 +384,11 @@ export default function HoSoTTHCPage() {
   };
 
   const handleAdd = () => {
+    setSelectedHoSo(null);
     const newMaHoSo = `TTHC-${new Date().getFullYear()}-${String(hoSoList.length + 1).padStart(4, '0')}`;
     setFormData({
       MaHoSo: newMaHoSo,
+      MaLoaiThuTuc: loaiThuTucList?.[0]?.MaLoaiThuTuc ? String(loaiThuTucList[0].MaLoaiThuTuc) : '',
       TenThuTuc: '',
       TenCongDan: '',
       CCCD: '',
@@ -286,7 +397,7 @@ export default function HoSoTTHCPage() {
       DiaChiLienHe: '',
       LoaiThuTuc: '',
       LinhVuc: 'Tư pháp',
-      MaTrangThai: 'MOI_TAO',
+      MaTrangThai: 'DA_TIEP_NHAN',
       HanXuLy: '',
       CanBoXuLy: '',
       PhiLePhi: 0,
@@ -295,24 +406,82 @@ export default function HoSoTTHCPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (editDialogOpen && selectedHoSo) {
-      setHoSoList(prev => prev.map(item => item.MaHoSo === selectedHoSo.MaHoSo ? {...item, ...formData} : item));
-      setEditDialogOpen(false);
-    } else if (addDialogOpen) {
-      const newHoSo: HoSoTTHC = {
-        ...formData,
-        MaCongDan: hoSoList.length + 1,
-        SoBienNhan: `BN-${new Date().getFullYear()}-${String(hoSoList.length + 1).padStart(4, '0')}`,
-        NgayTiepNhan: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0],
-        NgayHenTra: formData.HanXuLy,
-        NgayHoanThanh: null,
-        CanBoTiepNhan: 'Trần Văn Bình',
-        KetQuaXuLy: '',
-        TrangThai: 'Mới tiếp nhận',
-      };
-      setHoSoList(prev => [...prev, newHoSo]);
-      setAddDialogOpen(false);
+  const handleSave = async () => {
+    const tenThuTuc = cleanText(formData.TenThuTuc || formData.LoaiThuTuc, 200);
+    const tenCongDan = cleanText(formData.TenCongDan, 150);
+    const cccd = cleanText(formData.CCCD, 20);
+    const soDienThoai = cleanText(formData.SoDienThoai, 20);
+    const email = cleanText(formData.Email, 100);
+    const diaChiLienHe = cleanText(formData.DiaChiLienHe, 255);
+    const linhVuc = cleanText(formData.LinhVuc, 100);
+
+    if (!tenThuTuc) {
+      alert('Vui lòng nhập tên thủ tục.');
+      return;
+    }
+
+    if (!tenCongDan) {
+      alert('Vui lòng nhập tên công dân.');
+      return;
+    }
+
+    if (formData.CCCD.trim().length > 20) {
+      alert('CCCD tối đa 20 ký tự.');
+      return;
+    }
+
+    if (formData.SoDienThoai.trim().length > 20) {
+      alert('Số điện thoại tối đa 20 ký tự.');
+      return;
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert('Email không đúng định dạng.');
+      return;
+    }
+
+    const selectedLoai = loaiThuTucList.find((l) => String(l.MaLoaiThuTuc) === String(formData.MaLoaiThuTuc));
+    const matchedLoai = loaiThuTucList.find((l) => l.TenThuTuc === formData.LoaiThuTuc || l.TenThuTuc === formData.TenThuTuc);
+    const maLoaiThuTuc = selectedLoai?.MaLoaiThuTuc || matchedLoai?.MaLoaiThuTuc || loaiThuTucList?.[0]?.MaLoaiThuTuc || 1;
+
+    const payload = {
+      MaHoSo: formData.MaHoSo,
+      SoHoSo: formData.MaHoSo,
+      MaLoaiThuTuc: maLoaiThuTuc,
+      TenThuTuc: tenThuTuc || null,
+      NguoiNop: tenCongDan,
+      CCCD: cccd || null,
+      SoDienThoai: soDienThoai || null,
+      Email: email || null,
+      DiaChiLienHe: diaChiLienHe || null,
+      LinhVuc: linhVuc || null,
+      NgayNop: new Date().toISOString().split('T')[0],
+      NgayHenTra: formData.HanXuLy ? String(formData.HanXuLy).split('T')[0] : null,
+      TrangThai: mapCodeToStatus(formData.MaTrangThai),
+      CanBoXuLy: formData.CanBoXuLy ? Number(formData.CanBoXuLy) : null,
+      PhiLePhi: Number(formData.PhiLePhi || 0),
+      KetQua: formData.KetQuaXuLy || '',
+      GhiChu: formData.GhiChu || '',
+    };
+
+    try {
+      if (editDialogOpen && selectedHoSo) {
+        const result = await hoSoTthcApi.update(selectedHoSo.MaHoSo, payload);
+        if (!result?.success) {
+          throw new Error(result?.message || 'Không thể cập nhật hồ sơ TTHC');
+        }
+        setEditDialogOpen(false);
+      } else if (addDialogOpen) {
+        const result = await hoSoTthcApi.create(payload);
+        if (!result?.success) {
+          throw new Error(result?.message || 'Không thể tạo hồ sơ TTHC');
+        }
+        setAddDialogOpen(false);
+      }
+
+      await loadData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Lưu hồ sơ TTHC thất bại');
     }
   };
 
@@ -322,12 +491,12 @@ export default function HoSoTTHCPage() {
         return <Badge className="bg-green-500/10 text-green-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Hoàn thành</Badge>;
       case 'DANG_XU_LY':
         return <Badge className="bg-blue-500/10 text-blue-700 border-0"><Clock className="w-3 h-3 mr-1" />Đang xử lý</Badge>;
-      case 'CHO_DUYET':
-        return <Badge className="bg-yellow-500/10 text-yellow-700 border-0"><Clock className="w-3 h-3 mr-1" />Chờ duyệt</Badge>;
-      case 'QUA_HAN':
-        return <Badge className="bg-red-500/10 text-red-700 border-0"><AlertCircle className="w-3 h-3 mr-1" />Quá hạn</Badge>;
+      case 'CHO_BO_SUNG':
+        return <Badge className="bg-yellow-500/10 text-yellow-700 border-0"><Clock className="w-3 h-3 mr-1" />Chờ bổ sung</Badge>;
+      case 'TU_CHOI':
+        return <Badge className="bg-red-500/10 text-red-700 border-0"><AlertCircle className="w-3 h-3 mr-1" />Từ chối</Badge>;
       default:
-        return <Badge className="bg-gray-500/10 text-gray-700 border-0"><Inbox className="w-3 h-3 mr-1" />Mới tiếp nhận</Badge>;
+        return <Badge className="bg-gray-500/10 text-gray-700 border-0"><Inbox className="w-3 h-3 mr-1" />Đã tiếp nhận</Badge>;
     }
   };
 
@@ -417,11 +586,11 @@ export default function HoSoTTHCPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="MOI_TAO">Mới tiếp nhận</SelectItem>
+                  <SelectItem value="DA_TIEP_NHAN">Đã tiếp nhận</SelectItem>
                   <SelectItem value="DANG_XU_LY">Đang xử lý</SelectItem>
-                  <SelectItem value="CHO_DUYET">Chờ duyệt</SelectItem>
+                  <SelectItem value="CHO_BO_SUNG">Chờ bổ sung</SelectItem>
                   <SelectItem value="HOAN_THANH">Hoàn thành</SelectItem>
-                  <SelectItem value="QUA_HAN">Quá hạn</SelectItem>
+                  <SelectItem value="TU_CHOI">Từ chối</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -430,11 +599,9 @@ export default function HoSoTTHCPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="Hộ tịch">Hộ tịch</SelectItem>
-                  <SelectItem value="Chứng thực">Chứng thực</SelectItem>
-                  <SelectItem value="Đất đai">Đất đai</SelectItem>
-                  <SelectItem value="Xây dựng">Xây dựng</SelectItem>
-                  <SelectItem value="Kinh doanh">Kinh doanh</SelectItem>
+                  {loaiThuTucList.map((loai: any) => (
+                    <SelectItem key={loai.MaLoaiThuTuc} value={loai.TenThuTuc}>{loai.TenThuTuc}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -532,9 +699,14 @@ export default function HoSoTTHCPage() {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => {
+                          onClick={async () => {
                             if (window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${hoSo.MaHoSo}?`)) {
-                              setHoSoList(prev => prev.filter(item => item.MaHoSo !== hoSo.MaHoSo));
+                              const result = await hoSoTthcApi.delete(hoSo.MaHoSo);
+                              if (!result?.success) {
+                                alert(result?.message || 'Không thể xóa hồ sơ TTHC');
+                                return;
+                              }
+                              await loadData();
                             }
                           }}
                           title="Xóa"
@@ -653,16 +825,29 @@ export default function HoSoTTHCPage() {
             </div>
             <div>
               <Label>Loại thủ tục *</Label>
-              <Select value={formData.LoaiThuTuc} onValueChange={(v) => setFormData({...formData, LoaiThuTuc: v})}>
+              <Select
+                value={formData.MaLoaiThuTuc}
+                onValueChange={(v) => {
+                  const selected = loaiThuTucList.find((l: any) => String(l.MaLoaiThuTuc) === v);
+                  setFormData({
+                    ...formData,
+                    MaLoaiThuTuc: v,
+                    LoaiThuTuc: selected?.TenThuTuc || '',
+                    TenThuTuc: selected?.TenThuTuc || formData.TenThuTuc,
+                    LinhVuc: selected?.LinhVuc || formData.LinhVuc,
+                    PhiLePhi: Number(selected?.PhiDichVu ?? formData.PhiLePhi),
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Hộ tịch">Hộ tịch</SelectItem>
-                  <SelectItem value="Chứng thực">Chứng thực</SelectItem>
-                  <SelectItem value="Đất đai">Đất đai</SelectItem>
-                  <SelectItem value="Xây dựng">Xây dựng</SelectItem>
-                  <SelectItem value="Kinh doanh">Kinh doanh</SelectItem>
+                  {loaiThuTucList.map((loai: any) => (
+                    <SelectItem key={loai.MaLoaiThuTuc} value={String(loai.MaLoaiThuTuc)}>
+                      {loai.TenThuTuc}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -701,10 +886,11 @@ export default function HoSoTTHCPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MOI_TAO">Mới tiếp nhận</SelectItem>
+                  <SelectItem value="DA_TIEP_NHAN">Đã tiếp nhận</SelectItem>
                   <SelectItem value="DANG_XU_LY">Đang xử lý</SelectItem>
-                  <SelectItem value="CHO_DUYET">Chờ duyệt</SelectItem>
+                  <SelectItem value="CHO_BO_SUNG">Chờ bổ sung</SelectItem>
                   <SelectItem value="HOAN_THANH">Hoàn thành</SelectItem>
+                  <SelectItem value="TU_CHOI">Từ chối</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -753,16 +939,29 @@ export default function HoSoTTHCPage() {
             </div>
             <div>
               <Label>Loại thủ tục *</Label>
-              <Select value={formData.LoaiThuTuc} onValueChange={(v) => setFormData({...formData, LoaiThuTuc: v})}>
+              <Select
+                value={formData.MaLoaiThuTuc}
+                onValueChange={(v) => {
+                  const selected = loaiThuTucList.find((l: any) => String(l.MaLoaiThuTuc) === v);
+                  setFormData({
+                    ...formData,
+                    MaLoaiThuTuc: v,
+                    LoaiThuTuc: selected?.TenThuTuc || '',
+                    TenThuTuc: selected?.TenThuTuc || formData.TenThuTuc,
+                    LinhVuc: selected?.LinhVuc || formData.LinhVuc,
+                    PhiLePhi: Number(selected?.PhiDichVu ?? formData.PhiLePhi),
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Hộ tịch">Hộ tịch</SelectItem>
-                  <SelectItem value="Chứng thực">Chứng thực</SelectItem>
-                  <SelectItem value="Đất đai">Đất đai</SelectItem>
-                  <SelectItem value="Xây dựng">Xây dựng</SelectItem>
-                  <SelectItem value="Kinh doanh">Kinh doanh</SelectItem>
+                  {loaiThuTucList.map((loai: any) => (
+                    <SelectItem key={loai.MaLoaiThuTuc} value={String(loai.MaLoaiThuTuc)}>
+                      {loai.TenThuTuc}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

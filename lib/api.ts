@@ -407,6 +407,57 @@ export const hoTichApi = {
   delete: (id: number) => apiCall(`/ho-tich/${id}`, { method: 'DELETE' }),
 };
 
+export const chungThucApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/chung-thuc?${query}`);
+  },
+  getStats: () => apiCall('/chung-thuc/stats'),
+  getById: (id: number) => apiCall(`/chung-thuc/${id}`),
+  create: (data: any) => apiCall('/chung-thuc', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/chung-thuc/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/chung-thuc/${id}`, { method: 'DELETE' }),
+};
+
+export const hoKhauApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/ho-khau?${query}`);
+  },
+  getStats: () => apiCall('/ho-khau/stats'),
+  getById: (id: string) => apiCall(`/ho-khau/${id}`),
+  create: (data: any) => apiCall('/ho-khau', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/ho-khau/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/ho-khau/${id}`, { method: 'DELETE' }),
+  getMembers: (id: string) => apiCall(`/ho-khau/${id}/thanh-vien`),
+  addMember: (id: string, data: any) => apiCall(`/ho-khau/${id}/thanh-vien`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteMember: (memberId: number) => apiCall(`/ho-khau/thanh-vien/${memberId}`, { method: 'DELETE' }),
+};
+
+export const hoSoTthcApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/ho-so-tthc?${query}`);
+  },
+  getStats: () => apiCall('/ho-so-tthc/stats'),
+  getLoaiThuTuc: () => apiCall('/ho-so-tthc/loai-thu-tuc'),
+  getById: (id: string) => apiCall(`/ho-so-tthc/${id}`),
+  create: (data: any) => apiCall('/ho-so-tthc', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/ho-so-tthc/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/ho-so-tthc/${id}`, { method: 'DELETE' }),
+};
+
+export const baoCaoApi = {
+  getList: (params?: { page?: number; limit?: number; search?: string }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/bao-cao?${query}`);
+  },
+  getById: (id: number) => apiCall(`/bao-cao/${id}`),
+  create: (data: any) => apiCall('/bao-cao', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/bao-cao/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/bao-cao/${id}`, { method: 'DELETE' }),
+};
+
 // ============== Y TẾ ==============
 export const tramYTeApi = {
   getList: (params?: { page?: number; limit?: number }) => {
@@ -442,6 +493,30 @@ export const dichBenhApi = {
   create: (data: any) => apiCall('/dich-benh', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: any) => apiCall(`/dich-benh/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiCall(`/dich-benh/${id}`, { method: 'DELETE' }),
+};
+
+export const tiemChungApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/tiem-chung?${query}`);
+  },
+  getStats: () => apiCall('/tiem-chung/stats'),
+  getById: (id: number) => apiCall(`/tiem-chung/${id}`),
+  create: (data: any) => apiCall('/tiem-chung', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/tiem-chung/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/tiem-chung/${id}`, { method: 'DELETE' }),
+};
+
+export const phieuKhamApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/phieu-kham?${query}`);
+  },
+  getStats: () => apiCall('/phieu-kham/stats'),
+  getById: (id: number) => apiCall(`/phieu-kham/${id}`),
+  create: (data: any) => apiCall('/phieu-kham', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/phieu-kham/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/phieu-kham/${id}`, { method: 'DELETE' }),
 };
 
 export const luotKhamApi = {
@@ -800,6 +875,10 @@ export const api = {
   health: healthCheck,
   // New APIs
   hoTich: hoTichApi,
+  chungThuc: chungThucApi,
+  hoKhau: hoKhauApi,
+  hoSoTthc: hoSoTthcApi,
+  baoCao: baoCaoApi,
   tramYTe: tramYTeApi,
   nhanVienYTe: nhanVienYTeApi,
   dichBenh: dichBenhApi,

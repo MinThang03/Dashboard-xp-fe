@@ -30,6 +30,38 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_CACHE_KEY = 'dashboardxp_user';
+const FRONTEND_AUTH_ONLY = process.env.NEXT_PUBLIC_FRONTEND_AUTH_ONLY === 'true';
+
+const FRONTEND_USER_PRESETS: Record<UserRole, Omit<User, 'avatar' | 'role'>> = {
+  admin: {
+    id: 'fe-admin-1',
+    username: 'admin',
+    name: 'Quản trị viên (Frontend)',
+    email: 'admin@frontend.local',
+    department: 'Quản trị hệ thống',
+  },
+  leader: {
+    id: 'fe-leader-1',
+    username: 'leader',
+    name: 'Lãnh đạo (Frontend)',
+    email: 'leader@frontend.local',
+    department: 'Lãnh đạo UBND',
+  },
+  officer: {
+    id: 'fe-officer-1',
+    username: 'officer',
+    name: 'Cán bộ (Frontend)',
+    email: 'officer@frontend.local',
+    department: 'Khối chuyên môn',
+  },
+  citizen: {
+    id: 'fe-citizen-1',
+    username: 'citizen',
+    name: 'Công dân (Frontend)',
+    email: 'citizen@frontend.local',
+    department: 'Người dân',
+  },
+};
 
 function mapRole(roleId: number): UserRole {
   if (roleId === 1) return 'admin';
@@ -51,6 +83,39 @@ function toAppUser(user: AuthUserPayload): User {
     role: mapRole(user.roleId),
     avatar,
   };
+}
+
+function inferRoleFromIdentifier(identifier: string): UserRole {
+  const normalized = identifier.trim().toLowerCase();
+  if (normalized.includes('admin')) return 'admin';
+  if (normalized.includes('leader')) return 'leader';
+  if (normalized.includes('officer') || normalized.includes('canbo')) return 'officer';
+  return 'citizen';
+}
+
+function buildFrontendUser(identifier: string, expectedRole?: UserRole): User {
+  const role = expectedRole ?? inferRoleFromIdentifier(identifier);
+  const preset = FRONTEND_USER_PRESETS[role];
+  const username = identifier.trim() || preset.username;
+  const name = role === 'citizen' && identifier.trim() ? `${identifier.trim()} (Frontend)` : preset.name;
+
+  return {
+    ...preset,
+    username,
+    name,
+    role,
+    avatar: name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U',
+  };
+}
+
+export function isFrontendAuthOnlyEnabled() {
+  return FRONTEND_AUTH_ONLY;
 }
 
 function cacheUser(user: User | null) {
@@ -93,6 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      if (FRONTEND_AUTH_ONLY) {
+        clearAccessToken();
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       const me = await authApi.me();
       if (me?.data) {
         const appUser = toAppUser(me.data);
@@ -122,6 +195,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
 
     try {
+      if (FRONTEND_AUTH_ONLY) {
+        if (!identifier.trim() || !password.trim()) {
+          throw new Error('Vui lòng nhập tên đăng nhập và mật khẩu');
+        }
+
+        const frontendUser = buildFrontendUser(identifier, expectedRole);
+        setUser(frontendUser);
+        clearAccessToken();
+
+        return {
+          requiresVerification: false,
+          message: 'Đăng nhập frontend-only thành công',
+        };
+      }
+
       const response = await authApi.login(identifier, password);
       const verificationPayload = response?.data as {
         requiresVerification?: boolean;
@@ -165,6 +253,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (FRONTEND_AUTH_ONLY) {
+      clearAccessToken();
+      setUser(null);
+      return;
+    }
+
     try {
       await authApi.logout();
     } catch {

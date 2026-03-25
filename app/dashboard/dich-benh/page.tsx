@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ import {
   Clock,
   Eye,
   Edit,
+  Trash2,
   X,
   MapPin,
   Activity,
@@ -42,6 +43,7 @@ import {
   HeartPulse,
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
+import { dichBenhApi } from '@/lib/api';
 
 // Mock data cho dịch bệnh
 const mockDichBenh = [
@@ -214,6 +216,7 @@ export default function DichBenhPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CaBenh | null>(null);
+  const [records, setRecords] = useState<CaBenh[]>(mockDichBenh as CaBenh[]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -241,7 +244,7 @@ export default function DichBenhPage() {
   });
 
   // Filter data
-  const filteredData = mockDichBenh.filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchSearch = 
       item.MaCa.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenBenhNhan.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -255,12 +258,50 @@ export default function DichBenhPage() {
 
   // Stats
   const stats = {
-    total: mockDichBenh.length,
-    treating: mockDichBenh.filter(t => t.TrangThaiDieuTri === 'Đang điều trị').length,
-    recovered: mockDichBenh.filter(t => t.TrangThaiDieuTri === 'Đã khỏi').length,
-    severe: mockDichBenh.filter(t => t.MucDoBenh === 'Nặng').length,
-    contacts: mockDichBenh.reduce((sum, t) => sum + t.NguoiTiepXuc, 0),
+    total: records.length,
+    treating: records.filter(t => t.TrangThaiDieuTri === 'Đang điều trị').length,
+    recovered: records.filter(t => t.TrangThaiDieuTri === 'Đã khỏi').length,
+    severe: records.filter(t => t.MucDoBenh === 'Nặng').length,
+    contacts: records.reduce((sum, t) => sum + Number(t.NguoiTiepXuc || 0), 0),
   };
+
+  const mapRecord = (item: any): CaBenh => ({
+    MaCaBenh: item.MaCaBenh ?? item.MaDich,
+    MaCa: item.MaCa || '',
+    TenBenh: item.TenBenh || item.TenDich || '',
+    LoaiBenh: item.LoaiBenh || 'Truyền nhiễm',
+    MaDonViBenh: item.MaDonViBenh || '',
+    MaBenhNhan: item.MaBenhNhan || '',
+    TenBenhNhan: item.TenBenhNhan || '',
+    GioiTinh: item.GioiTinh || 'Nam',
+    NamSinh: Number(item.NamSinh || 2000),
+    DiaChi: item.DiaChi || '',
+    SoDienThoai: item.SoDienThoai || '',
+    NgayKhoiPhat: item.NgayKhoiPhat ? String(item.NgayKhoiPhat).slice(0, 10) : '',
+    NgayPhatHien: item.NgayPhatHien ? String(item.NgayPhatHien).slice(0, 10) : '',
+    NgayBaoCao: item.NgayBaoCao ? String(item.NgayBaoCao).slice(0, 10) : '',
+    TrieuChung: item.TrieuChung || '',
+    MucDoBenh: item.MucDoBenh || item.MucDo || 'Nhẹ',
+    TrangThaiDieuTri: item.TrangThaiDieuTri || item.TrangThai || 'Đang điều trị',
+    NoiDieuTri: item.NoiDieuTri || '',
+    NguoiTiepXuc: Number(item.NguoiTiepXuc || 0),
+    KhuVucPhatHien: item.KhuVucPhatHien || item.KhuVuc || '',
+    ToaDo: item.ToaDo || '',
+    BienPhapXuLy: item.BienPhapXuLy || '',
+    NguoiBaoCao: item.NguoiBaoCao || '',
+    GhiChu: item.GhiChu || '',
+  });
+
+  const loadData = async () => {
+    const response = await dichBenhApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data.map(mapRecord));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Handlers
   const handleView = (record: CaBenh) => {
@@ -297,7 +338,7 @@ export default function DichBenhPage() {
   };
 
   const handleAdd = () => {
-    const newMaCa = `DB-${new Date().getFullYear()}-${String(mockDichBenh.length + 1).padStart(4, '0')}`;
+    const newMaCa = `DB-${new Date().getFullYear()}-${String(records.length + 1).padStart(4, '0')}`;
     setFormData({
       MaCa: newMaCa,
       TenBenh: '',
@@ -324,10 +365,60 @@ export default function DichBenhPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    const payload = {
+      TenDich: formData.TenBenh,
+      KhuVuc: formData.KhuVucPhatHien,
+      SoCaNhiem: 1,
+      SoCaKhoi: formData.TrangThaiDieuTri === 'Đã khỏi' ? 1 : 0,
+      NgayBatDau: formData.NgayKhoiPhat || null,
+      NgayKetThuc: formData.TrangThaiDieuTri === 'Đã khỏi' ? formData.NgayBaoCao || null : null,
+      MucDo: formData.MucDoBenh,
+      TrangThai: formData.TrangThaiDieuTri,
+      GhiChu: formData.GhiChu,
+      NgayCapNhat: new Date().toISOString(),
+      MaCa: formData.MaCa,
+      LoaiBenh: formData.LoaiBenh,
+      MaDonViBenh: formData.MaDonViBenh,
+      TenBenhNhan: formData.TenBenhNhan,
+      GioiTinh: formData.GioiTinh,
+      NamSinh: Number(formData.NamSinh || 0),
+      DiaChi: formData.DiaChi,
+      SoDienThoai: formData.SoDienThoai,
+      NgayKhoiPhat: formData.NgayKhoiPhat || null,
+      NgayPhatHien: formData.NgayPhatHien || null,
+      NgayBaoCao: formData.NgayBaoCao || null,
+      TrieuChung: formData.TrieuChung,
+      TrangThaiDieuTri: formData.TrangThaiDieuTri,
+      NoiDieuTri: formData.NoiDieuTri,
+      NguoiTiepXuc: Number(formData.NguoiTiepXuc || 0),
+      KhuVucPhatHien: formData.KhuVucPhatHien,
+      BienPhapXuLy: formData.BienPhapXuLy,
+      NguoiBaoCao: formData.NguoiBaoCao,
+    };
+
+    const recordId = (selectedRecord as any)?.MaDich || selectedRecord?.MaCaBenh;
+    if (recordId) {
+      await dichBenhApi.update(recordId, payload);
+    } else {
+      await dichBenhApi.create(payload);
+    }
+
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: CaBenh) => {
+    const recordId = (record as any).MaDich || record.MaCaBenh;
+    if (!recordId) {
+      return;
+    }
+
+    if (confirm(`Bạn có chắc chắn muốn xóa ca bệnh ${record.MaCa}?`)) {
+      await dichBenhApi.delete(recordId);
+      await loadData();
+    }
   };
 
   // Helper functions
@@ -555,6 +646,15 @@ export default function DichBenhPage() {
                         title="Cập nhật"
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(record)}
+                        title="Xóa"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

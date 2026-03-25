@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,13 +33,15 @@ import {
   Clock,
   Eye,
   Edit,
+  Trash2,
   X,
   AlertTriangle,
   Baby,
   Users,
   Activity,
 } from 'lucide-react';
-import { mockTiemChung, formatDateTime } from '@/lib/mock-data';
+import { formatDateTime } from '@/lib/mock-data';
+import { tiemChungApi } from '@/lib/api';
 
 // Extended mock data
 const mockTiemChungFull = [
@@ -206,6 +208,7 @@ export default function TiemChungPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<TiemChung | null>(null);
+  const [records, setRecords] = useState<TiemChung[]>(mockTiemChungFull as TiemChung[]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -233,7 +236,7 @@ export default function TiemChungPage() {
   });
 
   // Filter data
-  const filteredData = mockTiemChungFull.filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchSearch = 
       item.MaPhieu.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenDoiTuong.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -247,12 +250,49 @@ export default function TiemChungPage() {
 
   // Stats
   const stats = {
-    total: mockTiemChungFull.length,
-    completed: mockTiemChungFull.filter(t => t.MaTrangThai === 'DA_TIEM').length,
-    waiting: mockTiemChungFull.filter(t => t.MaTrangThai === 'CHO_TIEM').length,
-    children: mockTiemChungFull.filter(t => t.LoaiDoiTuong === 'Trẻ em' || t.LoaiDoiTuong === 'Trẻ sơ sinh').length,
-    rate: Math.round((mockTiemChungFull.filter(t => t.MaTrangThai === 'DA_TIEM').length / mockTiemChungFull.length) * 100),
+    total: records.length,
+    completed: records.filter(t => t.MaTrangThai === 'DA_TIEM').length,
+    waiting: records.filter(t => t.MaTrangThai === 'CHO_TIEM').length,
+    children: records.filter(t => t.LoaiDoiTuong === 'Trẻ em' || t.LoaiDoiTuong === 'Trẻ sơ sinh').length,
+    rate: records.length > 0 ? Math.round((records.filter(t => t.MaTrangThai === 'DA_TIEM').length / records.length) * 100) : 0,
   };
+
+  const mapRecord = (item: any): TiemChung => ({
+    MaTiemChung: item.MaTiemChung,
+    MaPhieu: item.MaPhieu || '',
+    MaDoiTuong: Number(item.MaDoiTuong || 0),
+    TenDoiTuong: item.TenDoiTuong || '',
+    NgaySinh: item.NgaySinh ? String(item.NgaySinh).slice(0, 10) : '',
+    GioiTinh: item.GioiTinh || 'Nam',
+    TenChaMeBaoHo: item.TenChaMeBaoHo || '',
+    SoDienThoai: item.SoDienThoai || '',
+    DiaChi: item.DiaChi || '',
+    LoaiDoiTuong: item.LoaiDoiTuong || 'Trẻ em',
+    TenVacXin: item.TenVacXin || '',
+    LoaiVacXin: item.LoaiVacXin || item.LoaiVacxin || '',
+    MuiThu: Number(item.MuiThu || 1),
+    TongSoMui: Number(item.TongSoMui || 1),
+    NgayTiem: item.NgayTiem ? String(item.NgayTiem).replace('T', ' ').slice(0, 19) : '',
+    ViTriTiem: item.ViTriTiem || '',
+    SoLo: item.SoLo || '',
+    NguoiTiem: item.NguoiTiem || '',
+    MaTrangThai: item.MaTrangThai || 'CHO_TIEM',
+    TrangThai: item.TrangThai || '',
+    PhanUngSauTiem: item.PhanUngSauTiem || '',
+    NgayHenTiemKe: item.NgayHenTiemKe ? String(item.NgayHenTiemKe).slice(0, 10) : null,
+    GhiChu: item.GhiChu || '',
+  });
+
+  const loadData = async () => {
+    const response = await tiemChungApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data.map(mapRecord));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Handlers
   const handleView = (record: TiemChung) => {
@@ -289,10 +329,10 @@ export default function TiemChungPage() {
   };
 
   const handleAdd = () => {
-    const newMaPhieu = `TC-${new Date().getFullYear()}-${String(mockTiemChungFull.length + 1).padStart(4, '0')}`;
+    const newMaPhieu = `TC-${new Date().getFullYear()}-${String(records.length + 1).padStart(4, '0')}`;
     setFormData({
       MaPhieu: newMaPhieu,
-      MaDoiTuong: mockTiemChungFull.length + 1,
+      MaDoiTuong: records.length + 1,
       TenDoiTuong: '',
       NgaySinh: '',
       GioiTinh: 'Nam',
@@ -316,10 +356,37 @@ export default function TiemChungPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    const payload = {
+      ...formData,
+      NgayTiem: formData.NgayTiem || null,
+      NgaySinh: formData.NgaySinh || null,
+      NgayHenTiemKe: formData.NgayHenTiemKe || null,
+      TenDot: formData.TenVacXin || formData.MaPhieu,
+      LoaiVacxin: formData.LoaiVacXin,
+      TrangThai: formData.MaTrangThai,
+    };
+
+    if (selectedRecord?.MaTiemChung) {
+      await tiemChungApi.update(selectedRecord.MaTiemChung, payload);
+    } else {
+      await tiemChungApi.create(payload);
+    }
+
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: TiemChung) => {
+    if (!record.MaTiemChung) {
+      return;
+    }
+
+    if (confirm(`Bạn có chắc chắn muốn xóa phiếu tiêm ${record.MaPhieu}?`)) {
+      await tiemChungApi.delete(record.MaTiemChung);
+      await loadData();
+    }
   };
 
   // Helper functions
@@ -545,6 +612,15 @@ export default function TiemChungPage() {
                         title="Cập nhật"
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(record)}
+                        title="Xóa"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

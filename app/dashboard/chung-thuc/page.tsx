@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,10 +40,12 @@ import {
   UserCheck,
   History,
 } from 'lucide-react';
-import { mockHoSoNghiepVu, mockLichSuXuLyHoSo, formatDateTime } from '@/lib/mock-data';
+import { formatDateTime } from '@/lib/mock-data';
+import { chungThucApi } from '@/lib/api';
 
 // Interface cho Hồ sơ nghiệp vụ (Chứng thực)
 interface HoSoNghiepVu {
+  MaChungThuc?: number;
   MaHoSo: string;
   TenNghiepVu: string;
   MaCongDan: number;
@@ -75,6 +77,7 @@ interface LichSuXuLy {
 }
 
 export default function ChungThucPage() {
+  const [records, setRecords] = useState<HoSoNghiepVu[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -86,6 +89,45 @@ export default function ChungThucPage() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedHoSo, setSelectedHoSo] = useState<HoSoNghiepVu | null>(null);
   const [selectedHistory, setSelectedHistory] = useState<LichSuXuLy[]>([]);
+
+  const toStatusCode = (value: string) => {
+    if (value === 'Hoàn thành') return 'HOAN_THANH';
+    if (value === 'Đang xử lý') return 'DANG_XU_LY';
+    if (value === 'Chờ duyệt') return 'CHO_DUYET';
+    return 'MOI_TAO';
+  };
+
+  const mapFromApi = (item: any): HoSoNghiepVu => ({
+    MaChungThuc: item.MaChungThuc,
+    MaHoSo: item.SoChungThuc || `CT-${item.MaChungThuc}`,
+    TenNghiepVu: item.TenNghiepVu || item.LoaiGiayTo || 'Chứng thực',
+    MaCongDan: 0,
+    TenCongDan: item.NguoiYeuCau || '',
+    MaLinhVuc: 1,
+    TenLinhVuc: 'Tư pháp',
+    MaLoaiNghiepVu: 0,
+    LoaiHoSo: item.LoaiGiayTo || '',
+    MaCanBoXuLy: Number(item.NguoiXuLy || 0),
+    TenCanBoXuLy: item.TenCanBoXuLy || (item.NguoiXuLy ? `CB #${item.NguoiXuLy}` : ''),
+    MaTrangThai: item.MaTrangThai || toStatusCode(item.TrangThai || ''),
+    TrangThai: item.TrangThai || 'Mới tạo',
+    NgayTao: item.NgayTao || item.NgayYeuCau,
+    HanXuLy: item.HanXuLy || item.NgayHoanThanh || item.NgayYeuCau || '',
+    NgayHoanThanh: item.NgayHoanThanh || null,
+    MucDoUuTien: Number(item.MucDoUuTien || 2),
+    GhiChuXuLy: item.GhiChu || '',
+  });
+
+  const loadData = async () => {
+    const result = await chungThucApi.getList({ page: 1, limit: 500 });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Form state for add/edit
   const [formData, setFormData] = useState({
@@ -102,7 +144,7 @@ export default function ChungThucPage() {
   });
 
   // Filter data
-  const filteredData = (mockHoSoNghiepVu as HoSoNghiepVu[]).filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchSearch = 
       item.MaHoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenNghiepVu.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -116,10 +158,10 @@ export default function ChungThucPage() {
 
   // Stats
   const stats = {
-    total: mockHoSoNghiepVu.length,
-    pending: mockHoSoNghiepVu.filter((h) => h.MaTrangThai === 'CHO_DUYET' || h.MaTrangThai === 'MOI_TAO').length,
-    processing: mockHoSoNghiepVu.filter((h) => h.MaTrangThai === 'DANG_XU_LY').length,
-    completed: mockHoSoNghiepVu.filter((h) => h.MaTrangThai === 'HOAN_THANH').length,
+    total: records.length,
+    pending: records.filter((h) => h.MaTrangThai === 'CHO_DUYET' || h.MaTrangThai === 'MOI_TAO').length,
+    processing: records.filter((h) => h.MaTrangThai === 'DANG_XU_LY').length,
+    completed: records.filter((h) => h.MaTrangThai === 'HOAN_THANH').length,
   };
 
   // Handlers
@@ -147,13 +189,13 @@ export default function ChungThucPage() {
 
   const handleViewHistory = (hoSo: HoSoNghiepVu) => {
     setSelectedHoSo(hoSo);
-    const history = (mockLichSuXuLyHoSo as LichSuXuLy[]).filter(h => h.MaHoSo === hoSo.MaHoSo);
-    setSelectedHistory(history);
+    setSelectedHistory([]);
     setHistoryDialogOpen(true);
   };
 
   const handleAdd = () => {
-    const newMaHoSo = `HS-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(mockHoSoNghiepVu.length + 1).padStart(4, '0')}`;
+    const newMaHoSo = `CT-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(records.length + 1).padStart(4, '0')}`;
+    setSelectedHoSo(null);
     setFormData({
       MaHoSo: newMaHoSo,
       TenNghiepVu: '',
@@ -169,10 +211,54 @@ export default function ChungThucPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    setEditDialogOpen(false);
-    setAddDialogOpen(false);
+  const handleSave = async () => {
+    try {
+      const payload = {
+        SoChungThuc: formData.MaHoSo,
+        TenNghiepVu: formData.TenNghiepVu || null,
+        LoaiGiayTo: formData.LoaiHoSo || formData.TenNghiepVu,
+        NguoiYeuCau: formData.TenCongDan,
+        TrangThai: formData.TrangThai,
+        MaTrangThai: formData.MaTrangThai || toStatusCode(formData.TrangThai),
+        NguoiXuLy: null,
+        TenCanBoXuLy: formData.TenCanBoXuLy || null,
+        HanXuLy: formData.HanXuLy || null,
+        MucDoUuTien: Number(formData.MucDoUuTien || 2),
+        GhiChu: formData.GhiChuXuLy,
+        NgayYeuCau: formData.HanXuLy || new Date().toISOString().split('T')[0],
+      };
+
+      const result = selectedHoSo?.MaChungThuc
+        ? await chungThucApi.update(selectedHoSo.MaChungThuc, payload)
+        : await chungThucApi.create(payload);
+
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể lưu hồ sơ chứng thực');
+      }
+
+      await loadData();
+      setEditDialogOpen(false);
+      setAddDialogOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Lưu hồ sơ chứng thực thất bại');
+    }
+  };
+
+  const handleDelete = async (hoSo: HoSoNghiepVu) => {
+    if (!hoSo.MaChungThuc) {
+      return;
+    }
+    if (window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${hoSo.MaHoSo}?`)) {
+      try {
+        const result = await chungThucApi.delete(hoSo.MaChungThuc);
+        if (!result?.success) {
+          throw new Error(result?.message || 'Không thể xóa hồ sơ chứng thực');
+        }
+        await loadData();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Xóa hồ sơ chứng thực thất bại');
+      }
+    }
   };
 
   // Helper functions
@@ -353,6 +439,9 @@ export default function ChungThucPage() {
                       </Button>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:inline-flex" onClick={() => handleViewHistory(item)}>
                         <History className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700" onClick={() => handleDelete(item)}>
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                     </div>
                   </td>

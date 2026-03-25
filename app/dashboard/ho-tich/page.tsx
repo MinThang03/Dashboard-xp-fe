@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { mockHoTich, mockThanhVienHoTich, formatDate, formatDateTime } from '@/lib/mock-data';
+import { formatDate, formatDateTime } from '@/lib/mock-data';
+import { hoTichApi } from '@/lib/api';
 import {
   FileText,
   Search,
@@ -32,6 +33,7 @@ import {
 
 
 export default function HoTichPage() {
+  const [hoTichList, setHoTichList] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -39,7 +41,18 @@ export default function HoTichPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
-  const filteredData = mockHoTich.filter((item) => {
+  const loadData = async () => {
+    const result = await hoTichApi.getList({ page: 1, limit: 500 });
+    if (result.success && Array.isArray(result.data)) {
+      setHoTichList(result.data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filteredData = hoTichList.filter((item) => {
     const search = searchQuery.toLowerCase();
     return (
       item.so_ho_tich.toLowerCase().includes(search) ||
@@ -75,6 +88,7 @@ export default function HoTichPage() {
   };
 
   const handleAdd = () => {
+    setSelectedItem(null);
     setFormData({
       so_ho_tich: '',
       ten_chu_ho: '',
@@ -98,26 +112,55 @@ export default function HoTichPage() {
     setIsAddOpen(true);
   };
 
-  const handleSave = () => {
-    const payload = {
-      ...formData,
-      so_thanh_vien_ho_tich: formData.thanh_vien?.length || formData.so_thanh_vien_ho_tich || 0,
-    };
-    console.log('Saving:', payload);
-    // TODO: API call to save
-    setIsEditOpen(false);
-    setIsAddOpen(false);
+  const handleSave = async () => {
+    try {
+      const payload = {
+        so_ho_tich: formData.so_ho_tich,
+        ten_chu_ho: formData.ten_chu_ho,
+        ngay_sinh_chu_ho: formData.ngay_sinh_chu_ho || null,
+        gioi_tinh_chu_ho: formData.gioi_tinh_chu_ho || null,
+        dia_chi_ho_tich: formData.dia_chi_ho_tich,
+        so_thanh_vien_ho_tich: formData.thanh_vien?.length || formData.so_thanh_vien_ho_tich || 0,
+        ngay_lap_ho_tich: formData.ngay_lap_ho_tich || null,
+        ghi_chu: formData.ghi_chu || '',
+        trang_thai: Boolean(formData.trang_thai),
+      };
+
+      const result = selectedItem?.id
+        ? await hoTichApi.update(selectedItem.id, payload)
+        : await hoTichApi.create(payload);
+
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể lưu hồ sơ hộ tịch');
+      }
+
+      await loadData();
+      setIsEditOpen(false);
+      setIsAddOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Lưu hồ sơ hộ tịch thất bại');
+    }
   };
 
-  const handleDelete = (item: any) => {
+  const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hộ tịch ${item.so_ho_tich}?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      try {
+        const result = await hoTichApi.delete(item.id);
+        if (!result?.success) {
+          throw new Error(result?.message || 'Không thể xóa hồ sơ hộ tịch');
+        }
+        await loadData();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Xóa hồ sơ hộ tịch thất bại');
+      }
     }
   };
 
   const getThanhVien = (idHoTich: number) => {
-    return mockThanhVienHoTich.filter((tv) => tv.id_ho_tich === idHoTich);
+    if (selectedItem?.id === idHoTich && Array.isArray(formData.thanh_vien)) {
+      return formData.thanh_vien;
+    }
+    return [];
   };
 
   const handleMemberChange = (index: number, field: string, value: string) => {
@@ -188,7 +231,7 @@ export default function HoTichPage() {
             </div>
             <Badge className="bg-blue-500/10 text-blue-700 border-0">Tổng</Badge>
           </div>
-          <p className="text-3xl font-bold">{mockHoTich.length}</p>
+          <p className="text-3xl font-bold">{hoTichList.length}</p>
           <p className="text-sm text-muted-foreground">Tổng số hộ</p>
         </Card>
 
@@ -199,7 +242,7 @@ export default function HoTichPage() {
             </div>
             <Badge className="bg-green-500/10 text-green-700 border-0">Thành viên</Badge>
           </div>
-          <p className="text-3xl font-bold">{mockThanhVienHoTich.length}</p>
+          <p className="text-3xl font-bold">{hoTichList.reduce((sum, h) => sum + (Number(h.so_thanh_vien_ho_tich || 0)), 0)}</p>
           <p className="text-sm text-muted-foreground">Tổng thành viên</p>
         </Card>
 
@@ -210,7 +253,7 @@ export default function HoTichPage() {
             </div>
             <Badge className="bg-purple-500/10 text-purple-700 border-0">Hoạt động</Badge>
           </div>
-          <p className="text-3xl font-bold">{mockHoTich.filter(h => h.trang_thai === 1).length}</p>
+          <p className="text-3xl font-bold">{hoTichList.filter(h => h.trang_thai === true || h.trang_thai === 1).length}</p>
           <p className="text-sm text-muted-foreground">Hộ đang hoạt động</p>
         </Card>
 
@@ -222,7 +265,7 @@ export default function HoTichPage() {
             <Badge className="bg-amber-500/10 text-amber-700 border-0">Mới</Badge>
           </div>
           <p className="text-3xl font-bold">
-            {mockHoTich.filter(h => 
+            {hoTichList.filter(h => 
               new Date(h.created_at).getMonth() === new Date().getMonth()
             ).length}
           </p>
@@ -405,7 +448,7 @@ export default function HoTichPage() {
                   Danh sách thành viên ({getThanhVien(selectedItem.id).length})
                 </h3>
                 <div className="space-y-3">
-                  {getThanhVien(selectedItem.id).map((tv) => (
+                  {getThanhVien(selectedItem.id).map((tv: any) => (
                     <div key={tv.id} className="border rounded-lg p-4 hover:bg-slate-50">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
