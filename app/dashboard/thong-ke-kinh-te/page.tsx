@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { thongKeKinhTeApi } from '@/lib/api';
 
 // Mock data cho thống kê kinh tế
 const mockThongKe = [
@@ -173,13 +174,27 @@ export default function ThongKeKinhTePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [periodFilter, setPeriodFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [records, setRecords] = useState<ThongKe[]>([]);
   
   // Dialog states
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ThongKe | null>(null);
 
+  const loadData = async () => {
+    const res = await thongKeKinhTeApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockThongKe;
+
   // Filter data
-  const filteredData = mockThongKe.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.MaBC.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.KyBaoCao.toLowerCase().includes(searchQuery.toLowerCase());
@@ -191,14 +206,14 @@ export default function ThongKeKinhTePage() {
   });
 
   // Tổng hợp stats
-  const latestReport = mockThongKe.find(m => m.LoaiKy === 'Tháng' && m.TrangThai === 'Đã duyệt');
+  const latestReport = dataSource.find(m => m.LoaiKy === 'Tháng' && m.TrangThai === 'Đã duyệt');
   const stats = {
     tongDoanhThu: latestReport?.TongDoanhThu || 0,
     tongHoKD: latestReport?.TongHoKinhDoanh || 0,
     tangTruong: latestReport?.TangTruong || 0,
     tongThuNganSach: latestReport?.TongThuNganSach || 0,
     tongLaoDong: latestReport?.SoLuongLaoDong || 0,
-    soBaoCao: mockThongKe.length,
+    soBaoCao: dataSource.length,
   };
 
   // Handlers

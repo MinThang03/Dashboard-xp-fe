@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,8 +41,10 @@ import {
   Gavel,
   FileCheck,
   RefreshCcw,
+  Trash2,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { viPhamApi } from '@/lib/api';
 
 // Mock data cho vi phạm
 const mockViPham = [
@@ -243,6 +245,7 @@ export default function ViPhamPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ViPham | null>(null);
+  const [records, setRecords] = useState<ViPham[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -268,8 +271,21 @@ export default function ViPhamPage() {
     GhiChu: '',
   });
 
+  const loadData = async () => {
+    const res = await viPhamApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockViPham;
+
   // Filter data
-  const filteredData = mockViPham.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.SoBienBan.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.DoiTuong.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -283,12 +299,12 @@ export default function ViPhamPage() {
 
   // Stats
   const stats = {
-    total: mockViPham.length,
-    processing: mockViPham.filter(v => v.TrangThai === 'Đang xử lý').length,
-    resolved: mockViPham.filter(v => v.TrangThai === 'Đã xử lý').length,
-    pending: mockViPham.filter(v => v.TrangThai === 'Chờ xác minh').length,
-    totalFine: mockViPham.reduce((sum, v) => sum + v.MucPhat, 0),
-    reoffend: mockViPham.filter(v => v.TaiPham).length,
+    total: dataSource.length,
+    processing: dataSource.filter(v => v.TrangThai === 'Đang xử lý').length,
+    resolved: dataSource.filter(v => v.TrangThai === 'Đã xử lý').length,
+    pending: dataSource.filter(v => v.TrangThai === 'Chờ xác minh').length,
+    totalFine: dataSource.reduce((sum, v) => sum + (v.MucPhat || 0), 0),
+    reoffend: dataSource.filter(v => v.TaiPham).length,
   };
 
   // Handlers
@@ -325,6 +341,7 @@ export default function ViPhamPage() {
   };
 
   const handleAdd = () => {
+    setSelectedRecord(null);
     setFormData({
       SoBienBan: '',
       NgayLap: new Date().toISOString().split('T')[0],
@@ -350,10 +367,23 @@ export default function ViPhamPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    if (selectedRecord?.MaViPham) {
+      await viPhamApi.update(selectedRecord.MaViPham, formData);
+    } else {
+      await viPhamApi.create(formData);
+    }
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: ViPham) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa biên bản ${record.SoBienBan}?`)) {
+      return;
+    }
+    await viPhamApi.delete(record.MaViPham);
+    await loadData();
   };
 
   // Helper functions
@@ -606,6 +636,14 @@ export default function ViPhamPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

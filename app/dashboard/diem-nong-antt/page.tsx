@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,8 +40,10 @@ import {
   Shield,
   Clock,
   Phone,
+  Trash2,
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
+import { diemNongAnNinhApi } from '@/lib/api';
 
 // Mock data cho điểm nóng ANTT
 const mockDiemNong = [
@@ -229,6 +231,7 @@ export default function DiemNongANTTPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<DiemNong | null>(null);
+  const [records, setRecords] = useState<DiemNong[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -251,8 +254,43 @@ export default function DiemNongANTTPage() {
     GhiChu: '',
   });
 
+  const loadData = async () => {
+    const res = await diemNongAnNinhApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      const mapped = (res as any).data.map((item: any) => ({
+        MaDiemNong: item.MaDiemNong ?? item.MaDiem,
+        MaDN: item.MaDN,
+        TenDiaDiem: item.TenDiaDiem ?? item.TenDiem,
+        DiaChi: item.DiaChi ?? item.DiaDiem,
+        LoaiDiaDiem: item.LoaiDiaDiem,
+        LoaiViPham: item.LoaiViPham ?? item.LoaiRuiRo,
+        MucDo: item.MucDo ?? item.MucDoNghiemTrong,
+        SoDoiTuong: item.SoDoiTuong,
+        NgayPhatHien: item.NgayPhatHien,
+        NgayCapNhat: item.NgayCapNhat,
+        CanBoTheoDoi: item.CanBoTheoDoi,
+        SoDienThoai: item.SoDienThoai,
+        MoTa: item.MoTa,
+        BienPhapXuLy: item.BienPhapXuLy,
+        TrangThai: item.TrangThai ?? item.TinhTrang,
+        ToaDo: {
+          lat: Number(item.ToaDoLat ?? 0),
+          lng: Number(item.ToaDoLng ?? 0),
+        },
+        GhiChu: item.GhiChu,
+      }));
+      setRecords(mapped);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockDiemNong;
+
   // Filter data
-  const filteredData = mockDiemNong.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.MaDN.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenDiaDiem.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -266,12 +304,12 @@ export default function DiemNongANTTPage() {
 
   // Stats
   const stats = {
-    total: mockDiemNong.length,
-    high: mockDiemNong.filter(d => d.MucDo === 'Cao').length,
-    medium: mockDiemNong.filter(d => d.MucDo === 'Trung bình').length,
-    low: mockDiemNong.filter(d => d.MucDo === 'Thấp').length,
-    totalObjects: mockDiemNong.reduce((sum, d) => sum + d.SoDoiTuong, 0),
-    resolved: mockDiemNong.filter(d => d.TrangThai === 'Đã xử lý').length,
+    total: dataSource.length,
+    high: dataSource.filter(d => d.MucDo === 'Cao').length,
+    medium: dataSource.filter(d => d.MucDo === 'Trung bình').length,
+    low: dataSource.filter(d => d.MucDo === 'Thấp').length,
+    totalObjects: dataSource.reduce((sum, d) => sum + d.SoDoiTuong, 0),
+    resolved: dataSource.filter(d => d.TrangThai === 'Đã xử lý').length,
   };
 
   // Handlers
@@ -305,6 +343,7 @@ export default function DiemNongANTTPage() {
   };
 
   const handleAdd = () => {
+    setSelectedRecord(null);
     setFormData({
       MaDN: '',
       TenDiaDiem: '',
@@ -327,10 +366,28 @@ export default function DiemNongANTTPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    const payload = {
+      ...formData,
+      ToaDoLat: Number(formData.ToaDoLat || 0),
+      ToaDoLng: Number(formData.ToaDoLng || 0),
+    };
+    if (selectedRecord?.MaDiemNong) {
+      await diemNongAnNinhApi.update(selectedRecord.MaDiemNong, payload);
+    } else {
+      await diemNongAnNinhApi.create(payload);
+    }
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: DiemNong) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa điểm nóng ${record.MaDN}?`)) {
+      return;
+    }
+    await diemNongAnNinhApi.delete(record.MaDiemNong);
+    await loadData();
   };
 
   // Helper functions
@@ -563,6 +620,14 @@ export default function DiemNongANTTPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

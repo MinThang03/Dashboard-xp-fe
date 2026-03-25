@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import {
   MapPin, Users, FileText, Eye, AlertCircle, Activity, BarChart3,
   Calendar, Building2, Target, Info
 } from 'lucide-react';
+import { anNinhTratTuApi } from '@/lib/api';
 
 // Mock data tổng hợp ANTT
 const mockThongKeThang = [
@@ -66,7 +67,25 @@ const mockDoiTuongTheoDoi = [
 
 export default function AnNinhTratTuPage() {
   const [kyBaoCao, setKyBaoCao] = useState('thang');
+  const [suKienData, setSuKienData] = useState<typeof mockSuKienGanDay>(mockSuKienGanDay);
   const [selectedSuKien, setSelectedSuKien] = useState<typeof mockSuKienGanDay[0] | null>(null);
+
+  useEffect(() => {
+    anNinhTratTuApi.getList({ page: 1, limit: 200 }).then((res: any) => {
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = res.data.map((item: any) => ({
+          MaSK: item.MaSK ?? `SK${item.MaSuKien}`,
+          NoiDung: item.NoiDung,
+          KhuVuc: item.KhuVuc || 'Chưa cập nhật',
+          MucDo: item.MucDo || 'Trung bình',
+          NgayPhatSinh: item.NgayPhatSinh,
+          TrangThai: item.TrangThai || 'Đang xử lý',
+          CanBo: item.CanBo || 'Chưa phân công',
+        }));
+        setSuKienData(mapped);
+      }
+    });
+  }, []);
 
   // Tính toán thống kê tổng hợp
   const tongSuKien = mockThongKeThang.reduce((acc, item) => acc + item.SuKien, 0);
@@ -267,7 +286,7 @@ export default function AnNinhTratTuPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockSuKienGanDay.map((sk) => (
+                    {suKienData.map((sk) => (
                       <TableRow key={sk.MaSK}>
                         <TableCell>
                           <div>

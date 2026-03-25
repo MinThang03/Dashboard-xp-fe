@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,8 +42,10 @@ import {
   FileText,
   ArrowRightLeft,
   XCircle,
+  Trash2,
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
+import { tamTruTamVangApi } from '@/lib/api';
 
 // Mock data cho tạm trú tạm vắng
 const mockTamTruVang = [
@@ -249,6 +251,7 @@ export default function TamTruVangPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<TamTruVang | null>(null);
+  const [records, setRecords] = useState<TamTruVang[]>([]);
 
   // Form state
   const defaultForm = () => ({
@@ -274,8 +277,42 @@ export default function TamTruVangPage() {
 
   const [formData, setFormData] = useState(defaultForm());
 
+  const loadData = async () => {
+    const res = await tamTruTamVangApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      const mapped = (res as any).data.map((item: any) => ({
+        MaTT: item.MaTT ?? item.MaHoSo,
+        MaDangKy: item.MaDangKy,
+        LoaiDangKy: item.LoaiDangKy,
+        HoTen: item.HoTen ?? item.HoTenNguoiKhaiBao,
+        CCCD: item.CCCD,
+        NgaySinh: item.NgaySinh,
+        GioiTinh: item.GioiTinh,
+        QueQuan: item.QueQuan,
+        DiaChiThuongTru: item.DiaChiThuongTru,
+        DiaChiTamTru: item.DiaChiTamTru,
+        ChuHo: item.ChuHo,
+        QuanHeVoiChuHo: item.QuanHeVoiChuHo,
+        SoDienThoai: item.SoDienThoai,
+        NgayDangKy: item.NgayDangKy ?? item.TuNgay,
+        NgayHetHan: item.NgayHetHan ?? item.DenNgay,
+        LyDo: item.LyDo,
+        TrangThai: item.TrangThai ?? item.TinhTrangHoSo,
+        CanBoXuLy: item.CanBoXuLy,
+        GhiChu: item.GhiChu,
+      }));
+      setRecords(mapped);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockTamTruVang;
+
   // Filter data
-  const filteredData = mockTamTruVang.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.MaDangKy.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.HoTen.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -289,12 +326,12 @@ export default function TamTruVangPage() {
 
   // Stats
   const stats = {
-    total: mockTamTruVang.length,
-    tamTru: mockTamTruVang.filter(t => t.LoaiDangKy === 'Tạm trú').length,
-    tamVang: mockTamTruVang.filter(t => t.LoaiDangKy === 'Tạm vắng').length,
-    valid: mockTamTruVang.filter(t => t.TrangThai === 'Còn hạn').length,
-    expiring: mockTamTruVang.filter(t => t.TrangThai === 'Sắp hết hạn').length,
-    expired: mockTamTruVang.filter(t => t.TrangThai === 'Hết hạn').length,
+    total: dataSource.length,
+    tamTru: dataSource.filter(t => t.LoaiDangKy === 'Tạm trú').length,
+    tamVang: dataSource.filter(t => t.LoaiDangKy === 'Tạm vắng').length,
+    valid: dataSource.filter(t => t.TrangThai === 'Còn hạn').length,
+    expiring: dataSource.filter(t => t.TrangThai === 'Sắp hết hạn').length,
+    expired: dataSource.filter(t => t.TrangThai === 'Hết hạn').length,
   };
 
   // Handlers
@@ -329,16 +366,32 @@ export default function TamTruVangPage() {
   };
 
   const handleAdd = () => {
+    setSelectedRecord(null);
     setFormData({
       ...defaultForm(),
     });
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    const selectedId = (selectedRecord as any)?.MaTT ?? (selectedRecord as any)?.MaHoSo;
+    if (selectedId) {
+      await tamTruTamVangApi.update(selectedId, formData);
+    } else {
+      await tamTruTamVangApi.create(formData);
+    }
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: TamTruVang) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${record.MaDangKy}?`)) {
+      return;
+    }
+    const selectedId = (record as any).MaTT ?? (record as any).MaHoSo;
+    await tamTruTamVangApi.delete(selectedId);
+    await loadData();
   };
 
   // Helper functions
@@ -576,6 +629,14 @@ export default function TamTruVangPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

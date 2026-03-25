@@ -581,6 +581,42 @@ export const choDiemKinhDoanhApi = {
   delete: (id: number) => apiCall(`/cho-diem-kinh-doanh/${id}`, { method: 'DELETE' }),
 };
 
+export const thuPhiApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/thu-phi?${query}`);
+  },
+  getStats: () => apiCall('/thu-phi/stats'),
+  getById: (id: number) => apiCall(`/thu-phi/${id}`),
+  create: (data: any) => apiCall('/thu-phi', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/thu-phi/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/thu-phi/${id}`, { method: 'DELETE' }),
+};
+
+export const hoTroDoanhNghiepApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/ho-tro-doanh-nghiep?${query}`);
+  },
+  getStats: () => apiCall('/ho-tro-doanh-nghiep/stats'),
+  getById: (id: number) => apiCall(`/ho-tro-doanh-nghiep/${id}`),
+  create: (data: any) => apiCall('/ho-tro-doanh-nghiep', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/ho-tro-doanh-nghiep/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/ho-tro-doanh-nghiep/${id}`, { method: 'DELETE' }),
+};
+
+export const thongKeKinhTeApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/thong-ke-kinh-te?${query}`);
+  },
+  getStats: () => apiCall('/thong-ke-kinh-te/stats'),
+  getById: (id: number) => apiCall(`/thong-ke-kinh-te/${id}`),
+  create: (data: any) => apiCall('/thong-ke-kinh-te', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/thong-ke-kinh-te/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/thong-ke-kinh-te/${id}`, { method: 'DELETE' }),
+};
+
 // ============== AN NINH TRẬT TỰ ==============
 export const tamTruTamVangApi = {
   getList: (params?: { page?: number; limit?: number }) => {
@@ -592,6 +628,42 @@ export const tamTruTamVangApi = {
   create: (data: any) => apiCall('/tam-tru-tam-vang', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: any) => apiCall(`/tam-tru-tam-vang/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiCall(`/tam-tru-tam-vang/${id}`, { method: 'DELETE' }),
+};
+
+export const viPhamApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/vi-pham?${query}`);
+  },
+  getStats: () => apiCall('/vi-pham/stats'),
+  getById: (id: number) => apiCall(`/vi-pham/${id}`),
+  create: (data: any) => apiCall('/vi-pham', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/vi-pham/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/vi-pham/${id}`, { method: 'DELETE' }),
+};
+
+export const diemNongAnNinhApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/diem-nong-an-ninh?${query}`);
+  },
+  getStats: () => apiCall('/diem-nong-an-ninh/stats'),
+  getById: (id: number) => apiCall(`/diem-nong-an-ninh/${id}`),
+  create: (data: any) => apiCall('/diem-nong-an-ninh', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/diem-nong-an-ninh/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/diem-nong-an-ninh/${id}`, { method: 'DELETE' }),
+};
+
+export const anNinhTratTuApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/an-ninh-trat-tu?${query}`);
+  },
+  getStats: () => apiCall('/an-ninh-trat-tu/stats'),
+  getById: (id: number) => apiCall(`/an-ninh-trat-tu/${id}`),
+  create: (data: any) => apiCall('/an-ninh-trat-tu', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/an-ninh-trat-tu/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/an-ninh-trat-tu/${id}`, { method: 'DELETE' }),
 };
 
 export const tinhHinhANTTApi = {

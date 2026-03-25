@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,8 +40,10 @@ import {
   Building,
   ShoppingBag,
   Truck,
+  Trash2,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { choDiemKinhDoanhApi } from '@/lib/api';
 
 // Mock data cho chợ và điểm kinh doanh
 const mockChoKinhDoanh = [
@@ -202,6 +204,7 @@ export default function ChoKinhDoanhPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ChoKinhDoanh | null>(null);
+  const [records, setRecords] = useState<ChoKinhDoanh[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -225,8 +228,21 @@ export default function ChoKinhDoanhPage() {
     GhiChu: '',
   });
 
+  const loadData = async () => {
+    const res = await choDiemKinhDoanhApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockChoKinhDoanh;
+
   // Filter data
-  const filteredData = mockChoKinhDoanh.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.MaDiemKD.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenDiemKD.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -240,12 +256,12 @@ export default function ChoKinhDoanhPage() {
 
   // Stats
   const stats = {
-    totalPlaces: mockChoKinhDoanh.length,
-    totalStalls: mockChoKinhDoanh.reduce((sum, t) => sum + t.SoGianHang, 0),
-    activeStalls: mockChoKinhDoanh.reduce((sum, t) => sum + t.SoGianDangKinhDoanh, 0),
-    emptyStalls: mockChoKinhDoanh.reduce((sum, t) => sum + t.SoGianTrong, 0),
-    totalRevenue: mockChoKinhDoanh.reduce((sum, t) => sum + t.DoanhThuThang, 0),
-    totalFees: mockChoKinhDoanh.reduce((sum, t) => sum + t.ThuPhiThang, 0),
+    totalPlaces: dataSource.length,
+    totalStalls: dataSource.reduce((sum, t) => sum + t.SoGianHang, 0),
+    activeStalls: dataSource.reduce((sum, t) => sum + t.SoGianDangKinhDoanh, 0),
+    emptyStalls: dataSource.reduce((sum, t) => sum + t.SoGianTrong, 0),
+    totalRevenue: dataSource.reduce((sum, t) => sum + t.DoanhThuThang, 0),
+    totalFees: dataSource.reduce((sum, t) => sum + t.ThuPhiThang, 0),
   };
 
   // Handlers
@@ -280,6 +296,7 @@ export default function ChoKinhDoanhPage() {
   };
 
   const handleAdd = () => {
+    setSelectedRecord(null);
     setFormData({
       MaDiemKD: '',
       TenDiemKD: '',
@@ -303,10 +320,23 @@ export default function ChoKinhDoanhPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    if (selectedRecord?.MaCho) {
+      await choDiemKinhDoanhApi.update(selectedRecord.MaCho, formData);
+    } else {
+      await choDiemKinhDoanhApi.create(formData);
+    }
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: ChoKinhDoanh) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa điểm kinh doanh ${record.TenDiemKD}?`)) {
+      return;
+    }
+    await choDiemKinhDoanhApi.delete(record.MaCho);
+    await loadData();
   };
 
   // Helper functions
@@ -551,6 +581,14 @@ export default function ChoKinhDoanhPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

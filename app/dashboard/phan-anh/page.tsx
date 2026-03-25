@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit, Trash2, X } from 'lucide-react';
+import { phanAnhApi } from '@/lib/api';
 
 export default function PhanAnhPage() {
   const router = useRouter();
@@ -47,17 +48,31 @@ export default function PhanAnhPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [records, setRecords] = useState<any[]>([]);
+
+  const loadData = async () => {
+    const res = await phanAnhApi.getList({ page: 1, limit: 200 } as any);
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockPhanAnhKienNghi;
 
   // Tính toán thống kê
   const stats = {
-    total: mockPhanAnhKienNghi.length,
-    choXuLy: mockPhanAnhKienNghi.filter(pa => pa.TrangThai === 'Mới' || pa.TrangThai === 'Đang xử lý').length,
-    daXuLy: mockPhanAnhKienNghi.filter(pa => pa.TrangThai === 'Đã xử lý').length,
-    khanCap: mockPhanAnhKienNghi.filter(pa => pa.MucDoUuTien === 'Khẩn cấp').length,
+    total: dataSource.length,
+    choXuLy: dataSource.filter(pa => pa.TrangThai === 'Mới' || pa.TrangThai === 'Đang xử lý').length,
+    daXuLy: dataSource.filter(pa => pa.TrangThai === 'Đã xử lý').length,
+    khanCap: dataSource.filter(pa => pa.MucDoUuTien === 'Khẩn cấp').length,
   };
 
   // Lọc dữ liệu
-  const filteredData = mockPhanAnhKienNghi.filter(pa =>
+  const filteredData = dataSource.filter(pa =>
     pa.TieuDe.toLowerCase().includes(searchQuery.toLowerCase()) ||
     pa.TenNguoiPhanAnh.toLowerCase().includes(searchQuery.toLowerCase()) ||
     pa.NoiDung.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,6 +104,7 @@ export default function PhanAnhPage() {
   };
 
   const handleAdd = () => {
+    setSelectedItem(null);
     setFormData({
       TieuDe: '',
       NoiDung: '',
@@ -113,17 +129,20 @@ export default function PhanAnhPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    // TODO: API call to save
+  const handleSave = async () => {
+    if (selectedItem?.MaPhanAnh) {
+      await (phanAnhApi as any).update(selectedItem.MaPhanAnh, formData);
+    } else {
+      await (phanAnhApi as any).create(formData);
+    }
+    await loadData();
     setIsAddOpen(false);
     setIsEditOpen(false);
   };
 
   const handleDelete = (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa phản ánh "${item.TieuDe}"?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      (phanAnhApi as any).delete(item.MaPhanAnh).then(() => loadData());
     }
   };
 

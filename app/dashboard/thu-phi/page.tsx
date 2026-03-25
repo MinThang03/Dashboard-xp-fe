@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { mockThuPhiLePhi, mockTongHopThuPhi } from '@/lib/mock-data';
+import { thuPhiApi } from '@/lib/api';
 
 export default function ThuPhiPage() {
   const router = useRouter();
@@ -44,15 +45,29 @@ export default function ThuPhiPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [records, setRecords] = useState<any[]>([]);
+
+  const loadData = async () => {
+    const res = await thuPhiApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockThuPhiLePhi;
 
   // Tính toán thống kê
-  const tongThuThang = mockThuPhiLePhi.reduce((sum, item) => sum + item.ThanhTien, 0);
-  const soDoiTuong = mockThuPhiLePhi.reduce((sum, item) => sum + item.SoLuong, 0);
-  const daThu = mockThuPhiLePhi.filter(item => item.TrangThai === 'Đã thu').length;
-  const tyLeThu = Math.round((daThu / mockThuPhiLePhi.length) * 100);
+  const tongThuThang = dataSource.reduce((sum, item) => sum + (item.ThanhTien || 0), 0);
+  const soDoiTuong = dataSource.reduce((sum, item) => sum + (item.SoLuong || 0), 0);
+  const daThu = dataSource.filter(item => item.TrangThai === 'Đã thu').length;
+  const tyLeThu = dataSource.length ? Math.round((daThu / dataSource.length) * 100) : 0;
 
   // Lọc dữ liệu
-  const filteredData = mockThuPhiLePhi.filter(item =>
+  const filteredData = dataSource.filter(item =>
     item.LoaiPhi.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.MoTa.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -89,6 +104,7 @@ export default function ThuPhiPage() {
   };
 
   const handleAdd = () => {
+    setSelectedItem(null);
     setFormData({
       LoaiPhi: '',
       MoTa: '',
@@ -112,17 +128,20 @@ export default function ThuPhiPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    // TODO: API call to save
+  const handleSave = async () => {
+    if (selectedItem?.MaThuPhi) {
+      await thuPhiApi.update(selectedItem.MaThuPhi, formData);
+    } else {
+      await thuPhiApi.create(formData);
+    }
+    await loadData();
     setIsAddOpen(false);
     setIsEditOpen(false);
   };
 
   const handleDelete = (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa phiếu thu ${item.LoaiPhi}?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      thuPhiApi.delete(item.MaThuPhi).then(() => loadData());
     }
   };
 
@@ -193,7 +212,7 @@ export default function ThuPhiPage() {
               <Calendar className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold">{mockThuPhiLePhi.length}</p>
+          <p className="text-3xl font-bold">{dataSource.length}</p>
           <p className="text-sm text-muted-foreground">Loại phí/lệ phí</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">

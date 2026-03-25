@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,8 +41,10 @@ import {
   DollarSign,
   Building,
   HelpCircle,
+  Trash2,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { hoTroDoanhNghiepApi } from '@/lib/api';
 
 // Mock data cho hỗ trợ doanh nghiệp
 const mockHoTroDN = [
@@ -213,6 +215,7 @@ export default function HoTroDoanhNghiepPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<HoTroDN | null>(null);
+  const [records, setRecords] = useState<HoTroDN[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -234,8 +237,21 @@ export default function HoTroDoanhNghiepPage() {
     GhiChu: '',
   });
 
+  const loadData = async () => {
+    const res = await hoTroDoanhNghiepApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockHoTroDN;
+
   // Filter data
-  const filteredData = mockHoTroDN.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.MaYC.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenDoanhNghiep.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -249,12 +265,12 @@ export default function HoTroDoanhNghiepPage() {
 
   // Stats
   const stats = {
-    total: mockHoTroDN.length,
-    completed: mockHoTroDN.filter(h => h.TrangThai === 'Hoàn thành').length,
-    processing: mockHoTroDN.filter(h => h.TrangThai === 'Đang xử lý').length,
-    pending: mockHoTroDN.filter(h => h.TrangThai === 'Chờ xử lý').length,
-    totalValue: mockHoTroDN.reduce((sum, h) => sum + h.GiaTriHoTro, 0),
-    successRate: Math.round((mockHoTroDN.filter(h => h.TrangThai === 'Hoàn thành').length / mockHoTroDN.length) * 100),
+    total: dataSource.length,
+    completed: dataSource.filter(h => h.TrangThai === 'Hoàn thành').length,
+    processing: dataSource.filter(h => h.TrangThai === 'Đang xử lý').length,
+    pending: dataSource.filter(h => h.TrangThai === 'Chờ xử lý').length,
+    totalValue: dataSource.reduce((sum, h) => sum + h.GiaTriHoTro, 0),
+    successRate: dataSource.length ? Math.round((dataSource.filter(h => h.TrangThai === 'Hoàn thành').length / dataSource.length) * 100) : 0,
   };
 
   // Handlers
@@ -287,6 +303,7 @@ export default function HoTroDoanhNghiepPage() {
   };
 
   const handleAdd = () => {
+    setSelectedRecord(null);
     setFormData({
       MaYC: '',
       TenDoanhNghiep: '',
@@ -308,10 +325,23 @@ export default function HoTroDoanhNghiepPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    if (selectedRecord?.MaHoTro) {
+      await hoTroDoanhNghiepApi.update(selectedRecord.MaHoTro, formData);
+    } else {
+      await hoTroDoanhNghiepApi.create(formData);
+    }
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: HoTroDN) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa yêu cầu ${record.MaYC}?`)) {
+      return;
+    }
+    await hoTroDoanhNghiepApi.delete(record.MaHoTro);
+    await loadData();
   };
 
   // Helper functions
@@ -552,6 +582,14 @@ export default function HoTroDoanhNghiepPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

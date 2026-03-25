@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,8 +40,10 @@ import {
   Ban,
   Calendar,
   FileText,
+  Trash2,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { hoKinhDoanhApi } from '@/lib/api';
 
 // Mock data cho hộ kinh doanh
 const mockHoKinhDoanh = [
@@ -250,6 +252,7 @@ export default function HoKinhDoanhPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<HoKinhDoanh | null>(null);
+  const [records, setRecords] = useState<HoKinhDoanh[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -276,8 +279,21 @@ export default function HoKinhDoanhPage() {
     LanCapPhep: 1,
   });
 
+  const loadData = async () => {
+    const res = await hoKinhDoanhApi.getList({ page: 1, limit: 200 });
+    if (res.success && Array.isArray((res as any).data)) {
+      setRecords((res as any).data);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const dataSource = records.length > 0 ? records : mockHoKinhDoanh;
+
   // Filter data
-  const filteredData = mockHoKinhDoanh.filter((item) => {
+  const filteredData = dataSource.filter((item) => {
     const matchSearch = 
       item.SoGCN.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenHoKD.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -291,12 +307,12 @@ export default function HoKinhDoanhPage() {
 
   // Stats
   const stats = {
-    total: mockHoKinhDoanh.length,
-    active: mockHoKinhDoanh.filter(h => h.TrangThai === 'Hoạt động').length,
-    suspended: mockHoKinhDoanh.filter(h => h.TrangThai === 'Tạm ngưng').length,
-    totalRevenue: mockHoKinhDoanh.reduce((sum, h) => sum + h.DoanhThuNam, 0),
-    totalLabor: mockHoKinhDoanh.reduce((sum, h) => sum + h.SoLaoDong, 0),
-    totalCapital: mockHoKinhDoanh.reduce((sum, h) => sum + h.VonKinhDoanh, 0),
+    total: dataSource.length,
+    active: dataSource.filter(h => h.TrangThai === 'Hoạt động').length,
+    suspended: dataSource.filter(h => h.TrangThai === 'Tạm ngưng').length,
+    totalRevenue: dataSource.reduce((sum, h) => sum + h.DoanhThuNam, 0),
+    totalLabor: dataSource.reduce((sum, h) => sum + h.SoLaoDong, 0),
+    totalCapital: dataSource.reduce((sum, h) => sum + h.VonKinhDoanh, 0),
   };
 
   // Handlers
@@ -334,6 +350,7 @@ export default function HoKinhDoanhPage() {
   };
 
   const handleAdd = () => {
+    setSelectedRecord(null);
     setFormData({
       SoGCN: '',
       TenHoKD: '',
@@ -360,10 +377,23 @@ export default function HoKinhDoanhPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
+  const handleSave = async () => {
+    if (selectedRecord?.MaHoKD) {
+      await hoKinhDoanhApi.update(selectedRecord.MaHoKD, formData);
+    } else {
+      await hoKinhDoanhApi.create(formData);
+    }
+    await loadData();
     setEditDialogOpen(false);
     setAddDialogOpen(false);
+  };
+
+  const handleDelete = async (record: HoKinhDoanh) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa hộ kinh doanh ${record.TenHoKD}?`)) {
+      return;
+    }
+    await hoKinhDoanhApi.delete(record.MaHoKD);
+    await loadData();
   };
 
   // Helper functions
@@ -601,6 +631,14 @@ export default function HoKinhDoanhPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>
