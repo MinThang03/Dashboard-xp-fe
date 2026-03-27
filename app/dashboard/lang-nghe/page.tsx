@@ -228,12 +228,16 @@ export default function LangNghePage() {
     GhiChu: '',
   });
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = mockLangNghe.filter((item) => {
-    const matchSearch = 
-      item.MaLN.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.TenLangNghe.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.NgheNghiep.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.MaLN).includes(normalizedQuery) ||
+      normalizeText(item.TenLangNghe).includes(normalizedQuery) ||
+      normalizeText(item.NgheNghiep).includes(normalizedQuery);
     
     const matchType = typeFilter === 'all' || item.LoaiNgheNghiep === typeFilter;
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;

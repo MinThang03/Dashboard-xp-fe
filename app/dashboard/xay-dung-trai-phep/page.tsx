@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Ban, AlertTriangle, Clock, CheckCircle2, Search, Plus, Download, Eye, Edit, MapPin, Calendar, User, Gavel, FileX, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { xayDungTraiPhepApi } from "@/lib/api";
 
 interface XayDungTraiPhep {
   MaVuViec: string;
@@ -191,6 +192,7 @@ const defaultFormData = (): XayDungTraiPhep => ({
 
 export default function XayDungTraiPhepPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [records, setRecords] = useState<XayDungTraiPhep[]>(mockTraiPhep);
   const [filterTrangThai, setFilterTrangThai] = useState<string>("all");
   const [filterLoai, setFilterLoai] = useState<string>("all");
   const [selectedVu, setSelectedVu] = useState<XayDungTraiPhep | null>(null);
@@ -199,27 +201,37 @@ export default function XayDungTraiPhepPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState<XayDungTraiPhep>(defaultFormData());
 
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await xayDungTraiPhepApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setRecords((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
   const filteredData = useMemo(() => {
-    return mockTraiPhep.filter((item) => {
+    return records.filter((item) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
-        item.MaVuViec.toLowerCase().includes(q) ||
-        item.ChuCongTrinh.toLowerCase().includes(q) ||
-        item.DiaChi.toLowerCase().includes(q);
+        (item.MaVuViec || "").toLowerCase().includes(q) ||
+        (item.ChuCongTrinh || "").toLowerCase().includes(q) ||
+        (item.DiaChi || "").toLowerCase().includes(q);
       const matchesTrangThai = filterTrangThai === "all" || item.TrangThai === filterTrangThai;
       const matchesLoai = filterLoai === "all" || item.LoaiViPham === filterLoai;
       return matchesSearch && matchesTrangThai && matchesLoai;
     });
-  }, [searchQuery, filterTrangThai, filterLoai]);
+  }, [records, searchQuery, filterTrangThai, filterLoai]);
 
   const stats = useMemo(() => ({
-    total: mockTraiPhep.length,
-    moiPhatHien: mockTraiPhep.filter((r) => r.TrangThai === "Mới phát hiện").length,
-    dangXuLy: mockTraiPhep.filter((r) => r.TrangThai === "Đang xử lý").length,
-    daXuLy: mockTraiPhep.filter((r) => r.TrangThai === "Đã xử lý").length,
-    cuongChe: mockTraiPhep.filter((r) => r.TrangThai === "Chờ cưỡng chế" || r.TrangThai === "Đã cưỡng chế").length,
-    tongTienPhat: mockTraiPhep.reduce((sum, r) => sum + r.SoTien, 0),
-  }), []);
+    total: records.length,
+    moiPhatHien: records.filter((r) => r.TrangThai === "Mới phát hiện").length,
+    dangXuLy: records.filter((r) => r.TrangThai === "Đang xử lý").length,
+    daXuLy: records.filter((r) => r.TrangThai === "Đã xử lý").length,
+    cuongChe: records.filter((r) => r.TrangThai === "Chờ cưỡng chế" || r.TrangThai === "Đã cưỡng chế").length,
+    tongTienPhat: records.reduce((sum, r) => sum + (Number(r.SoTien) || 0), 0),
+  }), [records]);
 
   const getTrangThaiBadge = (trangThai: string) => {
     switch (trangThai) {
@@ -277,9 +289,17 @@ export default function XayDungTraiPhepPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    // TODO: wire to API/save state
-    console.log("Saving record", formData);
+  const handleSave = async () => {
+    const id = (selectedVu as any)?.MaViPham;
+    if (isEditOpen && id) {
+      await xayDungTraiPhepApi.update(id, formData);
+    } else {
+      await xayDungTraiPhepApi.create(formData);
+    }
+    const response = await xayDungTraiPhepApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray((response.data as any)?.data)) {
+      setRecords((response.data as any).data);
+    }
     setIsAddOpen(false);
     setIsEditOpen(false);
   };

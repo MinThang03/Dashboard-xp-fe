@@ -241,12 +241,16 @@ export default function ChoKinhDoanhPage() {
 
   const dataSource = records.length > 0 ? records : mockChoKinhDoanh;
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = dataSource.filter((item) => {
-    const matchSearch = 
-      item.MaDiemKD.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.TenDiemKD.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.DiaChi.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.MaDiemKD).includes(normalizedQuery) ||
+      normalizeText(item.TenDiemKD).includes(normalizedQuery) ||
+      normalizeText(item.DiaChi).includes(normalizedQuery);
     
     const matchType = typeFilter === 'all' || item.LoaiHinh === typeFilter;
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;
@@ -271,26 +275,37 @@ export default function ChoKinhDoanhPage() {
   };
 
   const handleEdit = (record: ChoKinhDoanh) => {
+    const toText = (value: unknown) => (value == null ? '' : String(value));
+    const toNumber = (value: unknown) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : 0;
+    };
+    const toDateInput = (value: unknown) => {
+      if (!value) return '';
+      const str = String(value);
+      return str.includes('T') ? str.split('T')[0] : str;
+    };
+
     setSelectedRecord(record);
     setFormData({
-      MaDiemKD: record.MaDiemKD,
-      TenDiemKD: record.TenDiemKD,
-      LoaiHinh: record.LoaiHinh,
-      NgayThanhLap: record.NgayThanhLap,
-      DiaChi: record.DiaChi,
-      DienTich: record.DienTich,
-      SoGianHang: record.SoGianHang,
-      BanQuanLy: record.BanQuanLy,
-      SoDienThoai: record.SoDienThoai,
-      GiayPhep: record.GiayPhep,
-      NgayCapPhep: record.NgayCapPhep,
-      NgayHetHan: record.NgayHetHan,
-      ThuPhiThang: record.ThuPhiThang,
-      TrangThai: record.TrangThai,
-      CoSoHaTang: record.CoSoHaTang,
-      AnNinhTratTu: record.AnNinhTratTu,
-      VeSinhMoiTruong: record.VeSinhMoiTruong,
-      GhiChu: record.GhiChu,
+      MaDiemKD: toText(record.MaDiemKD),
+      TenDiemKD: toText(record.TenDiemKD),
+      LoaiHinh: toText(record.LoaiHinh) || 'Chợ truyền thống',
+      NgayThanhLap: toDateInput(record.NgayThanhLap),
+      DiaChi: toText(record.DiaChi),
+      DienTich: toNumber(record.DienTich),
+      SoGianHang: toNumber(record.SoGianHang),
+      BanQuanLy: toText(record.BanQuanLy),
+      SoDienThoai: toText(record.SoDienThoai),
+      GiayPhep: toText(record.GiayPhep),
+      NgayCapPhep: toDateInput(record.NgayCapPhep),
+      NgayHetHan: toDateInput(record.NgayHetHan),
+      ThuPhiThang: toNumber(record.ThuPhiThang),
+      TrangThai: toText(record.TrangThai) || 'Hoạt động',
+      CoSoHaTang: toText(record.CoSoHaTang) || 'Tốt',
+      AnNinhTratTu: toText(record.AnNinhTratTu) || 'Ổn định',
+      VeSinhMoiTruong: toText(record.VeSinhMoiTruong) || 'Đạt',
+      GhiChu: toText(record.GhiChu),
     });
     setEditDialogOpen(true);
   };
@@ -633,7 +648,7 @@ export default function ChoKinhDoanhPage() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-muted-foreground text-xs">Diện tích</Label>
-                    <p className="font-medium">{selectedRecord.DienTich.toLocaleString()} m²</p>
+                    <p className="font-medium">{Number(selectedRecord.DienTich ?? 0).toLocaleString()} m²</p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-muted-foreground text-xs">Ngày thành lập</Label>

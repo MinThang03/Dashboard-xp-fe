@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,10 +37,12 @@ import {
   User,
 } from 'lucide-react';
 import { mockNguoiThatNghiep, mockHoTroThatNghiep } from '@/lib/mock-data';
+import { viecLamApi } from '@/lib/api';
 
 export default function ViecLamPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [viecLamList, setViecLamList] = useState<any[]>(mockNguoiThatNghiep);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -48,18 +50,28 @@ export default function ViecLamPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await viecLamApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setViecLamList((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
   // Tính toán thống kê
   const stats = {
-    tongNguoiTimViec: mockNguoiThatNghiep.length,
-    dangTimViec: mockNguoiThatNghiep.filter(n => n.TrangThai === 'Đang tìm việc').length,
-    daCoViec: mockNguoiThatNghiep.filter(n => n.TrangThai === 'Đã tìm được việc').length,
-    dangHuongBHTN: mockNguoiThatNghiep.filter(n => n.DangKyBHTN).length,
+    tongNguoiTimViec: viecLamList.length,
+    dangTimViec: viecLamList.filter(n => n.TrangThai === 'Đang tìm việc').length,
+    daCoViec: viecLamList.filter(n => n.TrangThai === 'Đã tìm được việc').length,
+    dangHuongBHTN: viecLamList.filter(n => n.DangKyBHTN).length,
   };
 
   // Lọc dữ liệu
-  const filteredData = mockNguoiThatNghiep.filter(n =>
-    n.HoTen.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    n.NgheNghiep.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredData = viecLamList.filter(n =>
+    (n.HoTen || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (n.NgheNghiep || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -115,17 +127,29 @@ export default function ViecLamPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    // TODO: API call to save
+  const handleSave = async () => {
+    if (isEditOpen && selectedItem) {
+      const id = selectedItem.MaViecLam ?? selectedItem.MaNTV;
+      await viecLamApi.update(id, formData);
+    } else {
+      await viecLamApi.create(formData);
+    }
+    const response = await viecLamApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray((response.data as any)?.data)) {
+      setViecLamList((response.data as any).data);
+    }
     setIsAddOpen(false);
     setIsEditOpen(false);
   };
 
-  const handleDelete = (item: any) => {
+  const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${item.HoTen}?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      const id = item.MaViecLam ?? item.MaNTV;
+      await viecLamApi.delete(id);
+      const response = await viecLamApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setViecLamList((response.data as any).data);
+      }
     }
   };
 
@@ -302,10 +326,10 @@ export default function ViecLamPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.map((n) => (
-                    <tr key={n.MaNTV} className="border-b hover:bg-slate-50 transition-colors">
+                  {filteredData.map((n, index) => (
+                    <tr key={n.MaViecLam ?? n.MaNTV ?? index} className="border-b hover:bg-slate-50 transition-colors">
                       <td className="p-4">
-                        <span className="font-semibold text-primary">NTV-{String(n.MaNTV).padStart(3, '0')}</span>
+                        <span className="font-semibold text-primary">NTV-{String(n.MaViecLam ?? n.MaNTV ?? '').padStart(3, '0')}</span>
                       </td>
                       <td className="p-4">
                         <p className="font-medium">{n.HoTen}</p>

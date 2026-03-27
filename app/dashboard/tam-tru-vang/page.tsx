@@ -311,12 +311,16 @@ export default function TamTruVangPage() {
 
   const dataSource = records.length > 0 ? records : mockTamTruVang;
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = dataSource.filter((item) => {
-    const matchSearch = 
-      item.MaDangKy.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.HoTen.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.CCCD.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.MaDangKy).includes(normalizedQuery) ||
+      normalizeText(item.HoTen).includes(normalizedQuery) ||
+      normalizeText(item.CCCD).includes(normalizedQuery);
     
     const matchType = typeFilter === 'all' || item.LoaiDangKy === typeFilter;
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;
@@ -341,26 +345,33 @@ export default function TamTruVangPage() {
   };
 
   const handleEdit = (record: TamTruVang) => {
+    const toText = (value: unknown) => (value == null ? '' : String(value));
+    const toDateInput = (value: unknown) => {
+      if (!value) return '';
+      const str = String(value);
+      return str.includes('T') ? str.split('T')[0] : str;
+    };
+
     setSelectedRecord(record);
     setFormData({
-      MaDangKy: record.MaDangKy,
-      LoaiDangKy: record.LoaiDangKy,
-      HoTen: record.HoTen,
-      CCCD: record.CCCD,
-      NgaySinh: record.NgaySinh,
-      GioiTinh: record.GioiTinh,
-      QueQuan: record.QueQuan,
-      DiaChiThuongTru: record.DiaChiThuongTru,
-      DiaChiTamTru: record.DiaChiTamTru,
-      ChuHo: record.ChuHo,
-      QuanHeVoiChuHo: record.QuanHeVoiChuHo,
-      SoDienThoai: record.SoDienThoai,
-      NgayDangKy: record.NgayDangKy,
-      NgayHetHan: record.NgayHetHan,
-      LyDo: record.LyDo,
-      TrangThai: record.TrangThai,
-      CanBoXuLy: record.CanBoXuLy,
-      GhiChu: record.GhiChu,
+      MaDangKy: toText(record.MaDangKy),
+      LoaiDangKy: toText(record.LoaiDangKy) || 'Tạm trú',
+      HoTen: toText(record.HoTen),
+      CCCD: toText(record.CCCD),
+      NgaySinh: toDateInput(record.NgaySinh),
+      GioiTinh: toText(record.GioiTinh) || 'Nam',
+      QueQuan: toText(record.QueQuan),
+      DiaChiThuongTru: toText(record.DiaChiThuongTru),
+      DiaChiTamTru: toText(record.DiaChiTamTru),
+      ChuHo: toText(record.ChuHo),
+      QuanHeVoiChuHo: toText(record.QuanHeVoiChuHo),
+      SoDienThoai: toText(record.SoDienThoai),
+      NgayDangKy: toDateInput(record.NgayDangKy),
+      NgayHetHan: toDateInput(record.NgayHetHan),
+      LyDo: toText(record.LyDo),
+      TrangThai: toText(record.TrangThai) || 'Còn hạn',
+      CanBoXuLy: toText(record.CanBoXuLy),
+      GhiChu: toText(record.GhiChu),
     });
     setEditDialogOpen(true);
   };
@@ -747,7 +758,7 @@ export default function TamTruVangPage() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">Lý do {selectedRecord.LoaiDangKy.toLowerCase()}</Label>
+                <Label className="text-muted-foreground text-xs">Lý do {normalizeText(selectedRecord.LoaiDangKy)}</Label>
                 <p className="font-medium bg-yellow-50 p-3 rounded">{selectedRecord.LyDo}</p>
               </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { mockHoNgheo, mockRaSoatHoNgheo, mockChinhSachHoNgheo } from '@/lib/mock-data';
+import { hoNgheoApi } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,6 +41,7 @@ import { Edit, Trash2, X } from 'lucide-react';
 export default function HoNgheoPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [hoNgheoList, setHoNgheoList] = useState<any[]>(mockHoNgheo);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -47,18 +49,28 @@ export default function HoNgheoPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await hoNgheoApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setHoNgheoList((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
   // Tính toán thống kê từ dữ liệu thực
   const stats = {
-    hoNgheo: mockHoNgheo.filter(h => h.MucDoNgheo === 'Hộ nghèo').length,
-    hoCanNgheo: mockHoNgheo.filter(h => h.MucDoNgheo === 'Cận nghèo').length,
-    daThoatNgheo: mockHoNgheo.filter(h => h.MucDoNgheo === 'Đã thoát nghèo').length,
+    hoNgheo: hoNgheoList.filter(h => h.MucDoNgheo === 'Hộ nghèo').length,
+    hoCanNgheo: hoNgheoList.filter(h => h.MucDoNgheo === 'Cận nghèo').length,
+    daThoatNgheo: hoNgheoList.filter(h => h.MucDoNgheo === 'Đã thoát nghèo').length,
     dangHuong: mockChinhSachHoNgheo.filter(cs => cs.TrangThai === 'Đang hưởng').length,
   };
 
   // Lọc dữ liệu
-  const filteredHoNgheo = mockHoNgheo.filter(h =>
-    h.ChuHo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    h.DiaChi.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredHoNgheo = hoNgheoList.filter(h =>
+    (h.ChuHo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (h.DiaChi || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -111,17 +123,29 @@ export default function HoNgheoPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    // TODO: API call to save
+  const handleSave = async () => {
+    if (isEditOpen && selectedItem) {
+      const id = selectedItem.MaHoNgheo ?? selectedItem.MaHo;
+      await hoNgheoApi.update(id, formData);
+    } else {
+      await hoNgheoApi.create(formData);
+    }
+    const response = await hoNgheoApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray((response.data as any)?.data)) {
+      setHoNgheoList((response.data as any).data);
+    }
     setIsAddOpen(false);
     setIsEditOpen(false);
   };
 
-  const handleDelete = (item: any) => {
+  const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hồ sơ hộ ${item.ChuHo}?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      const id = item.MaHoNgheo ?? item.MaHo;
+      await hoNgheoApi.delete(id);
+      const response = await hoNgheoApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setHoNgheoList((response.data as any).data);
+      }
     }
   };
 
@@ -289,10 +313,10 @@ export default function HoNgheoPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHoNgheo.map((ho) => (
-                    <tr key={ho.MaHo} className="border-b hover:bg-slate-50 transition-colors">
+                  {filteredHoNgheo.map((ho, index) => (
+                    <tr key={ho.MaHoNgheo ?? ho.MaHo ?? index} className="border-b hover:bg-slate-50 transition-colors">
                       <td className="p-4">
-                        <span className="font-semibold text-primary">HN-{String(ho.MaHo).padStart(3, '0')}</span>
+                        <span className="font-semibold text-primary">HN-{String(ho.MaHoNgheo ?? ho.MaHo ?? '').padStart(3, '0')}</span>
                       </td>
                       <td className="p-4 font-medium">{ho.ChuHo}</td>
                       <td className="p-4 text-sm text-muted-foreground">{ho.DiaChi}</td>

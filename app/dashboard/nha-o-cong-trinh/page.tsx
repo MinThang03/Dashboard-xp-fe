@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import {
   Home, Users, CheckCircle2, AlertTriangle, Search, Plus, Download, Eye, Edit,
   Building2, MapPin, Ruler, Calendar, Clock, Warehouse
 } from 'lucide-react';
+import { nhaOCongTrinhApi } from '@/lib/api';
 
 // Mock data nhà ở, công trình
 interface NhaOCongTrinh {
@@ -203,32 +204,92 @@ const tinhTrangPLOptions = ['Hợp pháp', 'Đang hoàn thiện hồ sơ', 'Khô
 const ketQuaKTOptions = ['Đạt', 'Cần bảo trì', 'Cần sửa chữa', 'Không đạt'];
 
 export default function NhaOCongTrinhPage() {
+  const emptyForm: NhaOCongTrinh = {
+    MaCongTrinh: '',
+    TenCongTrinh: '',
+    LoaiCongTrinh: 'Nhà ở riêng lẻ',
+    PhanLoai: 'Cấp 4',
+    DiaChi: '',
+    MaThua: '',
+    SoTo: '',
+    DienTichSan: 0,
+    SoTang: 0,
+    NamXayDung: new Date().getFullYear(),
+    ChuSoHuu: '',
+    CCCD: '',
+    SoDienThoai: '',
+    TinhTrangKienTruc: 'Tốt',
+    TinhTrangPhapLy: 'Hợp pháp',
+    SoGiayPhepXD: '',
+    NgayKiemTra: '',
+    NguoiKiemTra: '',
+    KetQuaKiemTra: 'Đạt',
+    GhiChu: '',
+  };
   const [searchQuery, setSearchQuery] = useState('');
+  const [records, setRecords] = useState<NhaOCongTrinh[]>(mockCongTrinh);
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [filterTinhTrang, setFilterTinhTrang] = useState<string>('all');
   const [selectedCT, setSelectedCT] = useState<NhaOCongTrinh | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState<NhaOCongTrinh>(emptyForm);
+  const [editFormData, setEditFormData] = useState<NhaOCongTrinh>(emptyForm);
 
-  const filteredData = mockCongTrinh.filter((item) => {
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await nhaOCongTrinhApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setRecords((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
+  const reloadData = async () => {
+    const response = await nhaOCongTrinhApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray((response.data as any)?.data)) {
+      setRecords((response.data as any).data);
+    }
+  };
+
+  const toNum = (value: string) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const handleCreate = async () => {
+    await nhaOCongTrinhApi.create(addFormData);
+    await reloadData();
+    setIsAddOpen(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedCT) return;
+    await nhaOCongTrinhApi.update(Number((selectedCT as any).MaCongTrinh), editFormData);
+    await reloadData();
+    setIsEditOpen(false);
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
-      item.MaCongTrinh.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.TenCongTrinh.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.ChuSoHuu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.DiaChi.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.MaCongTrinh || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.TenCongTrinh || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.ChuSoHuu || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.DiaChi || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLoai = filterLoai === 'all' || item.LoaiCongTrinh === filterLoai;
     const matchesTinhTrang = filterTinhTrang === 'all' || item.TinhTrangKienTruc === filterTinhTrang;
     return matchesSearch && matchesLoai && matchesTinhTrang;
   });
 
   const stats = {
-    total: mockCongTrinh.length,
-    nhaO: mockCongTrinh.filter(r => r.LoaiCongTrinh === 'Nhà ở riêng lẻ').length,
-    congTrinh: mockCongTrinh.filter(r => r.LoaiCongTrinh !== 'Nhà ở riêng lẻ').length,
-    dat: mockCongTrinh.filter(r => r.KetQuaKiemTra === 'Đạt').length,
-    khongDat: mockCongTrinh.filter(r => r.KetQuaKiemTra === 'Không đạt' || r.KetQuaKiemTra === 'Cần sửa chữa').length,
-    tongDienTich: mockCongTrinh.reduce((sum, r) => sum + r.DienTichSan, 0)
+    total: records.length,
+    nhaO: records.filter(r => r.LoaiCongTrinh === 'Nhà ở riêng lẻ').length,
+    congTrinh: records.filter(r => r.LoaiCongTrinh !== 'Nhà ở riêng lẻ').length,
+    dat: records.filter(r => r.KetQuaKiemTra === 'Đạt').length,
+    khongDat: records.filter(r => r.KetQuaKiemTra === 'Không đạt' || r.KetQuaKiemTra === 'Cần sửa chữa').length,
+    tongDienTich: records.reduce((sum, r) => sum + (Number(r.DienTichSan) || 0), 0)
   };
 
   const getTinhTrangKTBadge = (tinhTrang: string) => {
@@ -264,9 +325,9 @@ export default function NhaOCongTrinhPage() {
               <p className="text-indigo-100">Quản lý nhà ở, công trình công cộng trên địa bàn</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setAddFormData(emptyForm); }}>
             <DialogTrigger asChild>
-              <Button className="w-full 2xl:w-auto bg-white text-indigo-600 hover:bg-white/90">
+              <Button className="w-full 2xl:w-auto bg-white text-indigo-600 hover:bg-white/90" onClick={() => setAddFormData(emptyForm)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Thêm công trình
               </Button>
@@ -279,7 +340,7 @@ export default function NhaOCongTrinhPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Loại công trình *</Label>
-                  <Select>
+                  <Select value={addFormData.LoaiCongTrinh} onValueChange={(v) => setAddFormData({ ...addFormData, LoaiCongTrinh: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại" /></SelectTrigger>
                     <SelectContent>
                       {loaiCongTrinhOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -288,7 +349,7 @@ export default function NhaOCongTrinhPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Phân loại *</Label>
-                  <Select>
+                  <Select value={addFormData.PhanLoai} onValueChange={(v) => setAddFormData({ ...addFormData, PhanLoai: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn cấp" /></SelectTrigger>
                     <SelectContent>
                       {phanLoaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -297,56 +358,56 @@ export default function NhaOCongTrinhPage() {
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Tên công trình *</Label>
-                  <Input placeholder="Nhập tên công trình" />
+                  <Input value={addFormData.TenCongTrinh} onChange={(e) => setAddFormData({ ...addFormData, TenCongTrinh: e.target.value })} placeholder="Nhập tên công trình" />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Địa chỉ *</Label>
-                  <Input placeholder="Nhập địa chỉ" />
+                  <Input value={addFormData.DiaChi} onChange={(e) => setAddFormData({ ...addFormData, DiaChi: e.target.value })} placeholder="Nhập địa chỉ" />
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa</Label>
-                  <Input placeholder="Nhập mã thửa" />
+                  <Input value={addFormData.MaThua} onChange={(e) => setAddFormData({ ...addFormData, MaThua: e.target.value })} placeholder="Nhập mã thửa" />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input value={addFormData.SoTo} onChange={(e) => setAddFormData({ ...addFormData, SoTo: e.target.value })} placeholder="Nhập số tờ" />
                 </div>
                 <div className="space-y-2">
                   <Label>Diện tích sàn (m²)</Label>
-                  <Input type="number" placeholder="Nhập diện tích" />
+                  <Input type="number" value={addFormData.DienTichSan} onChange={(e) => setAddFormData({ ...addFormData, DienTichSan: toNum(e.target.value) })} placeholder="Nhập diện tích" />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tầng</Label>
-                  <Input type="number" placeholder="Nhập số tầng" />
+                  <Input type="number" value={addFormData.SoTang} onChange={(e) => setAddFormData({ ...addFormData, SoTang: toNum(e.target.value) })} placeholder="Nhập số tầng" />
                 </div>
                 <div className="space-y-2">
                   <Label>Năm xây dựng</Label>
-                  <Input type="number" placeholder="Nhập năm" />
+                  <Input type="number" value={addFormData.NamXayDung} onChange={(e) => setAddFormData({ ...addFormData, NamXayDung: toNum(e.target.value) })} placeholder="Nhập năm" />
                 </div>
                 <div className="space-y-2">
                   <Label>Số GPXD</Label>
-                  <Input placeholder="Nhập số giấy phép" />
+                  <Input value={addFormData.SoGiayPhepXD} onChange={(e) => setAddFormData({ ...addFormData, SoGiayPhepXD: e.target.value })} placeholder="Nhập số giấy phép" />
                 </div>
                 <div className="col-span-2 border-t pt-4 mt-2">
                   <h4 className="font-semibold mb-3">Chủ sở hữu</h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Họ tên / Tên đơn vị *</Label>
-                      <Input placeholder="Nhập tên" />
+                      <Input value={addFormData.ChuSoHuu} onChange={(e) => setAddFormData({ ...addFormData, ChuSoHuu: e.target.value })} placeholder="Nhập tên" />
                     </div>
                     <div className="space-y-2">
                       <Label>CCCD/MST</Label>
-                      <Input placeholder="Nhập số" />
+                      <Input value={addFormData.CCCD} onChange={(e) => setAddFormData({ ...addFormData, CCCD: e.target.value })} placeholder="Nhập số" />
                     </div>
                     <div className="space-y-2">
                       <Label>Điện thoại</Label>
-                      <Input placeholder="Nhập SĐT" />
+                      <Input value={addFormData.SoDienThoai} onChange={(e) => setAddFormData({ ...addFormData, SoDienThoai: e.target.value })} placeholder="Nhập SĐT" />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Tình trạng kiến trúc</Label>
-                  <Select>
+                  <Select value={addFormData.TinhTrangKienTruc} onValueChange={(v) => setAddFormData({ ...addFormData, TinhTrangKienTruc: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn tình trạng" /></SelectTrigger>
                     <SelectContent>
                       {tinhTrangKTOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -355,7 +416,7 @@ export default function NhaOCongTrinhPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Tình trạng pháp lý</Label>
-                  <Select>
+                  <Select value={addFormData.TinhTrangPhapLy} onValueChange={(v) => setAddFormData({ ...addFormData, TinhTrangPhapLy: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn tình trạng" /></SelectTrigger>
                     <SelectContent>
                       {tinhTrangPLOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -364,15 +425,15 @@ export default function NhaOCongTrinhPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày kiểm tra</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addFormData.NgayKiemTra} onChange={(e) => setAddFormData({ ...addFormData, NgayKiemTra: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Người kiểm tra</Label>
-                  <Input placeholder="Nhập người kiểm tra" />
+                  <Input value={addFormData.NguoiKiemTra} onChange={(e) => setAddFormData({ ...addFormData, NguoiKiemTra: e.target.value })} placeholder="Nhập người kiểm tra" />
                 </div>
                 <div className="space-y-2">
                   <Label>Kết quả kiểm tra</Label>
-                  <Select>
+                  <Select value={addFormData.KetQuaKiemTra} onValueChange={(v) => setAddFormData({ ...addFormData, KetQuaKiemTra: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn kết quả" /></SelectTrigger>
                     <SelectContent>
                       {ketQuaKTOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -381,12 +442,12 @@ export default function NhaOCongTrinhPage() {
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea value={addFormData.GhiChu} onChange={(e) => setAddFormData({ ...addFormData, GhiChu: e.target.value })} placeholder="Nhập ghi chú" />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Thêm mới</Button>
+                <Button onClick={handleCreate}>Thêm mới</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -666,7 +727,7 @@ export default function NhaOCongTrinhPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedCT?.MaCongTrinh === item.MaCongTrinh} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedCT(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedCT(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedCT(item); setEditFormData({ ...emptyForm, ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -681,39 +742,39 @@ export default function NhaOCongTrinhPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2 col-span-2">
                                   <Label>Tên công trình</Label>
-                                  <Input defaultValue={item.TenCongTrinh} />
+                                  <Input value={editFormData.TenCongTrinh} onChange={(e) => setEditFormData({ ...editFormData, TenCongTrinh: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Loại công trình</Label>
-                                  <Input defaultValue={item.LoaiCongTrinh} />
+                                  <Input value={editFormData.LoaiCongTrinh} onChange={(e) => setEditFormData({ ...editFormData, LoaiCongTrinh: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Phân loại</Label>
-                                  <Input defaultValue={item.PhanLoai} />
+                                  <Input value={editFormData.PhanLoai} onChange={(e) => setEditFormData({ ...editFormData, PhanLoai: e.target.value })} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Địa chỉ</Label>
-                                  <Input defaultValue={item.DiaChi} />
+                                  <Input value={editFormData.DiaChi} onChange={(e) => setEditFormData({ ...editFormData, DiaChi: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mã thửa</Label>
-                                  <Input defaultValue={item.MaThua} />
+                                  <Input value={editFormData.MaThua} onChange={(e) => setEditFormData({ ...editFormData, MaThua: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tờ</Label>
-                                  <Input defaultValue={item.SoTo} />
+                                  <Input value={editFormData.SoTo} onChange={(e) => setEditFormData({ ...editFormData, SoTo: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Năm xây dựng</Label>
-                                  <Input type="number" defaultValue={item.NamXayDung} />
+                                  <Input type="number" value={editFormData.NamXayDung} onChange={(e) => setEditFormData({ ...editFormData, NamXayDung: toNum(e.target.value) })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Diện tích sàn (m²)</Label>
-                                  <Input type="number" defaultValue={item.DienTichSan} />
+                                  <Input type="number" value={editFormData.DienTichSan} onChange={(e) => setEditFormData({ ...editFormData, DienTichSan: toNum(e.target.value) })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tầng</Label>
-                                  <Input type="number" defaultValue={item.SoTang} />
+                                  <Input type="number" value={editFormData.SoTang} onChange={(e) => setEditFormData({ ...editFormData, SoTang: toNum(e.target.value) })} />
                                 </div>
                               </div>
                             </div>
@@ -723,15 +784,15 @@ export default function NhaOCongTrinhPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Họ tên</Label>
-                                  <Input defaultValue={item.ChuSoHuu} />
+                                  <Input value={editFormData.ChuSoHuu} onChange={(e) => setEditFormData({ ...editFormData, ChuSoHuu: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD</Label>
-                                  <Input defaultValue={item.CCCD} />
+                                  <Input value={editFormData.CCCD} onChange={(e) => setEditFormData({ ...editFormData, CCCD: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Điện thoại</Label>
-                                  <Input defaultValue={item.SoDienThoai} />
+                                  <Input value={editFormData.SoDienThoai} onChange={(e) => setEditFormData({ ...editFormData, SoDienThoai: e.target.value })} />
                                 </div>
                               </div>
                             </div>
@@ -741,7 +802,7 @@ export default function NhaOCongTrinhPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Tình trạng kiến trúc</Label>
-                                  <Select defaultValue={item.TinhTrangKienTruc}>
+                                  <Select value={editFormData.TinhTrangKienTruc} onValueChange={(v) => setEditFormData({ ...editFormData, TinhTrangKienTruc: v })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {tinhTrangKTOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -750,7 +811,7 @@ export default function NhaOCongTrinhPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Tình trạng pháp lý</Label>
-                                  <Select defaultValue={item.TinhTrangPhapLy}>
+                                  <Select value={editFormData.TinhTrangPhapLy} onValueChange={(v) => setEditFormData({ ...editFormData, TinhTrangPhapLy: v })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {tinhTrangPLOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -759,7 +820,7 @@ export default function NhaOCongTrinhPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số GPXD</Label>
-                                  <Input defaultValue={item.SoGiayPhepXD} />
+                                  <Input value={editFormData.SoGiayPhepXD} onChange={(e) => setEditFormData({ ...editFormData, SoGiayPhepXD: e.target.value })} />
                                 </div>
                               </div>
                             </div>
@@ -769,15 +830,15 @@ export default function NhaOCongTrinhPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Ngày kiểm tra</Label>
-                                  <Input type="date" defaultValue={item.NgayKiemTra} />
+                                  <Input type="date" value={editFormData.NgayKiemTra} onChange={(e) => setEditFormData({ ...editFormData, NgayKiemTra: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Người kiểm tra</Label>
-                                  <Input defaultValue={item.NguoiKiemTra} />
+                                  <Input value={editFormData.NguoiKiemTra} onChange={(e) => setEditFormData({ ...editFormData, NguoiKiemTra: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Kết quả kiểm tra</Label>
-                                  <Select defaultValue={item.KetQuaKiemTra}>
+                                  <Select value={editFormData.KetQuaKiemTra} onValueChange={(v) => setEditFormData({ ...editFormData, KetQuaKiemTra: v })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {ketQuaKTOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -789,12 +850,12 @@ export default function NhaOCongTrinhPage() {
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editFormData.GhiChu} onChange={(e) => setEditFormData({ ...editFormData, GhiChu: e.target.value })} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

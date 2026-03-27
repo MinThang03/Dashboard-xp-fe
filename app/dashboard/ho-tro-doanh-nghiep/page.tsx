@@ -250,12 +250,16 @@ export default function HoTroDoanhNghiepPage() {
 
   const dataSource = records.length > 0 ? records : mockHoTroDN;
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = dataSource.filter((item) => {
-    const matchSearch = 
-      item.MaYC.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.TenDoanhNghiep.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.NguoiDaiDien.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.MaYC).includes(normalizedQuery) ||
+      normalizeText(item.TenDoanhNghiep).includes(normalizedQuery) ||
+      normalizeText(item.NguoiDaiDien).includes(normalizedQuery);
     
     const matchType = supportTypeFilter === 'all' || item.LoaiHoTro === supportTypeFilter;
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;

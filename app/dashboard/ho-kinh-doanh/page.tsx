@@ -292,14 +292,19 @@ export default function HoKinhDoanhPage() {
 
   const dataSource = records.length > 0 ? records : mockHoKinhDoanh;
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = dataSource.filter((item) => {
-    const matchSearch = 
-      item.SoGCN.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.TenHoKD.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.ChuHo.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchIndustry = industryFilter === 'all' || item.NganhNghe.includes(industryFilter);
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.SoGCN).includes(normalizedQuery) ||
+      normalizeText(item.TenHoKD).includes(normalizedQuery) ||
+      normalizeText(item.ChuHo).includes(normalizedQuery);
+
+    const matchIndustry =
+      industryFilter === 'all' || normalizeText(item.NganhNghe).includes(normalizeText(industryFilter));
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;
     
     return matchSearch && matchIndustry && matchStatus;
@@ -322,29 +327,40 @@ export default function HoKinhDoanhPage() {
   };
 
   const handleEdit = (record: HoKinhDoanh) => {
+    const toText = (value: unknown) => (value == null ? '' : String(value));
+    const toNumber = (value: unknown) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : 0;
+    };
+    const toDateInput = (value: unknown) => {
+      if (!value) return '';
+      const str = String(value);
+      return str.includes('T') ? str.split('T')[0] : str;
+    };
+
     setSelectedRecord(record);
     setFormData({
-      SoGCN: record.SoGCN,
-      TenHoKD: record.TenHoKD,
-      ChuHo: record.ChuHo,
-      CCCD: record.CCCD,
-      NgaySinh: record.NgaySinh,
-      DiaChi: record.DiaChi,
-      DiaChiKinhDoanh: record.DiaChiKinhDoanh,
-      DienThoai: record.DienThoai,
-      Email: record.Email,
-      NganhNghe: record.NganhNghe,
-      MaNganhNghe: record.MaNganhNghe,
-      VonKinhDoanh: record.VonKinhDoanh,
-      DoanhThuNam: record.DoanhThuNam,
-      SoLaoDong: record.SoLaoDong,
-      DienTichKD: record.DienTichKD,
-      LoaiHinhKD: record.LoaiHinhKD,
-      TrangThai: record.TrangThai,
-      GhiChu: record.GhiChu,
-      NgayDangKy: record.NgayDangKy,
-      NgayHetHan: record.NgayHetHan,
-      LanCapPhep: record.LanCapPhep,
+      SoGCN: toText(record.SoGCN),
+      TenHoKD: toText(record.TenHoKD),
+      ChuHo: toText(record.ChuHo),
+      CCCD: toText(record.CCCD),
+      NgaySinh: toDateInput(record.NgaySinh),
+      DiaChi: toText(record.DiaChi),
+      DiaChiKinhDoanh: toText(record.DiaChiKinhDoanh),
+      DienThoai: toText(record.DienThoai),
+      Email: toText(record.Email),
+      NganhNghe: toText(record.NganhNghe),
+      MaNganhNghe: toText(record.MaNganhNghe),
+      VonKinhDoanh: toNumber(record.VonKinhDoanh),
+      DoanhThuNam: toNumber(record.DoanhThuNam),
+      SoLaoDong: toNumber(record.SoLaoDong),
+      DienTichKD: toNumber(record.DienTichKD),
+      LoaiHinhKD: toText(record.LoaiHinhKD),
+      TrangThai: toText(record.TrangThai) || 'Hoạt động',
+      GhiChu: toText(record.GhiChu),
+      NgayDangKy: toDateInput(record.NgayDangKy),
+      NgayHetHan: toDateInput(record.NgayHetHan),
+      LanCapPhep: toNumber(record.LanCapPhep),
     });
     setEditDialogOpen(true);
   };

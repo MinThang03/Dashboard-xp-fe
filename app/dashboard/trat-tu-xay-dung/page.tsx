@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import {
   Building2, AlertTriangle, CheckCircle2, Clock, Search, Plus, Download, Eye, Edit,
   MapPin, Calendar, User, FileCheck, Ban, Gavel
 } from 'lucide-react';
+import { theoDoiTratTuXayDungApi } from '@/lib/api';
 
 // Mock data trật tự xây dựng
 interface TratTuXayDung {
@@ -188,32 +189,88 @@ const mucDoOptions = ['Nhẹ', 'Trung bình', 'Nghiêm trọng'];
 const trangThaiOptions = ['Đạt yêu cầu', 'Đang xử lý', 'Đang khắc phục', 'Đã khắc phục', 'Chờ cưỡng chế', 'Đã cưỡng chế'];
 
 export default function TratTuXayDungPage() {
+  const emptyForm: TratTuXayDung = {
+    MaKiemTra: '',
+    DiaChi: '',
+    MaThua: '',
+    SoTo: '',
+    LoaiCongTrinh: 'Nhà ở riêng lẻ',
+    ChuDauTu: '',
+    CCCD: '',
+    SoDienThoai: '',
+    SoGiayPhep: '',
+    NgayCapPhep: '',
+    TinhTrangGiayPhep: 'Có giấy phép',
+    NoiDungKiemTra: '',
+    NgayKiemTra: '',
+    CanBoKiemTra: '',
+    KetQuaKiemTra: 'Hợp lệ',
+    LoaiViPham: '',
+    MucDo: '',
+    BienPhapXuLy: '',
+    ThoiHanKhacPhuc: '',
+    TrangThaiXuLy: 'Đang xử lý',
+    GhiChu: '',
+  };
   const [searchQuery, setSearchQuery] = useState('');
+  const [records, setRecords] = useState<TratTuXayDung[]>(mockTratTuXD);
   const [filterKetQua, setFilterKetQua] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
   const [selectedKT, setSelectedKT] = useState<TratTuXayDung | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState<TratTuXayDung>(emptyForm);
+  const [editFormData, setEditFormData] = useState<TratTuXayDung>(emptyForm);
 
-  const filteredData = mockTratTuXD.filter((item) => {
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await theoDoiTratTuXayDungApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setRecords((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
+  const reloadData = async () => {
+    const response = await theoDoiTratTuXayDungApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray((response.data as any)?.data)) {
+      setRecords((response.data as any).data);
+    }
+  };
+
+  const handleCreate = async () => {
+    await theoDoiTratTuXayDungApi.create(addFormData);
+    await reloadData();
+    setIsAddOpen(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedKT) return;
+    await theoDoiTratTuXayDungApi.update(Number((selectedKT as any).MaTheoDoi), editFormData);
+    await reloadData();
+    setIsEditOpen(false);
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
-      item.MaKiemTra.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.ChuDauTu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.DiaChi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.SoGiayPhep.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.MaKiemTra || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.ChuDauTu || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.DiaChi || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.SoGiayPhep || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesKetQua = filterKetQua === 'all' || item.KetQuaKiemTra === filterKetQua;
     const matchesTrangThai = filterTrangThai === 'all' || item.TrangThaiXuLy === filterTrangThai;
     return matchesSearch && matchesKetQua && matchesTrangThai;
   });
 
   const stats = {
-    total: mockTratTuXD.length,
-    hopLe: mockTratTuXD.filter(r => r.KetQuaKiemTra === 'Hợp lệ').length,
-    viPham: mockTratTuXD.filter(r => r.KetQuaKiemTra === 'Vi phạm').length,
-    dangXuLy: mockTratTuXD.filter(r => r.TrangThaiXuLy === 'Đang xử lý' || r.TrangThaiXuLy === 'Đang khắc phục').length,
-    daKhacPhuc: mockTratTuXD.filter(r => r.TrangThaiXuLy === 'Đã khắc phục' || r.TrangThaiXuLy === 'Đạt yêu cầu').length,
-    choCuongChe: mockTratTuXD.filter(r => r.TrangThaiXuLy === 'Chờ cưỡng chế').length
+    total: records.length,
+    hopLe: records.filter(r => r.KetQuaKiemTra === 'Hợp lệ').length,
+    viPham: records.filter(r => r.KetQuaKiemTra === 'Vi phạm').length,
+    dangXuLy: records.filter(r => r.TrangThaiXuLy === 'Đang xử lý' || r.TrangThaiXuLy === 'Đang khắc phục').length,
+    daKhacPhuc: records.filter(r => r.TrangThaiXuLy === 'Đã khắc phục' || r.TrangThaiXuLy === 'Đạt yêu cầu').length,
+    choCuongChe: records.filter(r => r.TrangThaiXuLy === 'Chờ cưỡng chế').length
   };
 
   const getKetQuaBadge = (ketQua: string) => {
@@ -257,9 +314,9 @@ export default function TratTuXayDungPage() {
               <p className="text-amber-100">Kiểm tra, xử lý vi phạm trật tự xây dựng</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setAddFormData(emptyForm); }}>
             <DialogTrigger asChild>
-              <Button className="w-full 2xl:w-auto bg-white text-amber-600 hover:bg-white/90">
+              <Button className="w-full 2xl:w-auto bg-white text-amber-600 hover:bg-white/90" onClick={() => setAddFormData(emptyForm)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Lập biên bản
               </Button>
@@ -272,19 +329,19 @@ export default function TratTuXayDungPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2 col-span-2">
                   <Label>Địa chỉ công trình *</Label>
-                  <Input placeholder="Nhập địa chỉ" />
+                  <Input value={addFormData.DiaChi} onChange={(e) => setAddFormData({ ...addFormData, DiaChi: e.target.value })} placeholder="Nhập địa chỉ" />
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa</Label>
-                  <Input placeholder="Nhập mã thửa" />
+                  <Input value={addFormData.MaThua} onChange={(e) => setAddFormData({ ...addFormData, MaThua: e.target.value })} placeholder="Nhập mã thửa" />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input value={addFormData.SoTo} onChange={(e) => setAddFormData({ ...addFormData, SoTo: e.target.value })} placeholder="Nhập số tờ" />
                 </div>
                 <div className="space-y-2">
                   <Label>Loại công trình</Label>
-                  <Select>
+                  <Select value={addFormData.LoaiCongTrinh} onValueChange={(v) => setAddFormData({ ...addFormData, LoaiCongTrinh: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại" /></SelectTrigger>
                     <SelectContent>
                       {loaiCongTrinhOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -293,11 +350,11 @@ export default function TratTuXayDungPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Số giấy phép XD</Label>
-                  <Input placeholder="Nhập số GP (nếu có)" />
+                  <Input value={addFormData.SoGiayPhep} onChange={(e) => setAddFormData({ ...addFormData, SoGiayPhep: e.target.value })} placeholder="Nhập số GP (nếu có)" />
                 </div>
                 <div className="space-y-2">
                   <Label>Tình trạng giấy phép</Label>
-                  <Select>
+                  <Select value={addFormData.TinhTrangGiayPhep} onValueChange={(v) => setAddFormData({ ...addFormData, TinhTrangGiayPhep: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn tình trạng" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Có giấy phép">Có giấy phép</SelectItem>
@@ -309,40 +366,40 @@ export default function TratTuXayDungPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày cấp giấy phép</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addFormData.NgayCapPhep} onChange={(e) => setAddFormData({ ...addFormData, NgayCapPhep: e.target.value })} />
                 </div>
                 <div className="col-span-2 border-t pt-4 mt-2">
                   <h4 className="font-semibold mb-3">Chủ đầu tư</h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Họ tên *</Label>
-                      <Input placeholder="Nhập tên" />
+                      <Input value={addFormData.ChuDauTu} onChange={(e) => setAddFormData({ ...addFormData, ChuDauTu: e.target.value })} placeholder="Nhập tên" />
                     </div>
                     <div className="space-y-2">
                       <Label>CCCD</Label>
-                      <Input placeholder="Nhập CCCD" />
+                      <Input value={addFormData.CCCD} onChange={(e) => setAddFormData({ ...addFormData, CCCD: e.target.value })} placeholder="Nhập CCCD" />
                     </div>
                     <div className="space-y-2">
                       <Label>Điện thoại</Label>
-                      <Input placeholder="Nhập SĐT" />
+                      <Input value={addFormData.SoDienThoai} onChange={(e) => setAddFormData({ ...addFormData, SoDienThoai: e.target.value })} placeholder="Nhập SĐT" />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày kiểm tra *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addFormData.NgayKiemTra} onChange={(e) => setAddFormData({ ...addFormData, NgayKiemTra: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Cán bộ kiểm tra *</Label>
-                  <Input placeholder="Nhập tên cán bộ" />
+                  <Input value={addFormData.CanBoKiemTra} onChange={(e) => setAddFormData({ ...addFormData, CanBoKiemTra: e.target.value })} placeholder="Nhập tên cán bộ" />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Nội dung kiểm tra</Label>
-                  <Textarea placeholder="Mô tả nội dung kiểm tra" />
+                  <Textarea value={addFormData.NoiDungKiemTra} onChange={(e) => setAddFormData({ ...addFormData, NoiDungKiemTra: e.target.value })} placeholder="Mô tả nội dung kiểm tra" />
                 </div>
                 <div className="space-y-2">
                   <Label>Kết quả kiểm tra *</Label>
-                  <Select>
+                  <Select value={addFormData.KetQuaKiemTra} onValueChange={(v) => setAddFormData({ ...addFormData, KetQuaKiemTra: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn kết quả" /></SelectTrigger>
                     <SelectContent>
                       {ketQuaKiemTraOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -351,7 +408,7 @@ export default function TratTuXayDungPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Trạng thái xử lý</Label>
-                  <Select>
+                  <Select value={addFormData.TrangThaiXuLy} onValueChange={(v) => setAddFormData({ ...addFormData, TrangThaiXuLy: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn trạng thái" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Chờ xử lý">Chờ xử lý</SelectItem>
@@ -363,7 +420,7 @@ export default function TratTuXayDungPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Loại vi phạm</Label>
-                  <Select>
+                  <Select value={addFormData.LoaiViPham} onValueChange={(v) => setAddFormData({ ...addFormData, LoaiViPham: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại vi phạm" /></SelectTrigger>
                     <SelectContent>
                       {loaiViPhamOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -372,7 +429,7 @@ export default function TratTuXayDungPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Mức độ vi phạm</Label>
-                  <Select>
+                  <Select value={addFormData.MucDo} onValueChange={(v) => setAddFormData({ ...addFormData, MucDo: v })}>
                     <SelectTrigger><SelectValue placeholder="Chọn mức độ" /></SelectTrigger>
                     <SelectContent>
                       {mucDoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -381,20 +438,20 @@ export default function TratTuXayDungPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Thời hạn khắc phục</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addFormData.ThoiHanKhacPhuc} onChange={(e) => setAddFormData({ ...addFormData, ThoiHanKhacPhuc: e.target.value })} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Biện pháp xử lý</Label>
-                  <Textarea placeholder="Mô tả biện pháp xử lý" />
+                  <Textarea value={addFormData.BienPhapXuLy} onChange={(e) => setAddFormData({ ...addFormData, BienPhapXuLy: e.target.value })} placeholder="Mô tả biện pháp xử lý" />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea value={addFormData.GhiChu} onChange={(e) => setAddFormData({ ...addFormData, GhiChu: e.target.value })} placeholder="Nhập ghi chú" />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Lập biên bản</Button>
+                <Button onClick={handleCreate}>Lập biên bản</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -697,7 +754,7 @@ export default function TratTuXayDungPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedKT?.MaKiemTra === item.MaKiemTra} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedKT(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedKT(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedKT(item); setEditFormData({ ...emptyForm, ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -712,19 +769,19 @@ export default function TratTuXayDungPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2 col-span-2">
                                   <Label>Địa chỉ công trình</Label>
-                                  <Input defaultValue={item.DiaChi} />
+                                  <Input value={editFormData.DiaChi} onChange={(e) => setEditFormData({ ...editFormData, DiaChi: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mã thửa</Label>
-                                  <Input defaultValue={item.MaThua} />
+                                  <Input value={editFormData.MaThua} onChange={(e) => setEditFormData({ ...editFormData, MaThua: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tờ</Label>
-                                  <Input defaultValue={item.SoTo} />
+                                  <Input value={editFormData.SoTo} onChange={(e) => setEditFormData({ ...editFormData, SoTo: e.target.value })} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Loại công trình</Label>
-                                  <Input defaultValue={item.LoaiCongTrinh} />
+                                  <Input value={editFormData.LoaiCongTrinh} onChange={(e) => setEditFormData({ ...editFormData, LoaiCongTrinh: e.target.value })} />
                                 </div>
                               </div>
                             </div>
@@ -734,15 +791,15 @@ export default function TratTuXayDungPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Họ tên</Label>
-                                  <Input defaultValue={item.ChuDauTu} />
+                                  <Input value={editFormData.ChuDauTu} onChange={(e) => setEditFormData({ ...editFormData, ChuDauTu: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD</Label>
-                                  <Input defaultValue={item.CCCD} />
+                                  <Input value={editFormData.CCCD} onChange={(e) => setEditFormData({ ...editFormData, CCCD: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Điện thoại</Label>
-                                  <Input defaultValue={item.SoDienThoai} />
+                                  <Input value={editFormData.SoDienThoai} onChange={(e) => setEditFormData({ ...editFormData, SoDienThoai: e.target.value })} />
                                 </div>
                               </div>
                             </div>
@@ -752,15 +809,15 @@ export default function TratTuXayDungPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Tình trạng giấy phép</Label>
-                                  <Input defaultValue={item.TinhTrangGiayPhep} />
+                                  <Input value={editFormData.TinhTrangGiayPhep} onChange={(e) => setEditFormData({ ...editFormData, TinhTrangGiayPhep: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số giấy phép</Label>
-                                  <Input defaultValue={item.SoGiayPhep} placeholder="Không có" />
+                                  <Input value={editFormData.SoGiayPhep} onChange={(e) => setEditFormData({ ...editFormData, SoGiayPhep: e.target.value })} placeholder="Không có" />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày cấp</Label>
-                                  <Input type="date" defaultValue={item.NgayCapPhep} />
+                                  <Input type="date" value={editFormData.NgayCapPhep} onChange={(e) => setEditFormData({ ...editFormData, NgayCapPhep: e.target.value })} />
                                 </div>
                               </div>
                             </div>
@@ -770,19 +827,19 @@ export default function TratTuXayDungPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Ngày kiểm tra</Label>
-                                  <Input type="date" defaultValue={item.NgayKiemTra} />
+                                  <Input type="date" value={editFormData.NgayKiemTra} onChange={(e) => setEditFormData({ ...editFormData, NgayKiemTra: e.target.value })} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Cán bộ kiểm tra</Label>
-                                  <Input defaultValue={item.CanBoKiemTra} />
+                                  <Input value={editFormData.CanBoKiemTra} onChange={(e) => setEditFormData({ ...editFormData, CanBoKiemTra: e.target.value })} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Nội dung kiểm tra</Label>
-                                  <Textarea defaultValue={item.NoiDungKiemTra} rows={2} />
+                                  <Textarea value={editFormData.NoiDungKiemTra} onChange={(e) => setEditFormData({ ...editFormData, NoiDungKiemTra: e.target.value })} rows={2} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Kết quả kiểm tra</Label>
-                                  <Select defaultValue={item.KetQuaKiemTra}>
+                                  <Select value={editFormData.KetQuaKiemTra} onValueChange={(v) => setEditFormData({ ...editFormData, KetQuaKiemTra: v })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {ketQuaKiemTraOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -791,7 +848,7 @@ export default function TratTuXayDungPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái xử lý</Label>
-                                  <Select defaultValue={item.TrangThaiXuLy}>
+                                  <Select value={editFormData.TrangThaiXuLy} onValueChange={(v) => setEditFormData({ ...editFormData, TrangThaiXuLy: v })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -806,7 +863,7 @@ export default function TratTuXayDungPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Loại vi phạm</Label>
-                                  <Select defaultValue={item.LoaiViPham}>
+                                  <Select value={editFormData.LoaiViPham} onValueChange={(v) => setEditFormData({ ...editFormData, LoaiViPham: v })}>
                                     <SelectTrigger><SelectValue placeholder="Chọn loại" /></SelectTrigger>
                                     <SelectContent>
                                       {loaiViPhamOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -815,7 +872,7 @@ export default function TratTuXayDungPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mức độ</Label>
-                                  <Select defaultValue={item.MucDo}>
+                                  <Select value={editFormData.MucDo} onValueChange={(v) => setEditFormData({ ...editFormData, MucDo: v })}>
                                     <SelectTrigger><SelectValue placeholder="Chọn mức độ" /></SelectTrigger>
                                     <SelectContent>
                                       {mucDoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -824,23 +881,23 @@ export default function TratTuXayDungPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Thời hạn khắc phục</Label>
-                                  <Input type="date" defaultValue={item.ThoiHanKhacPhuc} />
+                                  <Input type="date" value={editFormData.ThoiHanKhacPhuc} onChange={(e) => setEditFormData({ ...editFormData, ThoiHanKhacPhuc: e.target.value })} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Biện pháp xử lý</Label>
-                                  <Textarea defaultValue={item.BienPhapXuLy} />
+                                  <Textarea value={editFormData.BienPhapXuLy} onChange={(e) => setEditFormData({ ...editFormData, BienPhapXuLy: e.target.value })} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editFormData.GhiChu} onChange={(e) => setEditFormData({ ...editFormData, GhiChu: e.target.value })} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

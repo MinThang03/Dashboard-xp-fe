@@ -269,12 +269,16 @@ export default function KinhDoanhDuLichPage() {
     GhiChu: '',
   });
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = mockDuLich.filter((item) => {
-    const matchSearch = 
-      item.MaCoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.TenCoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.ChuSoHuu.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.MaCoSo).includes(normalizedQuery) ||
+      normalizeText(item.TenCoSo).includes(normalizedQuery) ||
+      normalizeText(item.ChuSoHuu).includes(normalizedQuery);
     
     const matchType = typeFilter === 'all' || item.LoaiHinh === typeFilter;
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;

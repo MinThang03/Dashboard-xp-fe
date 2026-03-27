@@ -193,11 +193,15 @@ export default function ThongKeKinhTePage() {
 
   const dataSource = records.length > 0 ? records : mockThongKe;
 
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+
   // Filter data
   const filteredData = dataSource.filter((item) => {
-    const matchSearch = 
-      item.MaBC.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.KyBaoCao.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedQuery = normalizeText(searchQuery);
+    const matchSearch =
+      normalizeText(item.MaBC).includes(normalizedQuery) ||
+      normalizeText(item.KyBaoCao).includes(normalizedQuery);
     
     const matchPeriod = periodFilter === 'all' || item.LoaiKy === periodFilter;
     const matchStatus = statusFilter === 'all' || item.TrangThai === statusFilter;

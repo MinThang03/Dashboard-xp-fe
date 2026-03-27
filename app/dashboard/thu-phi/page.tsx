@@ -59,6 +59,8 @@ export default function ThuPhiPage() {
   }, []);
 
   const dataSource = records.length > 0 ? records : mockThuPhiLePhi;
+  const normalizeText = (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
 
   // Tính toán thống kê
   const tongThuThang = dataSource.reduce((sum, item) => sum + (item.ThanhTien || 0), 0);
@@ -67,10 +69,13 @@ export default function ThuPhiPage() {
   const tyLeThu = dataSource.length ? Math.round((daThu / dataSource.length) * 100) : 0;
 
   // Lọc dữ liệu
-  const filteredData = dataSource.filter(item =>
-    item.LoaiPhi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.MoTa.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredData = dataSource.filter((item) => {
+    const normalizedQuery = normalizeText(searchQuery);
+    return (
+      normalizeText(item.LoaiPhi).includes(normalizedQuery) ||
+      normalizeText(item.MoTa).includes(normalizedQuery)
+    );
+  });
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {

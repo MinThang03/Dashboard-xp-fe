@@ -727,6 +727,30 @@ export const xayDungTraiPhepApi = {
   delete: (id: number) => apiCall(`/xay-dung-trai-phep/${id}`, { method: 'DELETE' }),
 };
 
+export const theoDoiTratTuXayDungApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/theo-doi-trat-tu-xay-dung?${query}`);
+  },
+  getStats: () => apiCall('/theo-doi-trat-tu-xay-dung/stats'),
+  getById: (id: number) => apiCall(`/theo-doi-trat-tu-xay-dung/${id}`),
+  create: (data: any) => apiCall('/theo-doi-trat-tu-xay-dung', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/theo-doi-trat-tu-xay-dung/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/theo-doi-trat-tu-xay-dung/${id}`, { method: 'DELETE' }),
+};
+
+export const nhaOCongTrinhApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/nha-o-cong-trinh?${query}`);
+  },
+  getStats: () => apiCall('/nha-o-cong-trinh/stats'),
+  getById: (id: number) => apiCall(`/nha-o-cong-trinh/${id}`),
+  create: (data: any) => apiCall('/nha-o-cong-trinh', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/nha-o-cong-trinh/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/nha-o-cong-trinh/${id}`, { method: 'DELETE' }),
+};
+
 // ============== DÂN CƯ - LAO ĐỘNG ==============
 export const hoGiaDinhApi = {
   getList: (params?: { page?: number; limit?: number }) => {
@@ -774,6 +798,30 @@ export const hoNgheoApi = {
   create: (data: any) => apiCall('/ho-ngheo', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: any) => apiCall(`/ho-ngheo/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiCall(`/ho-ngheo/${id}`, { method: 'DELETE' }),
+};
+
+export const baoTroXaHoiApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/bao-tro-xa-hoi?${query}`);
+  },
+  getStats: () => apiCall('/bao-tro-xa-hoi/stats'),
+  getById: (id: number) => apiCall(`/bao-tro-xa-hoi/${id}`),
+  create: (data: any) => apiCall('/bao-tro-xa-hoi', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/bao-tro-xa-hoi/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/bao-tro-xa-hoi/${id}`, { method: 'DELETE' }),
+};
+
+export const nguoiCoCongApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/nguoi-co-cong?${query}`);
+  },
+  getStats: () => apiCall('/nguoi-co-cong/stats'),
+  getById: (id: number) => apiCall(`/nguoi-co-cong/${id}`),
+  create: (data: any) => apiCall('/nguoi-co-cong', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/nguoi-co-cong/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/nguoi-co-cong/${id}`, { method: 'DELETE' }),
 };
 
 // ============== TÀI CHÍNH ==============

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { haTangDoThiApi } from '@/lib/api';
 
 interface HaTang {
   MaHaTang: string;
@@ -175,6 +176,16 @@ export default function HaTangPage() {
   const [selectedHaTang, setSelectedHaTang] = useState<HaTang | null>(null);
   const [formData, setFormData] = useState<Partial<HaTang>>({});
 
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setHaTangList((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
   // Thống kê
   const tongHangMuc = haTangList.length;
   const tot = haTangList.filter(ht => ht.TinhTrang === 'Tốt').length;
@@ -200,8 +211,8 @@ export default function HaTangPage() {
 
   // Lọc
   const filteredHaTang = haTangList.filter(ht => {
-    const matchSearch = ht.TenHangMuc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       ht.ViTri.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = (ht.TenHangMuc || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       (ht.ViTri || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchLoai = selectedLoai === 'all' || ht.LoaiHaTang === selectedLoai;
     const matchTinhTrang = selectedTinhTrang === 'all' || ht.TinhTrang === selectedTinhTrang;
     return matchSearch && matchLoai && matchTinhTrang;
@@ -228,36 +239,34 @@ export default function HaTangPage() {
     setAddDialog(true);
   };
 
-  const handleDelete = (maHaTang: string) => {
+  const handleDelete = async (maHaTang: string | number) => {
     if (confirm('Bạn có chắc muốn xóa hạng mục này?')) {
-      setHaTangList(haTangList.filter(ht => ht.MaHaTang !== maHaTang));
+      await haTangDoThiApi.delete(Number(maHaTang));
+      const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setHaTangList((response.data as any).data);
+      }
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (selectedHaTang && formData) {
-      setHaTangList(haTangList.map(ht =>
-        ht.MaHaTang === selectedHaTang.MaHaTang ? { ...ht, ...formData } : ht
-      ));
+      await haTangDoThiApi.update(Number((selectedHaTang as any).MaHaTang), formData);
+      const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setHaTangList((response.data as any).data);
+      }
       setEditDialog(false);
     }
   };
 
-  const handleSaveAdd = () => {
+  const handleSaveAdd = async () => {
     if (formData.TenHangMuc) {
-      const newHaTang: HaTang = {
-        MaHaTang: `HT${String(haTangList.length + 1).padStart(3, '0')}`,
-        TenHangMuc: formData.TenHangMuc || '',
-        LoaiHaTang: (formData.LoaiHaTang as HaTang['LoaiHaTang']) || 'Đường',
-        ViTri: formData.ViTri || '',
-        TinhTrang: (formData.TinhTrang as HaTang['TinhTrang']) || 'Tốt',
-        ChieuDai: formData.ChieuDai,
-        KichThuoc: formData.KichThuoc || '',
-        NamXayDung: formData.NamXayDung || 2024,
-        LanSuaChua: formData.LanSuaChua || new Date().toISOString().split('T')[0],
-        GhiChu: formData.GhiChu || ''
-      };
-      setHaTangList([...haTangList, newHaTang]);
+      await haTangDoThiApi.create(formData);
+      const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setHaTangList((response.data as any).data);
+      }
       setAddDialog(false);
     }
   };

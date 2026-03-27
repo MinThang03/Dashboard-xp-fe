@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import {
   User,
 } from 'lucide-react';
 import { mockNguoiCoCong, mockCheDoNguoiCoCong, mockQuaTangThamHoi } from '@/lib/mock-data';
+import { nguoiCoCongApi } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,6 +42,7 @@ import { Edit, Trash2, X } from 'lucide-react';
 export default function NguoiCoCongPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [nguoiCoCongList, setNguoiCoCongList] = useState<any[]>(mockNguoiCoCong);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -48,18 +50,28 @@ export default function NguoiCoCongPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
+  useEffect(() => {
+    const loadData = async () => {
+      const response = await nguoiCoCongApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setNguoiCoCongList((response.data as any).data);
+      }
+    };
+    loadData();
+  }, []);
+
   // Tính toán thống kê
   const stats = {
-    tongNCC: mockNguoiCoCong.length,
-    thuongBinh: mockNguoiCoCong.filter(ncc => ncc.LoaiDoiTuong.includes('Thương binh')).length,
-    giaDinhLietSi: mockNguoiCoCong.filter(ncc => ncc.LoaiDoiTuong.includes('liệt sĩ') || ncc.LoaiDoiTuong.includes('VNAH')).length,
+    tongNCC: nguoiCoCongList.length,
+    thuongBinh: nguoiCoCongList.filter(ncc => (ncc.LoaiDoiTuong || '').includes('Thương binh')).length,
+    giaDinhLietSi: nguoiCoCongList.filter(ncc => (ncc.LoaiDoiTuong || '').includes('liệt sĩ') || (ncc.LoaiDoiTuong || '').includes('VNAH')).length,
     dangHuong: mockCheDoNguoiCoCong.filter(cd => cd.TrangThai === 'Đang hưởng').length,
   };
 
   // Lọc dữ liệu
-  const filteredNCC = mockNguoiCoCong.filter(ncc =>
-    ncc.HoTen.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ncc.LoaiDoiTuong.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredNCC = nguoiCoCongList.filter(ncc =>
+    (ncc.HoTen || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (ncc.LoaiDoiTuong || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -112,17 +124,29 @@ export default function NguoiCoCongPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    // TODO: API call to save
+  const handleSave = async () => {
+    if (isEditOpen && selectedItem) {
+      const id = selectedItem.MaNCC ?? selectedItem.MaNguoiCoCong;
+      await nguoiCoCongApi.update(id, formData);
+    } else {
+      await nguoiCoCongApi.create(formData);
+    }
+    const response = await nguoiCoCongApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray((response.data as any)?.data)) {
+      setNguoiCoCongList((response.data as any).data);
+    }
     setIsAddOpen(false);
     setIsEditOpen(false);
   };
 
-  const handleDelete = (item: any) => {
+  const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${item.HoTen}?`)) {
-      console.log('Deleting:', item);
-      // TODO: API call to delete
+      const id = item.MaNCC ?? item.MaNguoiCoCong;
+      await nguoiCoCongApi.delete(id);
+      const response = await nguoiCoCongApi.getList({ page: 1, limit: 500 });
+      if (response.success && Array.isArray((response.data as any)?.data)) {
+        setNguoiCoCongList((response.data as any).data);
+      }
     }
   };
 
@@ -284,10 +308,10 @@ export default function NguoiCoCongPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredNCC.map((ncc) => (
-                    <tr key={ncc.MaNguoiCoCong} className="border-b hover:bg-slate-50 transition-colors">
+                  {filteredNCC.map((ncc, index) => (
+                    <tr key={ncc.MaNCC ?? ncc.MaNguoiCoCong ?? index} className="border-b hover:bg-slate-50 transition-colors">
                       <td className="p-4">
-                        <span className="font-semibold text-primary">NCC-{String(ncc.MaNguoiCoCong).padStart(3, '0')}</span>
+                        <span className="font-semibold text-primary">NCC-{String(ncc.MaNCC ?? ncc.MaNguoiCoCong ?? '').padStart(3, '0')}</span>
                       </td>
                       <td className="p-4">
                         <p className="font-medium">{ncc.HoTen}</p>
