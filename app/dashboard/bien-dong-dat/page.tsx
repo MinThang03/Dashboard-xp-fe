@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +15,11 @@ import {
   Eye, Edit, CheckCircle2, Clock, XCircle, ArrowRightLeft, Scissors,
   Merge, FileText, User, Calendar, LandPlot
 } from 'lucide-react';
+import { bienDongDatApi } from '@/lib/api';
 
 // Mock data biến động đất đai
 interface BienDongDat {
+  MaBienDongId?: number;
   MaBienDong: string;
   LoaiBienDong: string;
   MaThua: string;
@@ -185,14 +187,161 @@ const loaiBienDongOptions = ['Chuyển mục đích sử dụng', 'Tách thửa'
 const trangThaiOptions = ['Chờ duyệt', 'Đang xử lý', 'Đã duyệt', 'Từ chối'];
 const loaiDatOptions = ['Đất ở', 'Đất nông nghiệp', 'Đất thương mại', 'Đất công cộng', 'Đất hỗn hợp'];
 
+const emptyBienDongForm: BienDongDat = {
+  MaBienDong: '',
+  LoaiBienDong: '',
+  MaThua: '',
+  SoTo: '',
+  DienTichCu: 0,
+  DienTichMoi: 0,
+  LoaiDatCu: '',
+  LoaiDatMoi: '',
+  ChuSoHuuCu: '',
+  ChuSoHuuMoi: '',
+  CCCDCu: '',
+  CCCDMoi: '',
+  NgayDeNghi: '',
+  NgayDuyet: '',
+  TrangThai: 'Chờ duyệt',
+  CanBoXuLy: '',
+  LyDo: '',
+  GhiChu: '',
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): BienDongDat {
+  const id = Number(item.MaBienDong);
+  return {
+    MaBienDongId: Number.isFinite(id) ? id : undefined,
+    MaBienDong: item.MaBienDongText || (Number.isFinite(id) ? `BD${String(id).padStart(3, '0')}` : ''),
+    LoaiBienDong: item.LoaiBienDong || '',
+    MaThua: item.MaThua || '',
+    SoTo: item.SoTo || '',
+    DienTichCu: toNumber(item.DienTichCu),
+    DienTichMoi: toNumber(item.DienTichMoi),
+    LoaiDatCu: item.LoaiDatCu || '',
+    LoaiDatMoi: item.LoaiDatMoi || '',
+    ChuSoHuuCu: item.ChuSoHuuCu || '',
+    ChuSoHuuMoi: item.ChuSoHuuMoi || '',
+    CCCDCu: item.CCCDCu || '',
+    CCCDMoi: item.CCCDMoi || '',
+    NgayDeNghi: toDateString(item.NgayDeNghi),
+    NgayDuyet: toDateString(item.NgayDuyet),
+    TrangThai: item.TrangThai || 'Chờ duyệt',
+    CanBoXuLy: item.CanBoXuLy || '',
+    LyDo: item.LyDo || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
 export default function BienDongDatPage() {
+  const [records, setRecords] = useState<BienDongDat[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterLoaiBD, setFilterLoaiBD] = useState<string>('all');
   const [selectedBienDong, setSelectedBienDong] = useState<BienDongDat | null>(null);
+  const [addForm, setAddForm] = useState<BienDongDat>(emptyBienDongForm);
+  const [editForm, setEditForm] = useState<BienDongDat>(emptyBienDongForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  const loadData = async () => {
+    const result = await bienDongDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'BIEN_DONG_DAT' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    const payload = {
+      LoaiBanGhi: 'BIEN_DONG_DAT',
+      MaBienDongText: addForm.MaBienDong || null,
+      MaThua: addForm.MaThua || '',
+      LoaiBienDong: addForm.LoaiBienDong || '',
+      NgayBienDong: addForm.NgayDeNghi || new Date().toISOString().slice(0, 10),
+      SoTo: addForm.SoTo || null,
+      DienTichCu: toNumber(addForm.DienTichCu),
+      DienTichMoi: toNumber(addForm.DienTichMoi),
+      LoaiDatCu: addForm.LoaiDatCu || null,
+      LoaiDatMoi: addForm.LoaiDatMoi || null,
+      ChuSoHuuCu: addForm.ChuSoHuuCu || null,
+      ChuSoHuuMoi: addForm.ChuSoHuuMoi || null,
+      CCCDCu: addForm.CCCDCu || null,
+      CCCDMoi: addForm.CCCDMoi || null,
+      NgayDeNghi: addForm.NgayDeNghi || null,
+      NgayDuyet: addForm.NgayDuyet || null,
+      TrangThai: addForm.TrangThai || 'Chờ duyệt',
+      CanBoXuLy: addForm.CanBoXuLy || null,
+      LyDo: addForm.LyDo || null,
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await bienDongDatApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tạo biến động đất đai');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyBienDongForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedBienDong?.MaBienDongId) {
+      alert('Không xác định được bản ghi để cập nhật');
+      return;
+    }
+
+    const payload = {
+      MaBienDongText: editForm.MaBienDong || null,
+      MaThua: editForm.MaThua || '',
+      LoaiBienDong: editForm.LoaiBienDong || '',
+      NgayBienDong: editForm.NgayDeNghi || new Date().toISOString().slice(0, 10),
+      SoTo: editForm.SoTo || null,
+      DienTichCu: toNumber(editForm.DienTichCu),
+      DienTichMoi: toNumber(editForm.DienTichMoi),
+      LoaiDatCu: editForm.LoaiDatCu || null,
+      LoaiDatMoi: editForm.LoaiDatMoi || null,
+      ChuSoHuuCu: editForm.ChuSoHuuCu || null,
+      ChuSoHuuMoi: editForm.ChuSoHuuMoi || null,
+      CCCDCu: editForm.CCCDCu || null,
+      CCCDMoi: editForm.CCCDMoi || null,
+      NgayDeNghi: editForm.NgayDeNghi || null,
+      NgayDuyet: editForm.NgayDuyet || null,
+      TrangThai: editForm.TrangThai || 'Chờ duyệt',
+      CanBoXuLy: editForm.CanBoXuLy || null,
+      LyDo: editForm.LyDo || null,
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await bienDongDatApi.update(selectedBienDong.MaBienDongId, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật biến động đất đai');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedBienDong(null);
+    setEditForm(emptyBienDongForm);
+    await loadData();
+  };
 
   const handleViewDialogChange = (open: boolean) => {
     setIsViewOpen(open);
@@ -204,7 +353,7 @@ export default function BienDongDatPage() {
     if (!open) setSelectedBienDong(null);
   };
 
-  const filteredData = mockBienDong.filter((item) => {
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaBienDong.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.ChuSoHuuCu.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -216,12 +365,12 @@ export default function BienDongDatPage() {
   });
 
   const stats = {
-    total: mockBienDong.length,
-    chuyenMDSD: mockBienDong.filter(r => r.LoaiBienDong === 'Chuyển mục đích sử dụng').length,
-    tachGop: mockBienDong.filter(r => r.LoaiBienDong === 'Tách thửa' || r.LoaiBienDong === 'Gộp thửa').length,
-    chuyenNhuong: mockBienDong.filter(r => r.LoaiBienDong === 'Chuyển nhượng' || r.LoaiBienDong === 'Thừa kế' || r.LoaiBienDong === 'Tặng cho').length,
-    choDuyet: mockBienDong.filter(r => r.TrangThai === 'Chờ duyệt').length,
-    daDuyet: mockBienDong.filter(r => r.TrangThai === 'Đã duyệt').length
+    total: records.length,
+    chuyenMDSD: records.filter(r => r.LoaiBienDong === 'Chuyển mục đích sử dụng').length,
+    tachGop: records.filter(r => r.LoaiBienDong === 'Tách thửa' || r.LoaiBienDong === 'Gộp thửa').length,
+    chuyenNhuong: records.filter(r => r.LoaiBienDong === 'Chuyển nhượng' || r.LoaiBienDong === 'Thừa kế' || r.LoaiBienDong === 'Tặng cho').length,
+    choDuyet: records.filter(r => r.TrangThai === 'Chờ duyệt').length,
+    daDuyet: records.filter(r => r.TrangThai === 'Đã duyệt').length
   };
 
   const getTrangThaiBadge = (trangThai: string) => {
@@ -259,7 +408,13 @@ export default function BienDongDatPage() {
                 <p className="text-sm sm:text-base text-white/90">Theo dõi chuyển đổi, tách gộp, chuyển nhượng quyền sử dụng đất</p>
               </div>
             </div>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <Dialog
+              open={isAddOpen}
+              onOpenChange={(open) => {
+                setIsAddOpen(open);
+                if (open) setAddForm(emptyBienDongForm);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button className="w-full 2xl:w-auto bg-white text-status-success hover:bg-white/90">
                   <Plus className="mr-2 h-4 w-4" />
@@ -275,7 +430,7 @@ export default function BienDongDatPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Loại biến động *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiBienDong || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiBienDong: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại biến động" /></SelectTrigger>
                     <SelectContent>
                       {loaiBienDongOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -284,23 +439,23 @@ export default function BienDongDatPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa *</Label>
-                  <Input placeholder="Nhập mã thửa" />
+                  <Input placeholder="Nhập mã thửa" value={addForm.MaThua} onChange={(e) => setAddForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ *</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input placeholder="Nhập số tờ" value={addForm.SoTo} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Diện tích cũ (m²)</Label>
-                  <Input type="number" placeholder="Nhập diện tích" />
+                  <Input type="number" placeholder="Nhập diện tích" value={addForm.DienTichCu} onChange={(e) => setAddForm((prev) => ({ ...prev, DienTichCu: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Diện tích mới (m²)</Label>
-                  <Input type="number" placeholder="Nhập diện tích" />
+                  <Input type="number" placeholder="Nhập diện tích" value={addForm.DienTichMoi} onChange={(e) => setAddForm((prev) => ({ ...prev, DienTichMoi: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Loại đất cũ</Label>
-                  <Select>
+                  <Select value={addForm.LoaiDatCu || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiDatCu: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại đất" /></SelectTrigger>
                     <SelectContent>
                       {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -309,7 +464,7 @@ export default function BienDongDatPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Loại đất mới</Label>
-                  <Select>
+                  <Select value={addForm.LoaiDatMoi || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiDatMoi: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại đất" /></SelectTrigger>
                     <SelectContent>
                       {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -318,36 +473,36 @@ export default function BienDongDatPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Chủ sở hữu cũ *</Label>
-                  <Input placeholder="Nhập tên chủ sở hữu cũ" />
+                  <Input placeholder="Nhập tên chủ sở hữu cũ" value={addForm.ChuSoHuuCu} onChange={(e) => setAddForm((prev) => ({ ...prev, ChuSoHuuCu: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>CCCD cũ</Label>
-                  <Input placeholder="Nhập CCCD" />
+                  <Input placeholder="Nhập CCCD" value={addForm.CCCDCu} onChange={(e) => setAddForm((prev) => ({ ...prev, CCCDCu: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Chủ sở hữu mới *</Label>
-                  <Input placeholder="Nhập tên chủ sở hữu mới" />
+                  <Input placeholder="Nhập tên chủ sở hữu mới" value={addForm.ChuSoHuuMoi} onChange={(e) => setAddForm((prev) => ({ ...prev, ChuSoHuuMoi: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>CCCD mới</Label>
-                  <Input placeholder="Nhập CCCD" />
+                  <Input placeholder="Nhập CCCD" value={addForm.CCCDMoi} onChange={(e) => setAddForm((prev) => ({ ...prev, CCCDMoi: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Cán bộ xử lý</Label>
-                  <Input placeholder="Tên cán bộ" />
+                  <Input placeholder="Tên cán bộ" value={addForm.CanBoXuLy} onChange={(e) => setAddForm((prev) => ({ ...prev, CanBoXuLy: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Lý do biến động</Label>
-                  <Textarea placeholder="Nhập lý do" />
+                  <Textarea placeholder="Nhập lý do" value={addForm.LyDo} onChange={(e) => setAddForm((prev) => ({ ...prev, LyDo: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Lưu biến động</Button>
+                <Button onClick={handleCreate}>Lưu biến động</Button>
               </DialogFooter>
             </DialogContent>
             </Dialog>
@@ -638,7 +793,7 @@ export default function BienDongDatPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedBienDong?.MaBienDong === item.MaBienDong} onOpenChange={handleEditDialogChange}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedBienDong(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedBienDong(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -653,23 +808,23 @@ export default function BienDongDatPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Loại biến động</Label>
-                                  <Input defaultValue={item.LoaiBienDong} />
+                                  <Input value={editForm.LoaiBienDong} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiBienDong: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mã thửa</Label>
-                                  <Input defaultValue={item.MaThua} />
+                                  <Input value={editForm.MaThua} onChange={(e) => setEditForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tờ</Label>
-                                  <Input defaultValue={item.SoTo} />
+                                  <Input value={editForm.SoTo} onChange={(e) => setEditForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày đề nghị</Label>
-                                  <Input type="date" defaultValue={item.NgayDeNghi} />
+                                  <Input type="date" value={editForm.NgayDeNghi} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayDeNghi: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -679,7 +834,7 @@ export default function BienDongDatPage() {
                               </div>
                               <div className="space-y-2 mt-4">
                                 <Label>Lý do biến động</Label>
-                                <Textarea defaultValue={item.LyDo} rows={2} />
+                                <Textarea value={editForm.LyDo} onChange={(e) => setEditForm((prev) => ({ ...prev, LyDo: e.target.value }))} rows={2} />
                               </div>
                             </div>
 
@@ -688,19 +843,19 @@ export default function BienDongDatPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Chủ sở hữu cũ</Label>
-                                  <Input defaultValue={item.ChuSoHuuCu} />
+                                  <Input value={editForm.ChuSoHuuCu} onChange={(e) => setEditForm((prev) => ({ ...prev, ChuSoHuuCu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD cũ</Label>
-                                  <Input defaultValue={item.CCCDCu} />
+                                  <Input value={editForm.CCCDCu} onChange={(e) => setEditForm((prev) => ({ ...prev, CCCDCu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Diện tích cũ (m²)</Label>
-                                  <Input type="number" defaultValue={item.DienTichCu} />
+                                  <Input type="number" value={editForm.DienTichCu} onChange={(e) => setEditForm((prev) => ({ ...prev, DienTichCu: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Loại đất cũ</Label>
-                                  <Input defaultValue={item.LoaiDatCu} />
+                                  <Input value={editForm.LoaiDatCu} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiDatCu: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -710,19 +865,19 @@ export default function BienDongDatPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Chủ sở hữu mới</Label>
-                                  <Input defaultValue={item.ChuSoHuuMoi} />
+                                  <Input value={editForm.ChuSoHuuMoi} onChange={(e) => setEditForm((prev) => ({ ...prev, ChuSoHuuMoi: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD mới</Label>
-                                  <Input defaultValue={item.CCCDMoi} />
+                                  <Input value={editForm.CCCDMoi} onChange={(e) => setEditForm((prev) => ({ ...prev, CCCDMoi: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Diện tích mới (m²)</Label>
-                                  <Input type="number" defaultValue={item.DienTichMoi} />
+                                  <Input type="number" value={editForm.DienTichMoi} onChange={(e) => setEditForm((prev) => ({ ...prev, DienTichMoi: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Loại đất mới</Label>
-                                  <Input defaultValue={item.LoaiDatMoi} />
+                                  <Input value={editForm.LoaiDatMoi} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiDatMoi: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -732,23 +887,23 @@ export default function BienDongDatPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Cán bộ xử lý</Label>
-                                  <Input defaultValue={item.CanBoXuLy} />
+                                  <Input value={editForm.CanBoXuLy} onChange={(e) => setEditForm((prev) => ({ ...prev, CanBoXuLy: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày duyệt</Label>
-                                  <Input type="date" defaultValue={item.NgayDuyet} />
+                                  <Input type="date" value={editForm.NgayDuyet} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayDuyet: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

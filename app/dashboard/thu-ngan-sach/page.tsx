@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,11 @@ import {
   TrendingUp, Coins, Calendar, CheckCircle2, Search, Plus, Download, Eye, Edit,
   DollarSign, Percent, FileText, Clock, CircleDollarSign
 } from 'lucide-react';
+import { nganSachApi } from '@/lib/api';
 
 // Mock data thu ngân sách
 interface ThuNganSach {
+  MaNganSach?: number;
   MaThu: string;
   LoaiThu: string;
   NguonThu: string;
@@ -152,16 +154,155 @@ const loaiThuOptions = ['Phí hành chính', 'Phí chợ', 'Phí môi trường'
 const trangThaiOptions = ['Chờ xác nhận', 'Đã xác nhận', 'Hoàn trả', 'Hủy'];
 const phuongThucOptions = ['Tiền mặt', 'Chuyển khoản', 'Nhiều hình thức'];
 
+const emptyThuForm: ThuNganSach = {
+  MaThu: '',
+  LoaiThu: '',
+  NguonThu: '',
+  MoTa: '',
+  SoTien: 0,
+  SoTienKeHoach: 0,
+  NguoiNop: '',
+  DiaChi: '',
+  NgayThu: '',
+  NguoiThu: '',
+  TrangThai: 'Chờ xác nhận',
+  PhuongThuc: 'Tiền mặt',
+  SoBienLai: '',
+  GhiChu: '',
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): ThuNganSach {
+  return {
+    MaNganSach: item.MaNganSach,
+    MaThu: item.MaThu || '',
+    LoaiThu: item.LoaiThu || '',
+    NguonThu: item.NguonThu || '',
+    MoTa: item.MoTa || '',
+    SoTien: toNumber(item.SoTien),
+    SoTienKeHoach: toNumber(item.SoTienKeHoach),
+    NguoiNop: item.NguoiNop || '',
+    DiaChi: item.DiaChi || '',
+    NgayThu: toDateString(item.NgayThu),
+    NguoiThu: item.NguoiThu || '',
+    TrangThai: item.TrangThai || 'Chờ xác nhận',
+    PhuongThuc: item.PhuongThuc || 'Tiền mặt',
+    SoBienLai: item.SoBienLai || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
 export default function ThuNganSachPage() {
+  const [records, setRecords] = useState<ThuNganSach[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
   const [selectedThu, setSelectedThu] = useState<ThuNganSach | null>(null);
+  const [addForm, setAddForm] = useState<ThuNganSach>(emptyThuForm);
+  const [editForm, setEditForm] = useState<ThuNganSach>(emptyThuForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredData = mockThuNganSach.filter((item) => {
+  const loadData = async () => {
+    const result = await nganSachApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'THU_NGAN_SACH' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    const year = addForm.NgayThu ? Number(addForm.NgayThu.slice(0, 4)) : new Date().getFullYear();
+    const tongDuToan = toNumber(addForm.SoTienKeHoach || addForm.SoTien);
+    const daGiaiNgan = toNumber(addForm.SoTien);
+
+    const payload = {
+      LoaiBanGhi: 'THU_NGAN_SACH',
+      Nam: year,
+      TongDuToan: tongDuToan,
+      DaGiaiNgan: daGiaiNgan,
+      TrangThai: addForm.TrangThai || 'Chờ xác nhận',
+      MaThu: addForm.MaThu || null,
+      LoaiThu: addForm.LoaiThu || null,
+      NguonThu: addForm.NguonThu || null,
+      MoTa: addForm.MoTa || null,
+      SoTien: daGiaiNgan,
+      SoTienKeHoach: toNumber(addForm.SoTienKeHoach),
+      NguoiNop: addForm.NguoiNop || null,
+      DiaChi: addForm.DiaChi || null,
+      NgayThu: addForm.NgayThu || null,
+      NguoiThu: addForm.NguoiThu || null,
+      PhuongThuc: addForm.PhuongThuc || null,
+      SoBienLai: addForm.SoBienLai || null,
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await nganSachApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tạo khoản thu');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyThuForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedThu?.MaNganSach) {
+      alert('Không xác định được bản ghi để cập nhật');
+      return;
+    }
+
+    const year = editForm.NgayThu ? Number(editForm.NgayThu.slice(0, 4)) : new Date().getFullYear();
+    const payload = {
+      Nam: year,
+      TongDuToan: toNumber(editForm.SoTienKeHoach || editForm.SoTien),
+      DaGiaiNgan: toNumber(editForm.SoTien),
+      TrangThai: editForm.TrangThai || 'Chờ xác nhận',
+      MaThu: editForm.MaThu || null,
+      LoaiThu: editForm.LoaiThu || null,
+      NguonThu: editForm.NguonThu || null,
+      MoTa: editForm.MoTa || null,
+      SoTien: toNumber(editForm.SoTien),
+      SoTienKeHoach: toNumber(editForm.SoTienKeHoach),
+      NguoiNop: editForm.NguoiNop || null,
+      DiaChi: editForm.DiaChi || null,
+      NgayThu: editForm.NgayThu || null,
+      NguoiThu: editForm.NguoiThu || null,
+      PhuongThuc: editForm.PhuongThuc || null,
+      SoBienLai: editForm.SoBienLai || null,
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await nganSachApi.update(selectedThu.MaNganSach, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật khoản thu');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedThu(null);
+    setEditForm(emptyThuForm);
+    await loadData();
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaThu.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.NguonThu.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -171,17 +312,17 @@ export default function ThuNganSachPage() {
     return matchesSearch && matchesLoai && matchesTrangThai;
   });
 
-  const tongThu = mockThuNganSach.filter(t => t.TrangThai === 'Đã xác nhận').reduce((sum, t) => sum + t.SoTien, 0);
-  const tongKeHoach = mockThuNganSach.reduce((sum, t) => sum + t.SoTienKeHoach, 0);
+  const tongThu = records.filter(t => t.TrangThai === 'Đã xác nhận').reduce((sum, t) => sum + t.SoTien, 0);
+  const tongKeHoach = records.reduce((sum, t) => sum + t.SoTienKeHoach, 0);
   const tyLeDat = tongKeHoach > 0 ? Math.round((tongThu / tongKeHoach) * 100) : 0;
 
   const stats = {
     tongThu,
     tongKeHoach,
     tyLeDat,
-    soKhoanThu: mockThuNganSach.length,
-    daXacNhan: mockThuNganSach.filter(t => t.TrangThai === 'Đã xác nhận').length,
-    choXacNhan: mockThuNganSach.filter(t => t.TrangThai === 'Chờ xác nhận').length
+    soKhoanThu: records.length,
+    daXacNhan: records.filter(t => t.TrangThai === 'Đã xác nhận').length,
+    choXacNhan: records.filter(t => t.TrangThai === 'Chờ xác nhận').length
   };
 
   const getTrangThaiBadge = (trangThai: string) => {
@@ -217,7 +358,13 @@ export default function ThuNganSachPage() {
               <p className="text-green-100">Quản lý và theo dõi các khoản thu ngân sách địa phương</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (open) setAddForm(emptyThuForm);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="w-full 2xl:w-auto bg-white text-green-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -232,7 +379,7 @@ export default function ThuNganSachPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Loại thu *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiThu || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiThu: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại thu" /></SelectTrigger>
                     <SelectContent>
                       {loaiThuOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -241,31 +388,31 @@ export default function ThuNganSachPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày thu *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayThu} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayThu: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Nguồn thu *</Label>
-                  <Input placeholder="Nhập nguồn thu" />
+                  <Input placeholder="Nhập nguồn thu" value={addForm.NguonThu} onChange={(e) => setAddForm((prev) => ({ ...prev, NguonThu: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tiền (VNĐ) *</Label>
-                  <Input type="number" placeholder="Nhập số tiền" />
+                  <Input type="number" placeholder="Nhập số tiền" value={addForm.SoTien} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTien: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Kế hoạch (VNĐ)</Label>
-                  <Input type="number" placeholder="Nhập số tiền kế hoạch" />
+                  <Input type="number" placeholder="Nhập số tiền kế hoạch" value={addForm.SoTienKeHoach} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTienKeHoach: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Người nộp</Label>
-                  <Input placeholder="Nhập tên người nộp" />
+                  <Input placeholder="Nhập tên người nộp" value={addForm.NguoiNop} onChange={(e) => setAddForm((prev) => ({ ...prev, NguoiNop: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Địa chỉ</Label>
-                  <Input placeholder="Nhập địa chỉ" />
+                  <Input placeholder="Nhập địa chỉ" value={addForm.DiaChi} onChange={(e) => setAddForm((prev) => ({ ...prev, DiaChi: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Phương thức</Label>
-                  <Select>
+                  <Select value={addForm.PhuongThuc || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, PhuongThuc: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn phương thức" /></SelectTrigger>
                     <SelectContent>
                       {phuongThucOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -274,20 +421,20 @@ export default function ThuNganSachPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Người thu</Label>
-                  <Input placeholder="Nhập tên người thu" />
+                  <Input placeholder="Nhập tên người thu" value={addForm.NguoiThu} onChange={(e) => setAddForm((prev) => ({ ...prev, NguoiThu: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Mô tả</Label>
-                  <Textarea placeholder="Mô tả chi tiết khoản thu" />
+                  <Textarea placeholder="Mô tả chi tiết khoản thu" value={addForm.MoTa} onChange={(e) => setAddForm((prev) => ({ ...prev, MoTa: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Thêm khoản thu</Button>
+                <Button onClick={handleCreate}>Thêm khoản thu</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -551,7 +698,7 @@ export default function ThuNganSachPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedThu?.MaThu === item.MaThu} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedThu(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedThu(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedThu(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -566,15 +713,15 @@ export default function ThuNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Loại thu</Label>
-                                  <Input defaultValue={item.LoaiThu} />
+                                  <Input value={editForm.LoaiThu} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiThu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Nguồn thu</Label>
-                                  <Input defaultValue={item.NguonThu} />
+                                  <Input value={editForm.NguonThu} onChange={(e) => setEditForm((prev) => ({ ...prev, NguonThu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Mô tả</Label>
-                                  <Textarea defaultValue={item.MoTa} />
+                                  <Textarea value={editForm.MoTa} onChange={(e) => setEditForm((prev) => ({ ...prev, MoTa: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -584,15 +731,15 @@ export default function ThuNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Số tiền (VNĐ)</Label>
-                                  <Input type="number" defaultValue={item.SoTien} />
+                                  <Input type="number" value={editForm.SoTien} onChange={(e) => setEditForm((prev) => ({ ...prev, SoTien: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Kế hoạch (VNĐ)</Label>
-                                  <Input type="number" defaultValue={item.SoTienKeHoach} />
+                                  <Input type="number" value={editForm.SoTienKeHoach} onChange={(e) => setEditForm((prev) => ({ ...prev, SoTienKeHoach: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -607,11 +754,11 @@ export default function ThuNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Người nộp</Label>
-                                  <Input defaultValue={item.NguoiNop} />
+                                  <Input value={editForm.NguoiNop} onChange={(e) => setEditForm((prev) => ({ ...prev, NguoiNop: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Địa chỉ</Label>
-                                  <Input defaultValue={item.DiaChi} />
+                                  <Input value={editForm.DiaChi} onChange={(e) => setEditForm((prev) => ({ ...prev, DiaChi: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -621,15 +768,15 @@ export default function ThuNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Ngày thu</Label>
-                                  <Input type="date" defaultValue={item.NgayThu} />
+                                  <Input type="date" value={editForm.NgayThu} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayThu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Người thu</Label>
-                                  <Input defaultValue={item.NguoiThu} />
+                                  <Input value={editForm.NguoiThu} onChange={(e) => setEditForm((prev) => ({ ...prev, NguoiThu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Phương thức</Label>
-                                  <Select defaultValue={item.PhuongThuc}>
+                                  <Select value={editForm.PhuongThuc} onValueChange={(value) => setEditForm((prev) => ({ ...prev, PhuongThuc: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {phuongThucOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -638,19 +785,19 @@ export default function ThuNganSachPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số biên lai</Label>
-                                  <Input defaultValue={item.SoBienLai} />
+                                  <Input value={editForm.SoBienLai} onChange={(e) => setEditForm((prev) => ({ ...prev, SoBienLai: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,11 @@ import {
   Receipt, TrendingDown, AlertTriangle, CheckCircle2, Search, Plus, Download, Eye, Edit,
   DollarSign, FileText, Clock, CircleDollarSign, Calendar, User
 } from 'lucide-react';
+import { nganSachApi } from '@/lib/api';
 
 // Mock data chi ngân sách
 interface ChiNganSach {
+  MaNganSach?: number;
   MaChi: string;
   LoaiChi: string;
   HangMucChi: string;
@@ -152,16 +154,152 @@ const loaiChiOptions = ['Chi lương', 'Chi thường xuyên', 'Chi đầu tư',
 const trangThaiOptions = ['Chờ phê duyệt', 'Đã phê duyệt', 'Đã chi', 'Từ chối', 'Hủy'];
 const phuongThucOptions = ['Tiền mặt', 'Chuyển khoản'];
 
+const emptyChiForm: ChiNganSach = {
+  MaChi: '',
+  LoaiChi: '',
+  HangMucChi: '',
+  MoTa: '',
+  SoTien: 0,
+  DuToan: 0,
+  NguoiNhan: '',
+  DonViNhan: '',
+  NgayChi: '',
+  NguoiDuyet: '',
+  TrangThai: 'Chờ phê duyệt',
+  PhuongThuc: 'Tiền mặt',
+  SoChungTu: '',
+  GhiChu: '',
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): ChiNganSach {
+  return {
+    MaNganSach: item.MaNganSach,
+    MaChi: item.MaChi || '',
+    LoaiChi: item.LoaiChi || '',
+    HangMucChi: item.HangMucChi || '',
+    MoTa: item.MoTa || '',
+    SoTien: toNumber(item.SoTien),
+    DuToan: toNumber(item.DuToan),
+    NguoiNhan: item.NguoiNhan || '',
+    DonViNhan: item.DonViNhan || '',
+    NgayChi: toDateString(item.NgayChi),
+    NguoiDuyet: item.NguoiDuyetText || item.NguoiDuyet || '',
+    TrangThai: item.TrangThai || 'Chờ phê duyệt',
+    PhuongThuc: item.PhuongThuc || 'Tiền mặt',
+    SoChungTu: item.SoChungTu || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
 export default function ChiNganSachPage() {
+  const [records, setRecords] = useState<ChiNganSach[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
   const [selectedChi, setSelectedChi] = useState<ChiNganSach | null>(null);
+  const [addForm, setAddForm] = useState<ChiNganSach>(emptyChiForm);
+  const [editForm, setEditForm] = useState<ChiNganSach>(emptyChiForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredData = mockChiNganSach.filter((item) => {
+  const loadData = async () => {
+    const result = await nganSachApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'CHI_NGAN_SACH' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    const year = addForm.NgayChi ? Number(addForm.NgayChi.slice(0, 4)) : new Date().getFullYear();
+    const payload = {
+      LoaiBanGhi: 'CHI_NGAN_SACH',
+      Nam: year,
+      TongDuToan: toNumber(addForm.DuToan || addForm.SoTien),
+      DaGiaiNgan: toNumber(addForm.SoTien),
+      TrangThai: addForm.TrangThai || 'Chờ phê duyệt',
+      MaChi: addForm.MaChi || null,
+      LoaiChi: addForm.LoaiChi || null,
+      HangMucChi: addForm.HangMucChi || null,
+      MoTa: addForm.MoTa || null,
+      SoTien: toNumber(addForm.SoTien),
+      DuToan: toNumber(addForm.DuToan),
+      NguoiNhan: addForm.NguoiNhan || null,
+      DonViNhan: addForm.DonViNhan || null,
+      NgayChi: addForm.NgayChi || null,
+      NguoiDuyetText: addForm.NguoiDuyet || null,
+      PhuongThuc: addForm.PhuongThuc || null,
+      SoChungTu: addForm.SoChungTu || null,
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await nganSachApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tạo khoản chi');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyChiForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedChi?.MaNganSach) {
+      alert('Không xác định được bản ghi để cập nhật');
+      return;
+    }
+
+    const year = editForm.NgayChi ? Number(editForm.NgayChi.slice(0, 4)) : new Date().getFullYear();
+    const payload = {
+      Nam: year,
+      TongDuToan: toNumber(editForm.DuToan || editForm.SoTien),
+      DaGiaiNgan: toNumber(editForm.SoTien),
+      TrangThai: editForm.TrangThai || 'Chờ phê duyệt',
+      MaChi: editForm.MaChi || null,
+      LoaiChi: editForm.LoaiChi || null,
+      HangMucChi: editForm.HangMucChi || null,
+      MoTa: editForm.MoTa || null,
+      SoTien: toNumber(editForm.SoTien),
+      DuToan: toNumber(editForm.DuToan),
+      NguoiNhan: editForm.NguoiNhan || null,
+      DonViNhan: editForm.DonViNhan || null,
+      NgayChi: editForm.NgayChi || null,
+      NguoiDuyetText: editForm.NguoiDuyet || null,
+      PhuongThuc: editForm.PhuongThuc || null,
+      SoChungTu: editForm.SoChungTu || null,
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await nganSachApi.update(selectedChi.MaNganSach, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật khoản chi');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedChi(null);
+    setEditForm(emptyChiForm);
+    await loadData();
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaChi.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.HangMucChi.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -171,16 +309,16 @@ export default function ChiNganSachPage() {
     return matchesSearch && matchesLoai && matchesTrangThai;
   });
 
-  const tongChi = mockChiNganSach.filter(c => c.TrangThai === 'Đã chi').reduce((sum, c) => sum + c.SoTien, 0);
-  const tongDuToan = mockChiNganSach.reduce((sum, c) => sum + c.DuToan, 0);
-  const vuotDuToan = mockChiNganSach.filter(c => c.SoTien > c.DuToan).length;
+  const tongChi = records.filter(c => c.TrangThai === 'Đã chi').reduce((sum, c) => sum + c.SoTien, 0);
+  const tongDuToan = records.reduce((sum, c) => sum + c.DuToan, 0);
+  const vuotDuToan = records.filter(c => c.SoTien > c.DuToan).length;
 
   const stats = {
     tongChi,
     tongDuToan,
     tyLeGiaiNgan: tongDuToan > 0 ? Math.round((tongChi / tongDuToan) * 100) : 0,
-    soKhoanChi: mockChiNganSach.length,
-    daChi: mockChiNganSach.filter(c => c.TrangThai === 'Đã chi').length,
+    soKhoanChi: records.length,
+    daChi: records.filter(c => c.TrangThai === 'Đã chi').length,
     vuotDuToan
   };
 
@@ -218,7 +356,13 @@ export default function ChiNganSachPage() {
               <p className="text-red-100">Quản lý và theo dõi các khoản chi ngân sách địa phương</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (open) setAddForm(emptyChiForm);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="w-full 2xl:w-auto bg-white text-red-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -233,7 +377,7 @@ export default function ChiNganSachPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Loại chi *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiChi || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiChi: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại chi" /></SelectTrigger>
                     <SelectContent>
                       {loaiChiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -242,31 +386,31 @@ export default function ChiNganSachPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày chi *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayChi} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayChi: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Hạng mục chi *</Label>
-                  <Input placeholder="Nhập hạng mục chi" />
+                  <Input placeholder="Nhập hạng mục chi" value={addForm.HangMucChi} onChange={(e) => setAddForm((prev) => ({ ...prev, HangMucChi: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tiền (VNĐ) *</Label>
-                  <Input type="number" placeholder="Nhập số tiền" />
+                  <Input type="number" placeholder="Nhập số tiền" value={addForm.SoTien} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTien: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Dự toán (VNĐ)</Label>
-                  <Input type="number" placeholder="Nhập số tiền dự toán" />
+                  <Input type="number" placeholder="Nhập số tiền dự toán" value={addForm.DuToan} onChange={(e) => setAddForm((prev) => ({ ...prev, DuToan: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Người/Đơn vị nhận *</Label>
-                  <Input placeholder="Nhập tên" />
+                  <Input placeholder="Nhập tên" value={addForm.NguoiNhan} onChange={(e) => setAddForm((prev) => ({ ...prev, NguoiNhan: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Đơn vị</Label>
-                  <Input placeholder="Nhập đơn vị" />
+                  <Input placeholder="Nhập đơn vị" value={addForm.DonViNhan} onChange={(e) => setAddForm((prev) => ({ ...prev, DonViNhan: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Phương thức</Label>
-                  <Select>
+                  <Select value={addForm.PhuongThuc || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, PhuongThuc: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn phương thức" /></SelectTrigger>
                     <SelectContent>
                       {phuongThucOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -275,20 +419,20 @@ export default function ChiNganSachPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Số chứng từ</Label>
-                  <Input placeholder="Nhập số chứng từ" />
+                  <Input placeholder="Nhập số chứng từ" value={addForm.SoChungTu} onChange={(e) => setAddForm((prev) => ({ ...prev, SoChungTu: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Mô tả</Label>
-                  <Textarea placeholder="Mô tả chi tiết khoản chi" />
+                  <Textarea placeholder="Mô tả chi tiết khoản chi" value={addForm.MoTa} onChange={(e) => setAddForm((prev) => ({ ...prev, MoTa: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Thêm khoản chi</Button>
+                <Button onClick={handleCreate}>Thêm khoản chi</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -558,7 +702,7 @@ export default function ChiNganSachPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedChi?.MaChi === item.MaChi} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedChi(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedChi(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedChi(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -573,15 +717,15 @@ export default function ChiNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Loại chi</Label>
-                                  <Input defaultValue={item.LoaiChi} />
+                                  <Input value={editForm.LoaiChi} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiChi: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Hạng mục chi</Label>
-                                  <Input defaultValue={item.HangMucChi} />
+                                  <Input value={editForm.HangMucChi} onChange={(e) => setEditForm((prev) => ({ ...prev, HangMucChi: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Mô tả</Label>
-                                  <Textarea defaultValue={item.MoTa} />
+                                  <Textarea value={editForm.MoTa} onChange={(e) => setEditForm((prev) => ({ ...prev, MoTa: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -591,15 +735,15 @@ export default function ChiNganSachPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Số tiền (VNĐ)</Label>
-                                  <Input type="number" defaultValue={item.SoTien} />
+                                  <Input type="number" value={editForm.SoTien} onChange={(e) => setEditForm((prev) => ({ ...prev, SoTien: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Dự toán (VNĐ)</Label>
-                                  <Input type="number" defaultValue={item.DuToan} />
+                                  <Input type="number" value={editForm.DuToan} onChange={(e) => setEditForm((prev) => ({ ...prev, DuToan: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -614,11 +758,11 @@ export default function ChiNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Người/Đơn vị nhận</Label>
-                                  <Input defaultValue={item.NguoiNhan} />
+                                  <Input value={editForm.NguoiNhan} onChange={(e) => setEditForm((prev) => ({ ...prev, NguoiNhan: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Loại đơn vị</Label>
-                                  <Input defaultValue={item.DonViNhan} />
+                                  <Input value={editForm.DonViNhan} onChange={(e) => setEditForm((prev) => ({ ...prev, DonViNhan: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -628,15 +772,15 @@ export default function ChiNganSachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Ngày chi</Label>
-                                  <Input type="date" defaultValue={item.NgayChi} />
+                                  <Input type="date" value={editForm.NgayChi} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayChi: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Người duyệt</Label>
-                                  <Input defaultValue={item.NguoiDuyet} />
+                                  <Input value={editForm.NguoiDuyet} onChange={(e) => setEditForm((prev) => ({ ...prev, NguoiDuyet: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Phương thức</Label>
-                                  <Select defaultValue={item.PhuongThuc}>
+                                  <Select value={editForm.PhuongThuc} onValueChange={(value) => setEditForm((prev) => ({ ...prev, PhuongThuc: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {phuongThucOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -645,19 +789,19 @@ export default function ChiNganSachPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số chứng từ</Label>
-                                  <Input defaultValue={item.SoChungTu} />
+                                  <Input value={editForm.SoChungTu} onChange={(e) => setEditForm((prev) => ({ ...prev, SoChungTu: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

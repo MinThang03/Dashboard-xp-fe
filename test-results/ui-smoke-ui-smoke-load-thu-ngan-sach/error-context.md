@@ -1,0 +1,67 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e19]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - img [ref=e24]
+        - generic [ref=e30]:
+          - heading "Smart Dashboard" [level=1] [ref=e31]
+          - paragraph [ref=e32]: Dashboard XP
+      - paragraph [ref=e33]: "Chế độ test giao diện: đăng nhập chỉ dùng frontend, tạm thời không gọi backend và không cần OTP."
+    - generic [ref=e35]:
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - img [ref=e41]
+          - generic [ref=e44]: Xác thực tài khoản
+        - heading "Chào mừng trở lại" [level=2] [ref=e45]
+        - paragraph [ref=e46]: Frontend-only login mode cho kiểm thử giao diện
+      - generic [ref=e47]:
+        - generic [ref=e48]: Chế độ frontend-only đang bật. Tắt biến môi trường NEXT_PUBLIC_FRONTEND_AUTH_ONLY để quay lại đăng nhập backend.
+        - generic [ref=e49]:
+          - button "Quản trị viên Dùng nhanh" [ref=e50]:
+            - generic [ref=e51]:
+              - img [ref=e53]
+              - generic [ref=e55]:
+                - generic [ref=e56]: Quản trị viên
+                - generic [ref=e57]: Dùng nhanh
+          - button "Lãnh đạo Dùng nhanh" [ref=e58]:
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - generic [ref=e65]:
+                - generic [ref=e66]: Lãnh đạo
+                - generic [ref=e67]: Dùng nhanh
+          - button "Cán bộ Dùng nhanh" [ref=e68]:
+            - generic [ref=e69]:
+              - img [ref=e71]
+              - generic [ref=e76]:
+                - generic [ref=e77]: Cán bộ
+                - generic [ref=e78]: Dùng nhanh
+          - button "Công dân Dùng nhanh" [ref=e79]:
+            - generic [ref=e80]:
+              - img [ref=e82]
+              - generic [ref=e86]:
+                - generic [ref=e87]: Công dân
+                - generic [ref=e88]: Dùng nhanh
+        - generic [ref=e89]:
+          - textbox "Tên đăng nhập hoặc email" [ref=e90]: admin
+          - textbox "Mật khẩu" [ref=e91]: admin123
+          - combobox [ref=e92]:
+            - option "Quản trị viên" [selected]
+            - option "Lãnh đạo"
+            - option "Cán bộ chuyên môn"
+            - option "Công dân"
+          - button "Đăng nhập" [ref=e93]:
+            - generic [ref=e94]:
+              - text: Đăng nhập
+              - img
+        - generic [ref=e95]:
+          - text: Chưa có tài khoản?
+          - link "Đăng ký ngay" [ref=e96] [cursor=pointer]:
+            - /url: /register
+        - paragraph [ref=e98]: "Đang test UI: đăng nhập mô phỏng ở frontend, bỏ qua backend và OTP."
+```

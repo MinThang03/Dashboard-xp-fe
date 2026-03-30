@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import {
   filterSignalsByCommonFilters,
   getRedBookAlerts,
 } from '@/lib/frontend-dss';
+import { thuaDatApi } from '@/lib/api';
 
 // Mock data hồ sơ cấp sổ đỏ
 interface HoSoCapSoDo {
@@ -223,17 +224,166 @@ const trangThaiOptions = ['Chờ thẩm định', 'Đang xử lý', 'Bổ sung h
 const giaiDoanOptions = ['Tiếp nhận hồ sơ', 'Thẩm định thực địa', 'Xét duyệt', 'Trình ký', 'In sổ', 'Hoàn thành', 'Yêu cầu bổ sung', 'Kết thúc'];
 const loaiDatOptions = ['Đất ở', 'Đất nông nghiệp', 'Đất thương mại', 'Đất hỗn hợp'];
 
+const emptyHoSoForm: HoSoCapSoDo = {
+  MaHoSo: '',
+  ChuSoHuu: '',
+  CCCD: '',
+  SoDienThoai: '',
+  DiaChiThuaDat: '',
+  MaThua: '',
+  SoTo: '',
+  DienTich: 0,
+  LoaiDat: '',
+  NgayNop: '',
+  NgayHenTra: '',
+  TrangThai: 'Chờ thẩm định',
+  GiaiDoan: 'Tiếp nhận hồ sơ',
+  CanBoTiepNhan: '',
+  CanBoThamDinh: '',
+  SoSoDo: '',
+  NgayCap: '',
+  GhiChu: '',
+  TienDo: 0,
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): HoSoCapSoDo {
+  return {
+    MaHoSo: item.MaHoSo || '',
+    ChuSoHuu: item.ChuSoHuu || '',
+    CCCD: item.CCCD || '',
+    SoDienThoai: item.SoDienThoai || '',
+    DiaChiThuaDat: item.DiaChiThuaDat || '',
+    MaThua: item.MaThua || '',
+    SoTo: item.SoTo || item.SoToBanDo || '',
+    DienTich: toNumber(item.DienTich),
+    LoaiDat: item.LoaiDat || '',
+    NgayNop: toDateString(item.NgayNop),
+    NgayHenTra: toDateString(item.NgayHenTra),
+    TrangThai: item.TrangThai || 'Chờ thẩm định',
+    GiaiDoan: item.GiaiDoan || 'Tiếp nhận hồ sơ',
+    CanBoTiepNhan: item.CanBoTiepNhan || '',
+    CanBoThamDinh: item.CanBoThamDinh || '',
+    SoSoDo: item.SoSoDo || '',
+    NgayCap: toDateString(item.NgayCap),
+    GhiChu: item.GhiChu || '',
+    TienDo: toNumber(item.TienDo),
+  };
+}
+
 export default function CapSoDoPage() {
+  const [records, setRecords] = useState<HoSoCapSoDo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedHoSo, setSelectedHoSo] = useState<HoSoCapSoDo | null>(null);
+  const [addForm, setAddForm] = useState<HoSoCapSoDo>(emptyHoSoForm);
+  const [editForm, setEditForm] = useState<HoSoCapSoDo>(emptyHoSoForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
   const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
 
-  const filteredData = mockCapSoDo.filter((item) => {
+  const loadData = async () => {
+    const result = await thuaDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'CAP_SO_DO' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    const payload = {
+      LoaiBanGhi: 'CAP_SO_DO',
+      MaThua: addForm.MaThua || '',
+      SoThua: addForm.MaThua || '',
+      SoToBanDo: addForm.SoTo || null,
+      DienTich: toNumber(addForm.DienTich),
+      ChuSoHuu: addForm.ChuSoHuu || null,
+      TrangThai: addForm.TrangThai || 'Chờ thẩm định',
+      MaHoSo: addForm.MaHoSo || null,
+      SoTo: addForm.SoTo || null,
+      LoaiDat: addForm.LoaiDat || null,
+      CCCD: addForm.CCCD || null,
+      DiaChiThuaDat: addForm.DiaChiThuaDat || null,
+      SoDienThoai: addForm.SoDienThoai || null,
+      NgayNop: addForm.NgayNop || null,
+      NgayHenTra: addForm.NgayHenTra || null,
+      GiaiDoan: addForm.GiaiDoan || null,
+      CanBoTiepNhan: addForm.CanBoTiepNhan || null,
+      CanBoThamDinh: addForm.CanBoThamDinh || null,
+      SoSoDo: addForm.SoSoDo || null,
+      NgayCap: addForm.NgayCap || null,
+      TienDo: toNumber(addForm.TienDo),
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await thuaDatApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tiếp nhận hồ sơ');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyHoSoForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedHoSo?.MaThua) {
+      alert('Không xác định được hồ sơ để cập nhật');
+      return;
+    }
+
+    const payload = {
+      MaHoSo: editForm.MaHoSo || null,
+      SoToBanDo: editForm.SoTo || null,
+      DienTich: toNumber(editForm.DienTich),
+      ChuSoHuu: editForm.ChuSoHuu || null,
+      TrangThai: editForm.TrangThai || 'Chờ thẩm định',
+      SoTo: editForm.SoTo || null,
+      LoaiDat: editForm.LoaiDat || null,
+      CCCD: editForm.CCCD || null,
+      DiaChiThuaDat: editForm.DiaChiThuaDat || null,
+      SoDienThoai: editForm.SoDienThoai || null,
+      NgayNop: editForm.NgayNop || null,
+      NgayHenTra: editForm.NgayHenTra || null,
+      GiaiDoan: editForm.GiaiDoan || null,
+      CanBoTiepNhan: editForm.CanBoTiepNhan || null,
+      CanBoThamDinh: editForm.CanBoThamDinh || null,
+      SoSoDo: editForm.SoSoDo || null,
+      NgayCap: editForm.NgayCap || null,
+      TienDo: toNumber(editForm.TienDo),
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await thuaDatApi.update(selectedHoSo.MaThua, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật hồ sơ');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedHoSo(null);
+    setEditForm(emptyHoSoForm);
+    await loadData();
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaHoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.ChuSoHuu.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -244,13 +394,15 @@ export default function CapSoDoPage() {
   });
 
   const stats = {
-    total: mockCapSoDo.length,
-    choThamDinh: mockCapSoDo.filter(r => r.TrangThai === 'Chờ thẩm định').length,
-    dangXuLy: mockCapSoDo.filter(r => r.TrangThai === 'Đang xử lý').length,
-    boSungHS: mockCapSoDo.filter(r => r.TrangThai === 'Bổ sung hồ sơ').length,
-    daCap: mockCapSoDo.filter(r => r.TrangThai === 'Đã cấp').length,
-    tuChoi: mockCapSoDo.filter(r => r.TrangThai === 'Từ chối').length,
-    tyLeHoanThanh: ((mockCapSoDo.filter(r => r.TrangThai === 'Đã cấp').length / mockCapSoDo.length) * 100).toFixed(1)
+    total: records.length,
+    choThamDinh: records.filter(r => r.TrangThai === 'Chờ thẩm định').length,
+    dangXuLy: records.filter(r => r.TrangThai === 'Đang xử lý').length,
+    boSungHS: records.filter(r => r.TrangThai === 'Bổ sung hồ sơ').length,
+    daCap: records.filter(r => r.TrangThai === 'Đã cấp').length,
+    tuChoi: records.filter(r => r.TrangThai === 'Từ chối').length,
+    tyLeHoanThanh: records.length > 0
+      ? ((records.filter(r => r.TrangThai === 'Đã cấp').length / records.length) * 100).toFixed(1)
+      : '0.0'
   };
 
   const redBookSignals = filterSignalsByCommonFilters(getRedBookAlerts(stats.boSungHS), {
@@ -288,7 +440,13 @@ export default function CapSoDoPage() {
               <p className="text-rose-100">Theo dõi tiến độ cấp giấy chứng nhận quyền sử dụng đất</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (open) setAddForm(emptyHoSoForm);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="w-full 2xl:w-auto bg-white text-rose-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -303,19 +461,19 @@ export default function CapSoDoPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Chủ sở hữu *</Label>
-                  <Input placeholder="Nhập họ tên chủ sở hữu" />
+                  <Input placeholder="Nhập họ tên chủ sở hữu" value={addForm.ChuSoHuu} onChange={(e) => setAddForm((prev) => ({ ...prev, ChuSoHuu: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>CCCD *</Label>
-                  <Input placeholder="Nhập số CCCD" />
+                  <Input placeholder="Nhập số CCCD" value={addForm.CCCD} onChange={(e) => setAddForm((prev) => ({ ...prev, CCCD: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số điện thoại</Label>
-                  <Input placeholder="Nhập số điện thoại" />
+                  <Input placeholder="Nhập số điện thoại" value={addForm.SoDienThoai} onChange={(e) => setAddForm((prev) => ({ ...prev, SoDienThoai: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Loại đất *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiDat || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiDat: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại đất" /></SelectTrigger>
                     <SelectContent>
                       {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -324,31 +482,31 @@ export default function CapSoDoPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa *</Label>
-                  <Input placeholder="Nhập mã thửa" />
+                  <Input placeholder="Nhập mã thửa" value={addForm.MaThua} onChange={(e) => setAddForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ *</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input placeholder="Nhập số tờ" value={addForm.SoTo} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Diện tích (m²) *</Label>
-                  <Input type="number" placeholder="Nhập diện tích" />
+                  <Input type="number" placeholder="Nhập diện tích" value={addForm.DienTich} onChange={(e) => setAddForm((prev) => ({ ...prev, DienTich: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày hẹn trả</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayHenTra} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayHenTra: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Địa chỉ thửa đất *</Label>
-                  <Input placeholder="Nhập địa chỉ chi tiết" />
+                  <Input placeholder="Nhập địa chỉ chi tiết" value={addForm.DiaChiThuaDat} onChange={(e) => setAddForm((prev) => ({ ...prev, DiaChiThuaDat: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Cán bộ tiếp nhận</Label>
-                  <Input placeholder="Tên cán bộ" />
+                  <Input placeholder="Tên cán bộ" value={addForm.CanBoTiepNhan} onChange={(e) => setAddForm((prev) => ({ ...prev, CanBoTiepNhan: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Trạng thái</Label>
-                  <Select defaultValue="Chờ thẩm định">
+                  <Select value={addForm.TrangThai} onValueChange={(value) => setAddForm((prev) => ({ ...prev, TrangThai: value }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -357,12 +515,12 @@ export default function CapSoDoPage() {
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Tiếp nhận</Button>
+                <Button onClick={handleCreate}>Tiếp nhận</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -647,7 +805,7 @@ export default function CapSoDoPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedHoSo?.MaHoSo === item.MaHoSo} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedHoSo(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedHoSo(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedHoSo(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -662,15 +820,15 @@ export default function CapSoDoPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Chủ sở hữu</Label>
-                                  <Input defaultValue={item.ChuSoHuu} />
+                                  <Input value={editForm.ChuSoHuu} onChange={(e) => setEditForm((prev) => ({ ...prev, ChuSoHuu: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD</Label>
-                                  <Input defaultValue={item.CCCD} />
+                                  <Input value={editForm.CCCD} onChange={(e) => setEditForm((prev) => ({ ...prev, CCCD: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số điện thoại</Label>
-                                  <Input defaultValue={item.SoDienThoai} />
+                                  <Input value={editForm.SoDienThoai} onChange={(e) => setEditForm((prev) => ({ ...prev, SoDienThoai: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -680,23 +838,23 @@ export default function CapSoDoPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2 col-span-2">
                                   <Label>Địa chỉ thửa đất</Label>
-                                  <Input defaultValue={item.DiaChiThuaDat} />
+                                  <Input value={editForm.DiaChiThuaDat} onChange={(e) => setEditForm((prev) => ({ ...prev, DiaChiThuaDat: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mã thửa</Label>
-                                  <Input defaultValue={item.MaThua} />
+                                  <Input value={editForm.MaThua} onChange={(e) => setEditForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tờ</Label>
-                                  <Input defaultValue={item.SoTo} />
+                                  <Input value={editForm.SoTo} onChange={(e) => setEditForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Diện tích (m²)</Label>
-                                  <Input type="number" defaultValue={item.DienTich} />
+                                  <Input type="number" value={editForm.DienTich} onChange={(e) => setEditForm((prev) => ({ ...prev, DienTich: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Loại đất</Label>
-                                  <Input defaultValue={item.LoaiDat} />
+                                  <Input value={editForm.LoaiDat} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiDat: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -706,23 +864,23 @@ export default function CapSoDoPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Ngày nộp</Label>
-                                  <Input type="date" defaultValue={item.NgayNop} />
+                                  <Input type="date" value={editForm.NgayNop} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayNop: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày hẹn trả</Label>
-                                  <Input type="date" defaultValue={item.NgayHenTra} />
+                                  <Input type="date" value={editForm.NgayHenTra} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayHenTra: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Cán bộ tiếp nhận</Label>
-                                  <Input defaultValue={item.CanBoTiepNhan} />
+                                  <Input value={editForm.CanBoTiepNhan} onChange={(e) => setEditForm((prev) => ({ ...prev, CanBoTiepNhan: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Cán bộ thẩm định</Label>
-                                  <Input defaultValue={item.CanBoThamDinh} />
+                                  <Input value={editForm.CanBoThamDinh} onChange={(e) => setEditForm((prev) => ({ ...prev, CanBoThamDinh: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Giai đoạn xử lý</Label>
-                                  <Select defaultValue={item.GiaiDoan}>
+                                  <Select value={editForm.GiaiDoan} onValueChange={(value) => setEditForm((prev) => ({ ...prev, GiaiDoan: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {giaiDoanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -731,7 +889,7 @@ export default function CapSoDoPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -740,7 +898,7 @@ export default function CapSoDoPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Tiến độ (%)</Label>
-                                  <Input type="number" min="0" max="100" defaultValue={item.TienDo} />
+                                  <Input type="number" min="0" max="100" value={editForm.TienDo} onChange={(e) => setEditForm((prev) => ({ ...prev, TienDo: toNumber(e.target.value) }))} />
                                 </div>
                               </div>
                             </div>
@@ -750,23 +908,23 @@ export default function CapSoDoPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Số sổ đỏ</Label>
-                                  <Input defaultValue={item.SoSoDo} placeholder="Nhập khi đã cấp" />
+                                  <Input value={editForm.SoSoDo} onChange={(e) => setEditForm((prev) => ({ ...prev, SoSoDo: e.target.value }))} placeholder="Nhập khi đã cấp" />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày cấp</Label>
-                                  <Input type="date" defaultValue={item.NgayCap} />
+                                  <Input type="date" value={editForm.NgayCap} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayCap: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

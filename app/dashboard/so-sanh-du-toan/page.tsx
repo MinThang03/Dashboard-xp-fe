@@ -1,55 +1,122 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { BarChart3, TrendingUp, TrendingDown, Download, ArrowRight, Eye } from 'lucide-react';
+import { BarChart3, Download, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { nganSachApi } from '@/lib/api';
 
-interface KhoanMuc {
-  MaKhoanMuc: string;
-  TenKhoanMuc: string;
-  LoaiKhoanMuc: 'Thu' | 'Chi';
-  DuToan: number;
-  ThucTe: number;
-  ChenhLech: number;
-  TyLeThucHien: number;
+type Item = {
+  id: string;
+  loai: 'Thu' | 'Chi';
+  ten: string;
+  duToan: number;
+  thucTe: number;
+  chenhlech: number;
+  tyLe: number;
+};
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
-const mockSoSanh: KhoanMuc[] = [
-  { MaKhoanMuc: 'SS001', TenKhoanMuc: 'Thu phí hành chính', LoaiKhoanMuc: 'Thu', DuToan: 180000000, ThucTe: 165000000, ChenhLech: -15000000, TyLeThucHien: 91.7 },
-  { MaKhoanMuc: 'SS002', TenKhoanMuc: 'Thu phí môi trường', LoaiKhoanMuc: 'Thu', DuToan: 120000000, ThucTe: 125000000, ChenhLech: 5000000, TyLeThucHien: 104.2 },
-  { MaKhoanMuc: 'SS003', TenKhoanMuc: 'Thu thuế đất', LoaiKhoanMuc: 'Thu', DuToan: 300000000, ThucTe: 280000000, ChenhLech: -20000000, TyLeThucHien: 93.3 },
-  { MaKhoanMuc: 'SS004', TenKhoanMuc: 'Chi lương cán bộ', LoaiKhoanMuc: 'Chi', DuToan: 1500000000, ThucTe: 1500000000, ChenhLech: 0, TyLeThucHien: 100 },
-  { MaKhoanMuc: 'SS005', TenKhoanMuc: 'Chi hạ tầng', LoaiKhoanMuc: 'Chi', DuToan: 800000000, ThucTe: 650000000, ChenhLech: -150000000, TyLeThucHien: 81.3 },
-  { MaKhoanMuc: 'SS006', TenKhoanMuc: 'Chi văn phòng phẩm', LoaiKhoanMuc: 'Chi', DuToan: 50000000, ThucTe: 48000000, ChenhLech: -2000000, TyLeThucHien: 96 },
-  { MaKhoanMuc: 'SS007', TenKhoanMuc: 'Chi đầu tư', LoaiKhoanMuc: 'Chi', DuToan: 600000000, ThucTe: 620000000, ChenhLech: 20000000, TyLeThucHien: 103.3 },
-  { MaKhoanMuc: 'SS008', TenKhoanMuc: 'Chi bảo trì', LoaiKhoanMuc: 'Chi', DuToan: 200000000, ThucTe: 185000000, ChenhLech: -15000000, TyLeThucHien: 92.5 }
-];
-
-const tongThu = {
-  duToan: mockSoSanh.filter(k => k.LoaiKhoanMuc === 'Thu').reduce((sum, k) => sum + k.DuToan, 0),
-  thucTe: mockSoSanh.filter(k => k.LoaiKhoanMuc === 'Thu').reduce((sum, k) => sum + k.ThucTe, 0)
-};
-
-const tongChi = {
-  duToan: mockSoSanh.filter(k => k.LoaiKhoanMuc === 'Chi').reduce((sum, k) => sum + k.DuToan, 0),
-  thucTe: mockSoSanh.filter(k => k.LoaiKhoanMuc === 'Chi').reduce((sum, k) => sum + k.ThucTe, 0)
-};
-
-const chartData = mockSoSanh.map(item => ({
-  name: item.TenKhoanMuc.substring(0, 12) + '...',
-  'Dự toán': item.DuToan / 1000000,
-  'Thực tế': item.ThucTe / 1000000,
-  loai: item.LoaiKhoanMuc
-}));
-
 export default function SoSanhDuToanPage() {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [thuRes, chiRes] = await Promise.all([
+        nganSachApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'THU_NGAN_SACH' }),
+        nganSachApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'CHI_NGAN_SACH' }),
+      ]);
+
+      const nextItems: Item[] = [];
+
+      if (thuRes.success && Array.isArray(thuRes.data)) {
+        thuRes.data.forEach((x: any) => {
+          const duToan = Number(x.SoTienKeHoach || x.TongDuToan || 0);
+          const thucTe = Number(x.SoTien || 0);
+          const chenhlech = thucTe - duToan;
+          const tyLe = duToan > 0 ? (thucTe / duToan) * 100 : 0;
+          nextItems.push({
+            id: `thu-${x.MaNganSach}`,
+            loai: 'Thu',
+            ten: x.LoaiThu || x.NguonThu || x.MaThu || `THU-${x.MaNganSach}`,
+            duToan,
+            thucTe,
+            chenhlech,
+            tyLe,
+          });
+        });
+      }
+
+      if (chiRes.success && Array.isArray(chiRes.data)) {
+        chiRes.data.forEach((x: any) => {
+          const duToan = Number(x.DuToan || x.TongDuToan || 0);
+          const thucTe = Number(x.SoTien || 0);
+          const chenhlech = thucTe - duToan;
+          const tyLe = duToan > 0 ? (thucTe / duToan) * 100 : 0;
+          nextItems.push({
+            id: `chi-${x.MaNganSach}`,
+            loai: 'Chi',
+            ten: x.HangMucChi || x.LoaiChi || x.MaChi || `CHI-${x.MaNganSach}`,
+            duToan,
+            thucTe,
+            chenhlech,
+            tyLe,
+          });
+        });
+      }
+
+      setItems(nextItems);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const stats = useMemo(() => {
+    const thu = items.filter((x) => x.loai === 'Thu');
+    const chi = items.filter((x) => x.loai === 'Chi');
+
+    const tongThuDuToan = thu.reduce((sum, x) => sum + x.duToan, 0);
+    const tongThuThucTe = thu.reduce((sum, x) => sum + x.thucTe, 0);
+    const tongChiDuToan = chi.reduce((sum, x) => sum + x.duToan, 0);
+    const tongChiThucTe = chi.reduce((sum, x) => sum + x.thucTe, 0);
+
+    return {
+      tongThuDuToan,
+      tongThuThucTe,
+      tongChiDuToan,
+      tongChiThucTe,
+      tyLeThu: tongThuDuToan > 0 ? (tongThuThucTe / tongThuDuToan) * 100 : 0,
+      tyLeChi: tongChiDuToan > 0 ? (tongChiThucTe / tongChiDuToan) * 100 : 0,
+    };
+  }, [items]);
+
+  const chartData = useMemo(
+    () =>
+      items.map((item) => ({
+        name: item.ten.length > 14 ? `${item.ten.slice(0, 14)}...` : item.ten,
+        duToan: item.duToan / 1_000_000,
+        thucTe: item.thucTe / 1_000_000,
+        loai: item.loai,
+      })),
+    [items],
+  );
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
@@ -59,7 +126,7 @@ export default function SoSanhDuToanPage() {
             <BarChart3 className="h-8 w-8" />
             <div>
               <h1 className="text-2xl font-bold">So sánh Thu Chi với Dự toán</h1>
-              <p className="text-purple-100">Phân tích và so sánh thu chi thực tế với dự toán đã lập</p>
+              <p className="text-purple-100">Phân tích mức độ thực hiện thu chi theo dữ liệu backend</p>
             </div>
           </div>
           <div className="flex w-full 2xl:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -73,23 +140,23 @@ export default function SoSanhDuToanPage() {
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Tổng quan so sánh dự toán</DialogTitle>
-                  <DialogDescription>Tóm tắt nhanh tình hình thu chi và mức độ thực hiện theo kế hoạch.</DialogDescription>
+                  <DialogDescription>Tóm tắt nhanh các chỉ số thu chi theo dữ liệu đã lưu trong hệ thống.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 md:grid-cols-2 py-2">
                   <div className="rounded-lg border p-4 bg-slate-50/70">
                     <p className="text-sm text-muted-foreground mb-1">Tổng thu</p>
-                    <p className="text-lg font-semibold">{formatCurrency(tongThu.thucTe)}</p>
-                    <p className="text-sm text-muted-foreground">Dự toán: {formatCurrency(tongThu.duToan)}</p>
-                    <p className={`text-sm font-medium ${tongThu.thucTe >= tongThu.duToan ? 'text-green-600' : 'text-amber-600'}`}>
-                      Tỷ lệ thực hiện: {((tongThu.thucTe / tongThu.duToan) * 100).toFixed(1)}%
+                    <p className="text-lg font-semibold">{formatCurrency(stats.tongThuThucTe)}</p>
+                    <p className="text-sm text-muted-foreground">Dự toán: {formatCurrency(stats.tongThuDuToan)}</p>
+                    <p className={`text-sm font-medium ${stats.tyLeThu >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                      Tỷ lệ thực hiện: {stats.tyLeThu.toFixed(1)}%
                     </p>
                   </div>
                   <div className="rounded-lg border p-4 bg-slate-50/70">
                     <p className="text-sm text-muted-foreground mb-1">Tổng chi</p>
-                    <p className="text-lg font-semibold">{formatCurrency(tongChi.thucTe)}</p>
-                    <p className="text-sm text-muted-foreground">Dự toán: {formatCurrency(tongChi.duToan)}</p>
-                    <p className={`text-sm font-medium ${tongChi.thucTe <= tongChi.duToan ? 'text-green-600' : 'text-red-600'}`}>
-                      Tỷ lệ thực hiện: {((tongChi.thucTe / tongChi.duToan) * 100).toFixed(1)}%
+                    <p className="text-lg font-semibold">{formatCurrency(stats.tongChiThucTe)}</p>
+                    <p className="text-sm text-muted-foreground">Dự toán: {formatCurrency(stats.tongChiDuToan)}</p>
+                    <p className={`text-sm font-medium ${stats.tyLeChi <= 100 ? 'text-green-600' : 'text-red-600'}`}>
+                      Tỷ lệ thực hiện: {stats.tyLeChi.toFixed(1)}%
                     </p>
                   </div>
                 </div>
@@ -98,45 +165,25 @@ export default function SoSanhDuToanPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button variant="secondary" className="bg-white/20 hover:bg-white/30">
+            <Button variant="secondary" className="bg-white/20 hover:bg-white/30" onClick={loadData}>
               <Download className="mr-2 h-4 w-4" />
-              Xuất báo cáo
+              Làm mới dữ liệu
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-green-600">Tổng Thu ngân sách</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Dự toán</span>
-                <span className="text-2xl font-bold">{formatCurrency(tongThu.duToan)}</span>
-              </div>
-              <ArrowRight className="h-5 w-5 mx-auto text-muted-foreground" />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Thực tế</span>
-                <span className="text-2xl font-bold text-green-600">{formatCurrency(tongThu.thucTe)}</span>
-              </div>
-              <div className="pt-2 border-t">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Chênh lệch</span>
-                  <span className={`text-lg font-bold ${tongThu.thucTe >= tongThu.duToan ? 'text-green-600' : 'text-red-600'}`}>
-                    {tongThu.thucTe >= tongThu.duToan ? '+' : ''}{formatCurrency(tongThu.thucTe - tongThu.duToan)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm font-medium">Tỷ lệ thực hiện</span>
-                  <Badge className={tongThu.thucTe >= tongThu.duToan ? 'bg-green-500' : 'bg-amber-500'}>
-                    {((tongThu.thucTe / tongThu.duToan) * 100).toFixed(1)}%
-                  </Badge>
-                </div>
-              </div>
-            </div>
+          <CardContent className="space-y-2">
+            <div>Dự toán: <strong>{formatCurrency(stats.tongThuDuToan)}</strong></div>
+            <div>Thực tế: <strong>{formatCurrency(stats.tongThuThucTe)}</strong></div>
+            <div>Chênh lệch: <strong className={stats.tongThuThucTe - stats.tongThuDuToan >= 0 ? 'text-green-600' : 'text-red-600'}>{stats.tongThuThucTe >= stats.tongThuDuToan ? '+' : ''}{formatCurrency(stats.tongThuThucTe - stats.tongThuDuToan)}</strong></div>
+            <div>Tỷ lệ thực hiện: <strong>{stats.tyLeThu.toFixed(1)}%</strong></div>
+            <Progress value={Math.min(100, stats.tyLeThu)} className="h-2" />
           </CardContent>
         </Card>
 
@@ -144,32 +191,12 @@ export default function SoSanhDuToanPage() {
           <CardHeader>
             <CardTitle className="text-red-600">Tổng Chi ngân sách</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Dự toán</span>
-                <span className="text-2xl font-bold">{formatCurrency(tongChi.duToan)}</span>
-              </div>
-              <ArrowRight className="h-5 w-5 mx-auto text-muted-foreground" />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Thực tế</span>
-                <span className="text-2xl font-bold text-red-600">{formatCurrency(tongChi.thucTe)}</span>
-              </div>
-              <div className="pt-2 border-t">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Chênh lệch</span>
-                  <span className={`text-lg font-bold ${tongChi.thucTe <= tongChi.duToan ? 'text-green-600' : 'text-red-600'}`}>
-                    {tongChi.thucTe >= tongChi.duToan ? '+' : ''}{formatCurrency(tongChi.thucTe - tongChi.duToan)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm font-medium">Tỷ lệ thực hiện</span>
-                  <Badge className={tongChi.thucTe <= tongChi.duToan ? 'bg-green-500' : 'bg-red-500'}>
-                    {((tongChi.thucTe / tongChi.duToan) * 100).toFixed(1)}%
-                  </Badge>
-                </div>
-              </div>
-            </div>
+          <CardContent className="space-y-2">
+            <div>Dự toán: <strong>{formatCurrency(stats.tongChiDuToan)}</strong></div>
+            <div>Thực tế: <strong>{formatCurrency(stats.tongChiThucTe)}</strong></div>
+            <div>Chênh lệch: <strong className={stats.tongChiThucTe - stats.tongChiDuToan <= 0 ? 'text-green-600' : 'text-red-600'}>{stats.tongChiThucTe >= stats.tongChiDuToan ? '+' : ''}{formatCurrency(stats.tongChiThucTe - stats.tongChiDuToan)}</strong></div>
+            <div>Tỷ lệ thực hiện: <strong>{stats.tyLeChi.toFixed(1)}%</strong></div>
+            <Progress value={Math.min(100, stats.tyLeChi)} className="h-2" />
           </CardContent>
         </Card>
       </div>
@@ -180,15 +207,15 @@ export default function SoSanhDuToanPage() {
           <CardDescription>Đơn vị: Triệu VNĐ</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height={340}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+              <XAxis dataKey="name" angle={-35} textAnchor="end" height={84} />
               <YAxis label={{ value: 'Triệu VNĐ', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value) => `${value} tr`} />
+              <Tooltip formatter={(value: number) => `${value.toLocaleString('vi-VN')} tr`} />
               <Legend />
-              <Bar dataKey="Dự toán" fill="#3b82f6" />
-              <Bar dataKey="Thực tế">
+              <Bar dataKey="duToan" fill="#3b82f6" name="Dự toán" />
+              <Bar dataKey="thucTe" name="Thực tế">
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.loai === 'Thu' ? '#10b981' : '#ef4444'} />
                 ))}
@@ -200,48 +227,46 @@ export default function SoSanhDuToanPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Chi tiết từng khoản mục</CardTitle>
+          <CardTitle>Chi tiết khoản mục</CardTitle>
+          <CardDescription>{items.length} khoản mục {loading ? '(đang tải...)' : ''}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockSoSanh.map((item) => (
-              <div key={item.MaKhoanMuc} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between mb-3">
+            {items.map((x) => (
+              <div key={x.id} className="border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={item.LoaiKhoanMuc === 'Thu' ? 'default' : 'destructive'}>
-                        {item.LoaiKhoanMuc}
-                      </Badge>
-                      <span className="font-semibold">{item.TenKhoanMuc}</span>
+                      <Badge variant={x.loai === 'Thu' ? 'default' : 'destructive'}>{x.loai}</Badge>
+                      <span className="font-semibold">{x.ten}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Mã: {item.MaKhoanMuc}</p>
+                    <p className="text-xs text-muted-foreground">Mã: {x.id}</p>
                   </div>
                   <div className="text-right">
-                    <div className={`text-lg font-bold ${
-                      item.LoaiKhoanMuc === 'Thu' 
-                        ? (item.TyLeThucHien >= 100 ? 'text-green-600' : 'text-amber-600')
-                        : (item.TyLeThucHien <= 100 ? 'text-green-600' : 'text-red-600')
-                    }`}>
-                      {item.TyLeThucHien.toFixed(1)}%
+                    <div className={`text-lg font-bold ${x.loai === 'Thu' ? (x.tyLe >= 100 ? 'text-green-600' : 'text-amber-600') : (x.tyLe <= 100 ? 'text-green-600' : 'text-red-600')}`}>
+                      {x.tyLe.toFixed(1)}%
                     </div>
-                    <div className={`text-sm ${item.ChenhLech >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {item.ChenhLech >= 0 ? '+' : ''}{formatCurrency(item.ChenhLech)}
+                    <div className={`text-sm ${x.chenhlech >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {x.chenhlech >= 0 ? '+' : ''}{formatCurrency(x.chenhlech)}
                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm mb-2">
                   <div>
                     <span className="text-muted-foreground">Dự toán: </span>
-                    <strong>{formatCurrency(item.DuToan)}</strong>
+                    <strong>{formatCurrency(x.duToan)}</strong>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Thực tế: </span>
-                    <strong>{formatCurrency(item.ThucTe)}</strong>
+                    <strong>{formatCurrency(x.thucTe)}</strong>
                   </div>
                 </div>
-                <Progress value={item.TyLeThucHien} className="h-2" />
+                <Progress value={Math.min(100, x.tyLe)} className="h-2" />
               </div>
             ))}
+            {!loading && items.length === 0 && (
+              <div className="text-center text-muted-foreground">Chưa có dữ liệu thu/chi để so sánh</div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +15,11 @@ import {
   Activity, TrendingUp, Clock, CheckCircle2, Search, Plus, Download, Eye, Edit,
   DollarSign, Calendar, Building2, Target, AlertTriangle, Percent
 } from 'lucide-react';
+import { nganSachApi } from '@/lib/api';
 
 // Mock data giải ngân
 interface GiaiNgan {
+  MaNganSach?: number;
   MaDuAn: string;
   TenDuAn: string;
   LoaiDuAn: string;
@@ -144,16 +146,146 @@ const mockGiaiNgan: GiaiNgan[] = [
 const loaiDuAnOptions = ['Giao thông', 'Giáo dục', 'Y tế', 'Hạ tầng', 'Văn hóa', 'Điện', 'Môi trường', 'Khác'];
 const trangThaiOptions = ['Chờ giải ngân', 'Đang thực hiện', 'Chậm tiến độ', 'Hoàn thành', 'Tạm dừng'];
 
+const emptyGiaiNganForm: GiaiNgan = {
+  MaDuAn: '',
+  TenDuAn: '',
+  LoaiDuAn: '',
+  DonViThucHien: '',
+  TongKeHoach: 0,
+  DaGiaiNgan: 0,
+  TienDo: 0,
+  NgayBatDau: '',
+  NgayKetThuc: '',
+  TrangThai: 'Chờ giải ngân',
+  SoDotGiaiNgan: 0,
+  NgayCapNhat: '',
+  GhiChu: '',
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): GiaiNgan {
+  return {
+    MaNganSach: item.MaNganSach,
+    MaDuAn: item.MaDuAn || '',
+    TenDuAn: item.TenDuAn || '',
+    LoaiDuAn: item.LoaiDuAn || '',
+    DonViThucHien: item.DonViThucHien || '',
+    TongKeHoach: toNumber(item.TongKeHoach),
+    DaGiaiNgan: toNumber(item.DaGiaiNgan),
+    TienDo: toNumber(item.TienDo),
+    NgayBatDau: toDateString(item.NgayBatDau),
+    NgayKetThuc: toDateString(item.NgayKetThuc),
+    TrangThai: item.TrangThai || 'Chờ giải ngân',
+    SoDotGiaiNgan: toNumber(item.SoDotGiaiNgan),
+    NgayCapNhat: toDateString(item.NgayCapNhat),
+    GhiChu: item.GhiChu || '',
+  };
+}
+
 export default function GiaiNganPage() {
+  const [records, setRecords] = useState<GiaiNgan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
   const [selectedDA, setSelectedDA] = useState<GiaiNgan | null>(null);
+  const [addForm, setAddForm] = useState<GiaiNgan>(emptyGiaiNganForm);
+  const [editForm, setEditForm] = useState<GiaiNgan>(emptyGiaiNganForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredData = mockGiaiNgan.filter((item) => {
+  const loadData = async () => {
+    const result = await nganSachApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'GIAI_NGAN' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    const year = addForm.NgayBatDau ? Number(addForm.NgayBatDau.slice(0, 4)) : new Date().getFullYear();
+    const payload = {
+      LoaiBanGhi: 'GIAI_NGAN',
+      Nam: year,
+      TongDuToan: toNumber(addForm.TongKeHoach),
+      DaGiaiNgan: toNumber(addForm.DaGiaiNgan),
+      TrangThai: addForm.TrangThai || 'Chờ giải ngân',
+      MaDuAn: addForm.MaDuAn || null,
+      TenDuAn: addForm.TenDuAn || null,
+      LoaiDuAn: addForm.LoaiDuAn || null,
+      DonViThucHien: addForm.DonViThucHien || null,
+      TongKeHoach: toNumber(addForm.TongKeHoach),
+      TienDo: toNumber(addForm.TienDo),
+      NgayBatDau: addForm.NgayBatDau || null,
+      NgayKetThuc: addForm.NgayKetThuc || null,
+      SoDotGiaiNgan: toNumber(addForm.SoDotGiaiNgan),
+      NgayCapNhat: addForm.NgayCapNhat || null,
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await nganSachApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tạo dự án giải ngân');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyGiaiNganForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedDA?.MaNganSach) {
+      alert('Không xác định được bản ghi để cập nhật');
+      return;
+    }
+
+    const year = editForm.NgayBatDau ? Number(editForm.NgayBatDau.slice(0, 4)) : new Date().getFullYear();
+    const payload = {
+      Nam: year,
+      TongDuToan: toNumber(editForm.TongKeHoach),
+      DaGiaiNgan: toNumber(editForm.DaGiaiNgan),
+      TrangThai: editForm.TrangThai || 'Chờ giải ngân',
+      MaDuAn: editForm.MaDuAn || null,
+      TenDuAn: editForm.TenDuAn || null,
+      LoaiDuAn: editForm.LoaiDuAn || null,
+      DonViThucHien: editForm.DonViThucHien || null,
+      TongKeHoach: toNumber(editForm.TongKeHoach),
+      TienDo: toNumber(editForm.TienDo),
+      NgayBatDau: editForm.NgayBatDau || null,
+      NgayKetThuc: editForm.NgayKetThuc || null,
+      SoDotGiaiNgan: toNumber(editForm.SoDotGiaiNgan),
+      NgayCapNhat: editForm.NgayCapNhat || null,
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await nganSachApi.update(selectedDA.MaNganSach, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật dự án giải ngân');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedDA(null);
+    setEditForm(emptyGiaiNganForm);
+    await loadData();
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaDuAn.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.TenDuAn.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -163,17 +295,17 @@ export default function GiaiNganPage() {
     return matchesSearch && matchesLoai && matchesTrangThai;
   });
 
-  const tongKeHoach = mockGiaiNgan.reduce((sum, d) => sum + d.TongKeHoach, 0);
-  const tongGiaiNgan = mockGiaiNgan.reduce((sum, d) => sum + d.DaGiaiNgan, 0);
+  const tongKeHoach = records.reduce((sum, d) => sum + d.TongKeHoach, 0);
+  const tongGiaiNgan = records.reduce((sum, d) => sum + d.DaGiaiNgan, 0);
   const tyLeGiaiNgan = tongKeHoach > 0 ? Math.round((tongGiaiNgan / tongKeHoach) * 100) : 0;
 
   const stats = {
     tongKeHoach,
     tongGiaiNgan,
     tyLeGiaiNgan,
-    soDuAn: mockGiaiNgan.length,
-    dangThucHien: mockGiaiNgan.filter(d => d.TrangThai === 'Đang thực hiện').length,
-    chamTienDo: mockGiaiNgan.filter(d => d.TrangThai === 'Chậm tiến độ').length
+    soDuAn: records.length,
+    dangThucHien: records.filter(d => d.TrangThai === 'Đang thực hiện').length,
+    chamTienDo: records.filter(d => d.TrangThai === 'Chậm tiến độ').length
   };
 
   const getTrangThaiBadge = (trangThai: string) => {
@@ -210,7 +342,13 @@ export default function GiaiNganPage() {
               <p className="text-cyan-100">Theo dõi tiến độ giải ngân các dự án và khoản mục chi</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (open) setAddForm(emptyGiaiNganForm);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="w-full 2xl:w-auto bg-white text-blue-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -225,11 +363,11 @@ export default function GiaiNganPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2 col-span-2">
                   <Label>Tên dự án *</Label>
-                  <Input placeholder="Nhập tên dự án" />
+                  <Input placeholder="Nhập tên dự án" value={addForm.TenDuAn} onChange={(e) => setAddForm((prev) => ({ ...prev, TenDuAn: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Loại dự án *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiDuAn || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiDuAn: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại" /></SelectTrigger>
                     <SelectContent>
                       {loaiDuAnOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -238,32 +376,32 @@ export default function GiaiNganPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Đơn vị thực hiện</Label>
-                  <Input placeholder="Nhập đơn vị" />
+                  <Input placeholder="Nhập đơn vị" value={addForm.DonViThucHien} onChange={(e) => setAddForm((prev) => ({ ...prev, DonViThucHien: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Tổng kế hoạch (VNĐ) *</Label>
-                  <Input type="number" placeholder="Nhập số tiền" />
+                  <Input type="number" placeholder="Nhập số tiền" value={addForm.TongKeHoach} onChange={(e) => setAddForm((prev) => ({ ...prev, TongKeHoach: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Đã giải ngân (VNĐ)</Label>
-                  <Input type="number" placeholder="Nhập số tiền" defaultValue="0" />
+                  <Input type="number" placeholder="Nhập số tiền" value={addForm.DaGiaiNgan} onChange={(e) => setAddForm((prev) => ({ ...prev, DaGiaiNgan: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày bắt đầu *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayBatDau} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayBatDau: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày kết thúc *</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayKetThuc} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayKetThuc: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Thêm dự án</Button>
+                <Button onClick={handleCreate}>Thêm dự án</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -528,7 +666,7 @@ export default function GiaiNganPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedDA?.MaDuAn === item.MaDuAn} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedDA(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedDA(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedDA(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -543,15 +681,15 @@ export default function GiaiNganPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2 col-span-2">
                                   <Label>Tên dự án</Label>
-                                  <Input defaultValue={item.TenDuAn} />
+                                  <Input value={editForm.TenDuAn} onChange={(e) => setEditForm((prev) => ({ ...prev, TenDuAn: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Loại dự án</Label>
-                                  <Input defaultValue={item.LoaiDuAn} />
+                                  <Input value={editForm.LoaiDuAn} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiDuAn: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Đơn vị thực hiện</Label>
-                                  <Input defaultValue={item.DonViThucHien} />
+                                  <Input value={editForm.DonViThucHien} onChange={(e) => setEditForm((prev) => ({ ...prev, DonViThucHien: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -561,15 +699,15 @@ export default function GiaiNganPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Tổng kế hoạch (VNĐ)</Label>
-                                  <Input type="number" defaultValue={item.TongKeHoach} />
+                                  <Input type="number" value={editForm.TongKeHoach} onChange={(e) => setEditForm((prev) => ({ ...prev, TongKeHoach: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Đã giải ngân (VNĐ)</Label>
-                                  <Input type="number" defaultValue={item.DaGiaiNgan} />
+                                  <Input type="number" value={editForm.DaGiaiNgan} onChange={(e) => setEditForm((prev) => ({ ...prev, DaGiaiNgan: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Tiến độ (%)</Label>
-                                  <Input type="number" min="0" max="100" defaultValue={item.TienDo} />
+                                  <Input type="number" min="0" max="100" value={editForm.TienDo} onChange={(e) => setEditForm((prev) => ({ ...prev, TienDo: toNumber(e.target.value) }))} />
                                 </div>
                               </div>
                             </div>
@@ -579,15 +717,15 @@ export default function GiaiNganPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Ngày bắt đầu</Label>
-                                  <Input type="date" defaultValue={item.NgayBatDau} />
+                                  <Input type="date" value={editForm.NgayBatDau} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayBatDau: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày kết thúc</Label>
-                                  <Input type="date" defaultValue={item.NgayKetThuc} />
+                                  <Input type="date" value={editForm.NgayKetThuc} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayKetThuc: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -596,19 +734,19 @@ export default function GiaiNganPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số đợt giải ngân</Label>
-                                  <Input type="number" defaultValue={item.SoDotGiaiNgan} />
+                                  <Input type="number" value={editForm.SoDotGiaiNgan} onChange={(e) => setEditForm((prev) => ({ ...prev, SoDotGiaiNgan: toNumber(e.target.value) }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

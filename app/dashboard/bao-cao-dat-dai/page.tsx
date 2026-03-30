@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Map,
+  Map as MapIcon,
   FileCheck,
   Layers,
   LandPlot,
@@ -28,22 +28,219 @@ import {
   CheckCircle2,
   Clock,
 } from 'lucide-react';
-import { mockBaoCaoDatDai, mockThongKeDatDai } from '@/lib/mock-data';
+import { bienDongDatApi, thuaDatApi } from '@/lib/api';
+
+interface BaoCaoDatDaiItem {
+  MaBaoCao: string;
+  TenBaoCao: string;
+  LoaiBaoCao: string;
+  KyBaoCao: string;
+  NgayLap: string;
+  TenDonVi: string;
+  NguoiLap: string;
+  TongDienTich: number;
+  DaCapGCN: number;
+  ChuaCapGCN: number;
+  TrangThai: string;
+  GhiChu: string;
+}
+
+interface ThongKeDatDaiState {
+  TongDienTich: number;
+  SoThua: number;
+  DaCapGCN: number;
+  ChuaCapGCN: number;
+  TheoLoaiDat: Array<{ LoaiDat: string; DienTich: number; TyLe: number; SoThua: number }>;
+  TheoAp: Array<{ TenAp: string; DienTich: number; SoThua: number; DaCapGCN: number }>;
+}
+
+const emptyThongKe: ThongKeDatDaiState = {
+  TongDienTich: 0,
+  SoThua: 0,
+  DaCapGCN: 0,
+  ChuaCapGCN: 0,
+  TheoLoaiDat: [],
+  TheoAp: [],
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function extractApLabel(address: unknown): string {
+  const raw = String(address || '').trim();
+  if (!raw) {
+    return 'Chưa phân loại';
+  }
+
+  const normalized = raw.toLowerCase();
+  const apMatch = normalized.match(/(ấp\s*\d+|thôn\s*\d+|khu phố\s*\d+|kp\s*\d+)/i);
+  if (apMatch && apMatch[0]) {
+    const text = apMatch[0].replace(/\s+/g, ' ').trim();
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  const firstPart = raw.split(',')[0]?.trim();
+  return firstPart || 'Chưa phân loại';
+}
+
+function quarterLabel(date: Date): string {
+  const quarter = Math.floor(date.getMonth() / 3) + 1;
+  return `Quý ${quarter}/${date.getFullYear()}`;
+}
 
 export default function BaoCaoDatDaiPage() {
   const router = useRouter();
+  const [reports, setReports] = useState<BaoCaoDatDaiItem[]>([]);
+  const [thongKeDatDai, setThongKeDatDai] = useState<ThongKeDatDaiState>(emptyThongKe);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<BaoCaoDatDaiItem | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  const loadData = async () => {
+    try {
+      const [thuaDatRes, bienDongRes] = await Promise.all([
+        thuaDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'CAP_SO_DO' }),
+        bienDongDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'BIEN_DONG_DAT' }),
+      ]);
+
+      const thuaDatList = thuaDatRes.success && Array.isArray(thuaDatRes.data) ? thuaDatRes.data : [];
+      const bienDongList = bienDongRes.success && Array.isArray(bienDongRes.data) ? bienDongRes.data : [];
+
+      const tongDienTich = thuaDatList.reduce((sum: number, item: any) => sum + toNumber(item.DienTich), 0);
+      const soThua = thuaDatList.length;
+      const daCapGCN = thuaDatList.filter((item: any) => {
+        const status = String(item.TrangThai || '').toLowerCase();
+        return Boolean(item.SoSoDo) || status.includes('đã cấp');
+      }).length;
+      const chuaCapGCN = Math.max(soThua - daCapGCN, 0);
+
+      const loaiDatMap: Record<string, { LoaiDat: string; DienTich: number; SoThua: number }> = {};
+      const apMap: Record<string, { TenAp: string; DienTich: number; SoThua: number; DaCapGCN: number }> = {};
+
+      for (const item of thuaDatList) {
+        const loaiDat = item.LoaiDat || item.MaLoaiDat || 'Chưa phân loại';
+        const dienTich = toNumber(item.DienTich);
+        const loaiDatCurrent = loaiDatMap[loaiDat] || {
+          LoaiDat: loaiDat,
+          DienTich: 0,
+          SoThua: 0,
+        };
+        loaiDatCurrent.DienTich += dienTich;
+        loaiDatCurrent.SoThua += 1;
+        loaiDatMap[loaiDat] = loaiDatCurrent;
+
+        const tenAp = extractApLabel(item.DiaChiThuaDat);
+        const apCurrent = apMap[tenAp] || { TenAp: tenAp, DienTich: 0, SoThua: 0, DaCapGCN: 0 };
+        apCurrent.DienTich += dienTich;
+        apCurrent.SoThua += 1;
+        const status = String(item.TrangThai || '').toLowerCase();
+        if (item.SoSoDo || status.includes('đã cấp')) {
+          apCurrent.DaCapGCN += 1;
+        }
+        apMap[tenAp] = apCurrent;
+      }
+
+      const theoLoaiDat = Object.values(loaiDatMap)
+        .sort((a, b) => b.DienTich - a.DienTich)
+        .map((item) => ({
+          ...item,
+          TyLe: tongDienTich > 0 ? (item.DienTich / tongDienTich) * 100 : 0,
+        }));
+
+      const theoAp = Object.values(apMap).sort((a, b) => b.DienTich - a.DienTich);
+
+      setThongKeDatDai({
+        TongDienTich: tongDienTich,
+        SoThua: soThua,
+        DaCapGCN: daCapGCN,
+        ChuaCapGCN: chuaCapGCN,
+        TheoLoaiDat: theoLoaiDat,
+        TheoAp: theoAp,
+      });
+
+      const now = new Date();
+      const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const bienDongDienTich = bienDongList.reduce(
+        (sum: number, item: any) => sum + toNumber(item.DienTichMoi || item.DienTichCu),
+        0,
+      );
+
+      const nextReports: BaoCaoDatDaiItem[] = [
+        {
+          MaBaoCao: `BCDD-${year}-01`,
+          TenBaoCao: 'Báo cáo thống kê đất đai tổng hợp',
+          LoaiBaoCao: 'Báo cáo năm',
+          KyBaoCao: `Năm ${year}`,
+          NgayLap: now.toISOString().slice(0, 10),
+          TenDonVi: 'Phòng TN&MT',
+          NguoiLap: 'Hệ thống tổng hợp',
+          TongDienTich: tongDienTich,
+          DaCapGCN: daCapGCN,
+          ChuaCapGCN: chuaCapGCN,
+          TrangThai: 'Đã hoàn thành',
+          GhiChu: 'Tổng hợp từ dữ liệu thửa đất và tình trạng cấp GCN hiện tại.',
+        },
+        {
+          MaBaoCao: `BCDD-${year}-02`,
+          TenBaoCao: 'Báo cáo biến động đất đai',
+          LoaiBaoCao: 'Báo cáo quý',
+          KyBaoCao: quarterLabel(now),
+          NgayLap: now.toISOString().slice(0, 10),
+          TenDonVi: 'Phòng TN&MT',
+          NguoiLap: 'Hệ thống tổng hợp',
+          TongDienTich: bienDongDienTich,
+          DaCapGCN: bienDongList.filter((item: any) => String(item.TrangThai || '').toLowerCase().includes('đã duyệt'))
+            .length,
+          ChuaCapGCN: bienDongList.filter((item: any) => !String(item.TrangThai || '').toLowerCase().includes('đã duyệt'))
+            .length,
+          TrangThai: bienDongList.length > 0 ? 'Đã hoàn thành' : 'Đang thực hiện',
+          GhiChu: `Có ${bienDongList.length} hồ sơ biến động ghi nhận trong kỳ.`,
+        },
+        {
+          MaBaoCao: `BCDD-${year}-03`,
+          TenBaoCao: `Báo cáo tình hình cấp GCN tháng ${currentMonth}/${year}`,
+          LoaiBaoCao: 'Báo cáo tháng',
+          KyBaoCao: `Tháng ${currentMonth}/${year}`,
+          NgayLap: now.toISOString().slice(0, 10),
+          TenDonVi: 'Phòng TN&MT',
+          NguoiLap: 'Hệ thống tổng hợp',
+          TongDienTich: tongDienTich,
+          DaCapGCN: daCapGCN,
+          ChuaCapGCN: chuaCapGCN,
+          TrangThai: chuaCapGCN > 0 ? 'Đang thực hiện' : 'Đã hoàn thành',
+          GhiChu: `Tỷ lệ cấp GCN hiện tại đạt ${
+            soThua > 0 ? ((daCapGCN / soThua) * 100).toFixed(1) : '0.0'
+          }%.`,
+        },
+      ];
+
+      setReports(nextReports);
+    } catch {
+      setThongKeDatDai(emptyThongKe);
+      setReports([]);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Lọc dữ liệu
-  const filteredData = mockBaoCaoDatDai.filter(bc =>
+  const filteredData = reports.filter(bc =>
     bc.TenBaoCao.toLowerCase().includes(searchQuery.toLowerCase()) ||
     bc.TenDonVi.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleView = (item: any) => {
+  const handleView = (item: BaoCaoDatDaiItem) => {
     setSelectedItem(item);
     setIsViewOpen(true);
   };
@@ -110,7 +307,7 @@ export default function BaoCaoDatDaiPage() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <Map className="w-6 h-6" />
+                  <MapIcon className="w-6 h-6" />
                 </div>
                 <h1 className="text-3xl font-bold">Báo cáo Đất đai</h1>
               </div>
@@ -134,7 +331,7 @@ export default function BaoCaoDatDaiPage() {
               <LandPlot className="w-6 h-6 text-lime-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold">{mockThongKeDatDai.TongDienTich.toLocaleString()}</p>
+          <p className="text-3xl font-bold">{thongKeDatDai.TongDienTich.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground">Tổng diện tích (ha)</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">
@@ -143,7 +340,7 @@ export default function BaoCaoDatDaiPage() {
               <FileCheck className="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-green-600">{mockThongKeDatDai.DaCapGCN.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-green-600">{thongKeDatDai.DaCapGCN.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground">Đã cấp GCN</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">
@@ -152,7 +349,7 @@ export default function BaoCaoDatDaiPage() {
               <Clock className="w-6 h-6 text-amber-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-amber-600">{mockThongKeDatDai.ChuaCapGCN.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-amber-600">{thongKeDatDai.ChuaCapGCN.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground">Chưa cấp GCN</p>
         </Card>
         <Card className="p-6 border-0 shadow-lg hover-lift">
@@ -161,7 +358,7 @@ export default function BaoCaoDatDaiPage() {
               <Layers className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-blue-600">{mockThongKeDatDai.SoThua.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-blue-600">{thongKeDatDai.SoThua.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground">Tổng số thửa</p>
         </Card>
       </div>
@@ -250,9 +447,9 @@ export default function BaoCaoDatDaiPage() {
             <Card className="p-6 border-0 shadow-lg">
               <h3 className="text-lg font-semibold mb-4">Theo loại đất</h3>
               <div className="space-y-3">
-                {mockThongKeDatDai.TheoLoaiDat.map((item, index) => {
+                {thongKeDatDai.TheoLoaiDat.map((item, index) => {
                   const colors = ['bg-green-500', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-rose-500'];
-                  const total = mockThongKeDatDai.TongDienTich;
+                  const total = thongKeDatDai.TongDienTich || 1;
                   const percent = ((item.DienTich / total) * 100).toFixed(1);
                   return (
                     <div key={index} className="p-3 bg-slate-50 rounded-lg">
@@ -300,12 +497,18 @@ export default function BaoCaoDatDaiPage() {
                         stroke="#22c55e"
                         strokeWidth="16"
                         fill="none"
-                        strokeDasharray={`${(mockThongKeDatDai.DaCapGCN / mockThongKeDatDai.SoThua) * 502} 502`}
+                        strokeDasharray={`${
+                          thongKeDatDai.SoThua > 0 ? (thongKeDatDai.DaCapGCN / thongKeDatDai.SoThua) * 502 : 0
+                        } 502`}
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-3xl font-bold">
-                        {((mockThongKeDatDai.DaCapGCN / mockThongKeDatDai.SoThua) * 100).toFixed(1)}%
+                        {(
+                          thongKeDatDai.SoThua > 0
+                            ? (thongKeDatDai.DaCapGCN / thongKeDatDai.SoThua) * 100
+                            : 0
+                        ).toFixed(1)}%
                       </span>
                       <span className="text-sm text-muted-foreground">Đã cấp GCN</span>
                     </div>
@@ -313,11 +516,11 @@ export default function BaoCaoDatDaiPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-green-50 rounded-xl">
-                    <p className="text-2xl font-bold text-green-600">{mockThongKeDatDai.DaCapGCN.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-600">{thongKeDatDai.DaCapGCN.toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">Đã cấp GCN</p>
                   </div>
                   <div className="text-center p-4 bg-amber-50 rounded-xl">
-                    <p className="text-2xl font-bold text-amber-600">{mockThongKeDatDai.ChuaCapGCN.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-amber-600">{thongKeDatDai.ChuaCapGCN.toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">Chưa cấp GCN</p>
                   </div>
                 </div>
@@ -341,7 +544,7 @@ export default function BaoCaoDatDaiPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockThongKeDatDai.TheoAp.map((ap, index) => {
+                  {thongKeDatDai.TheoAp.map((ap, index) => {
                     const tyLe = ((ap.DaCapGCN / ap.SoThua) * 100).toFixed(1);
                     return (
                       <tr key={index} className="border-b hover:bg-slate-50 transition-colors">

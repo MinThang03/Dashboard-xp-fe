@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,39 +31,293 @@ import {
   User,
   Calendar,
 } from 'lucide-react';
-import { mockHoSoTonDong, mockThongKeHoSoTonDong } from '@/lib/mock-data';
+import { bienDongDatApi, thuaDatApi } from '@/lib/api';
 import {
   ALERT_PERIOD_LABELS,
   ALERT_RISK_LABELS,
+  type BacklogSnapshot,
   type AlertPeriod,
   type AlertRiskLevel,
+  type SharedAlertSignal,
   filterSignalsByCommonFilters,
-  getBacklogAlerts,
-  getBacklogSnapshot,
 } from '@/lib/frontend-dss';
+
+interface HoSoTonDongItem {
+  MaHoSo: string;
+  TenNghiepVu: string;
+  TenCongDan: string;
+  TenLinhVuc: string;
+  NgayNhan: string;
+  HanXuLy: string;
+  SoNgayTonDong: number;
+  LyDoTonDong: string;
+  CanBoXuLy: string;
+  MucDoQuaHan: 'Quá hạn' | 'Trong hạn';
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function addDays(dateString: string, days: number): string {
+  const base = new Date(dateString);
+  if (Number.isNaN(base.getTime())) {
+    return '';
+  }
+  base.setDate(base.getDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
+function dayDiffFromToday(dateString: string): number {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return 0;
+  }
+
+  const now = new Date();
+  const utcNow = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const utcDate = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.floor((utcNow - utcDate) / (24 * 3600 * 1000));
+}
+
+function isPendingStatus(status: unknown): boolean {
+  const value = String(status || '').toLowerCase();
+  if (!value) return true;
+  return (
+    value.includes('chờ') ||
+    value.includes('đang') ||
+    value.includes('bổ sung') ||
+    value.includes('xử lý') ||
+    value.includes('thẩm định')
+  );
+}
+
+function buildBacklogSnapshot(records: HoSoTonDongItem[]): BacklogSnapshot {
+  const tongHoSoTonDong = records.length;
+  const quaHan = records.filter((item) => item.MucDoQuaHan === 'Quá hạn').length;
+  const trongHan = tongHoSoTonDong - quaHan;
+
+  const currentWindow = records.filter((item) => {
+    const diff = dayDiffFromToday(item.NgayNhan);
+    return diff <= 30 && item.MucDoQuaHan === 'Quá hạn';
+  }).length;
+
+  const previousWindow = records.filter((item) => {
+    const diff = dayDiffFromToday(item.NgayNhan);
+    return diff > 30 && diff <= 60 && item.MucDoQuaHan === 'Quá hạn';
+  }).length;
+
+  const trendDelta =
+    previousWindow === 0
+      ? currentWindow === 0
+        ? 0
+        : -100
+      : Math.round(((previousWindow - currentWindow) / previousWindow) * 100);
+
+  const fieldMap = new Map<string, { LinhVuc: string; SoLuong: number; QuaHan: number }>();
+  for (const item of records) {
+    const key = item.TenLinhVuc || 'Khác';
+    const current = fieldMap.get(key) || { LinhVuc: key, SoLuong: 0, QuaHan: 0 };
+    current.SoLuong += 1;
+    if (item.MucDoQuaHan === 'Quá hạn') {
+      current.QuaHan += 1;
+    }
+    fieldMap.set(key, current);
+  }
+
+  const officerMap = new Map<string, { CanBo: string; SoLuong: number }>();
+  for (const item of records) {
+    const key = item.CanBoXuLy || 'Chưa phân công';
+    const current = officerMap.get(key) || { CanBo: key, SoLuong: 0 };
+    current.SoLuong += 1;
+    officerMap.set(key, current);
+  }
+
+  const doTinCayDuBao = Math.max(
+    75,
+    95 - Math.round((quaHan / Math.max(1, tongHoSoTonDong)) * 40),
+  );
+
+  return {
+    tongHoSoTonDong,
+    quaHan,
+    trongHan,
+    trendDelta,
+    doTinCayDuBao,
+    theoLinhVuc: Array.from(fieldMap.values()).sort((a, b) => b.SoLuong - a.SoLuong),
+    theoCanBo: Array.from(officerMap.values()).sort((a, b) => b.SoLuong - a.SoLuong),
+  };
+}
+
+function buildBacklogSignals(snapshot: BacklogSnapshot): SharedAlertSignal[] {
+  const today = new Date().toISOString().slice(0, 10);
+  const topOfficer = snapshot.theoCanBo[0];
+  return [
+    {
+      id: 'backlog-overdue-main',
+      title: `${snapshot.quaHan} hồ sơ quá hạn cần xử lý`,
+      description:
+        snapshot.quaHan >= 8
+          ? 'Khối lượng hồ sơ trễ hạn đang cao, cần ưu tiên điều phối xử lý liên phòng ban.'
+          : snapshot.quaHan > 0
+            ? 'Đã phát sinh hồ sơ trễ hạn, cần theo dõi sát để không tăng SLA.'
+            : 'Không ghi nhận hồ sơ trễ hạn trong kỳ theo dõi hiện tại.',
+      level: snapshot.quaHan >= 8 ? 'critical' : snapshot.quaHan > 0 ? 'warning' : 'safe',
+      source: 'Hồ sơ tồn đọng',
+      createdDate: today,
+    },
+    {
+      id: 'backlog-officer-load',
+      title: 'Cảnh báo phân bổ cán bộ xử lý',
+      description: topOfficer
+        ? `${topOfficer.CanBo} đang phụ trách ${topOfficer.SoLuong} hồ sơ tồn đọng.`
+        : 'Chưa có dữ liệu phân công cán bộ xử lý.',
+      level: topOfficer?.SoLuong >= 5 ? 'warning' : 'info',
+      source: 'Điều phối cán bộ',
+      createdDate: today,
+    },
+  ];
+}
 
 export default function HoSoTonDongPage() {
   const router = useRouter();
+  const [records, setRecords] = useState<HoSoTonDongItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<HoSoTonDongItem | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
   const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
 
-  const backlogSnapshot = getBacklogSnapshot();
-  const backlogSignals = filterSignalsByCommonFilters(getBacklogAlerts(), {
-    period: filterPeriod,
-    risk: filterRisk,
-  });
+  const loadData = async () => {
+    try {
+      const [capSoDoRes, thamDinhRes, tranhChapRes] = await Promise.all([
+        thuaDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'CAP_SO_DO' }),
+        bienDongDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'THAM_DINH_THUC_DIA' }),
+        bienDongDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'TRANH_CHAP_DAT' }),
+      ]);
+
+      const capSoDoItems = (capSoDoRes.success && Array.isArray(capSoDoRes.data)
+        ? capSoDoRes.data
+        : []
+      ).filter((item: any) => isPendingStatus(item.TrangThai)).map((item: any): HoSoTonDongItem => {
+        const ngayNhan =
+          toDateString(item.NgayNop) ||
+          toDateString(item.NgayNhapLieu) ||
+          new Date().toISOString().slice(0, 10);
+        const hanXuLy = toDateString(item.NgayHenTra) || addDays(ngayNhan, 20);
+        return {
+          MaHoSo: item.MaHoSo || `HS-SD-${item.MaThua || 'NA'}`,
+          TenNghiepVu: 'Cấp giấy chứng nhận quyền sử dụng đất',
+          TenCongDan: item.ChuSoHuu || 'Chưa cập nhật',
+          TenLinhVuc: 'Địa chính - Cấp sổ đỏ',
+          NgayNhan: ngayNhan,
+          HanXuLy: hanXuLy,
+          SoNgayTonDong: Math.max(dayDiffFromToday(ngayNhan), 0),
+          LyDoTonDong: item.GhiChu || 'Hồ sơ đang trong quá trình xử lý.',
+          CanBoXuLy: item.CanBoThamDinh || item.CanBoTiepNhan || 'Chưa phân công',
+          MucDoQuaHan: dayDiffFromToday(hanXuLy) > 0 ? 'Quá hạn' : 'Trong hạn',
+        };
+      });
+
+      const thamDinhItems = (thamDinhRes.success && Array.isArray(thamDinhRes.data)
+        ? thamDinhRes.data
+        : []
+      ).filter((item: any) => isPendingStatus(item.TrangThai)).map((item: any): HoSoTonDongItem => {
+        const ngayNhan =
+          toDateString(item.NgayThamDinh) ||
+          toDateString(item.NgayDeNghi) ||
+          toDateString(item.NgayBienDong) ||
+          new Date().toISOString().slice(0, 10);
+        const hanXuLy = addDays(ngayNhan, 15) || ngayNhan;
+        return {
+          MaHoSo:
+            item.MaHoSo ||
+            item.MaBienDongText ||
+            (item.MaBienDong ? `TD-${String(item.MaBienDong).padStart(4, '0')}` : 'TD-NA'),
+          TenNghiepVu: `Thẩm định thực địa${item.LoaiThamDinh ? ` - ${item.LoaiThamDinh}` : ''}`,
+          TenCongDan:
+            item.ChuSoHuuMoi ||
+            item.ChuSoHuuCu ||
+            item.BenKhieuNai ||
+            'Chưa cập nhật',
+          TenLinhVuc: 'Địa chính - Thẩm định thực địa',
+          NgayNhan: ngayNhan,
+          HanXuLy: hanXuLy,
+          SoNgayTonDong: Math.max(dayDiffFromToday(ngayNhan), 0),
+          LyDoTonDong:
+            item.MoTaSaiLech ||
+            item.LyDo ||
+            item.GhiChu ||
+            'Đang chờ kết luận thẩm định thực địa.',
+          CanBoXuLy: item.CanBoThamDinh || item.CanBoXuLy || 'Chưa phân công',
+          MucDoQuaHan: dayDiffFromToday(hanXuLy) > 0 ? 'Quá hạn' : 'Trong hạn',
+        };
+      });
+
+      const tranhChapItems = (tranhChapRes.success && Array.isArray(tranhChapRes.data)
+        ? tranhChapRes.data
+        : []
+      ).filter((item: any) => isPendingStatus(item.TrangThai)).map((item: any): HoSoTonDongItem => {
+        const ngayNhan =
+          toDateString(item.NgayKhieuNai) ||
+          toDateString(item.NgayDeNghi) ||
+          toDateString(item.NgayBienDong) ||
+          new Date().toISOString().slice(0, 10);
+        const hanXuLy = addDays(ngayNhan, 30) || ngayNhan;
+        return {
+          MaHoSo:
+            item.MaHoSo ||
+            item.MaVu ||
+            item.MaBienDongText ||
+            (item.MaBienDong ? `TC-${String(item.MaBienDong).padStart(4, '0')}` : 'TC-NA'),
+          TenNghiepVu: `Giải quyết tranh chấp${item.LoaiTranhChap ? ` - ${item.LoaiTranhChap}` : ' đất đai'}`,
+          TenCongDan: item.BenKhieuNai || item.BenBiKhieuNai || item.ChuSoHuuMoi || 'Chưa cập nhật',
+          TenLinhVuc: 'Địa chính - Tranh chấp đất đai',
+          NgayNhan: ngayNhan,
+          HanXuLy: hanXuLy,
+          SoNgayTonDong: Math.max(dayDiffFromToday(ngayNhan), 0),
+          LyDoTonDong:
+            item.NoiDung ||
+            item.LyDo ||
+            item.GhiChu ||
+            'Đang chờ xác minh và hòa giải theo quy định.',
+          CanBoXuLy: item.CanBoThuLy || item.CanBoXuLy || 'Chưa phân công',
+          MucDoQuaHan: dayDiffFromToday(hanXuLy) > 0 ? 'Quá hạn' : 'Trong hạn',
+        };
+      });
+
+      const merged = [...capSoDoItems, ...thamDinhItems, ...tranhChapItems].sort(
+        (a, b) => b.SoNgayTonDong - a.SoNgayTonDong,
+      );
+      setRecords(merged);
+    } catch {
+      setRecords([]);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const backlogSnapshot = useMemo(() => buildBacklogSnapshot(records), [records]);
+  const backlogSignals = useMemo(
+    () =>
+      filterSignalsByCommonFilters(buildBacklogSignals(backlogSnapshot), {
+        period: filterPeriod,
+        risk: filterRisk,
+      }),
+    [backlogSnapshot, filterPeriod, filterRisk],
+  );
 
   // Lọc dữ liệu
-  const filteredData = mockHoSoTonDong.filter(hs =>
+  const filteredData = records.filter(hs =>
     hs.TenNghiepVu.toLowerCase().includes(searchQuery.toLowerCase()) ||
     hs.TenCongDan.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleView = (item: any) => {
+  const handleView = (item: HoSoTonDongItem) => {
     setSelectedItem(item);
     setIsViewOpen(true);
   };

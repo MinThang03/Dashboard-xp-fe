@@ -825,6 +825,18 @@ export const nguoiCoCongApi = {
 };
 
 // ============== TÀI CHÍNH ==============
+export const nganSachApi = {
+  getList: (params?: { page?: number; limit?: number; loaiBanGhi?: string }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/ngan-sach?${query}`);
+  },
+  getStats: () => apiCall('/ngan-sach/stats'),
+  getById: (id: number) => apiCall(`/ngan-sach/${id}`),
+  create: (data: any) => apiCall('/ngan-sach', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/ngan-sach/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/ngan-sach/${id}`, { method: 'DELETE' }),
+};
+
 export const duToanNganSachApi = {
   getList: (params?: { page?: number; limit?: number }) => {
     const query = new URLSearchParams(params as any).toString();
@@ -875,7 +887,7 @@ export const quyHoachApi = {
 };
 
 export const thuaDatApi = {
-  getList: (params?: { page?: number; limit?: number }) => {
+  getList: (params?: { page?: number; limit?: number; loaiBanGhi?: string }) => {
     const query = new URLSearchParams(params as any).toString();
     return apiCall(`/thua-dat?${query}`);
   },
@@ -887,7 +899,7 @@ export const thuaDatApi = {
 };
 
 export const bienDongDatApi = {
-  getList: (params?: { page?: number; limit?: number }) => {
+  getList: (params?: { page?: number; limit?: number; loaiBanGhi?: string }) => {
     const query = new URLSearchParams(params as any).toString();
     return apiCall(`/bien-dong-dat?${query}`);
   },

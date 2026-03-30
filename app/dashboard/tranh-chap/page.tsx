@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,11 @@ import {
   AlertTriangle, MapPin, Clock, XCircle, Search, Plus, Download, Eye, Edit,
   CheckCircle2, Scale, Users, FileText, Calendar, Gavel, MessageSquare
 } from 'lucide-react';
+import { bienDongDatApi } from '@/lib/api';
 
 // Mock data tranh chấp đất đai
 interface TranhChapDat {
+  MaBienDongId?: number;
   MaVu: string;
   LoaiTranhChap: string;
   MaThua: string;
@@ -178,16 +180,180 @@ const loaiTranhChapOptions = ['Tranh chấp ranh giới', 'Tranh chấp quyền 
 const mucDoOptions = ['Nhẹ', 'Trung bình', 'Phức tạp', 'Nghiêm trọng'];
 const trangThaiOptions = ['Chờ xử lý', 'Đang giải quyết', 'Đã giải quyết', 'Chuyển tòa án'];
 
+const emptyTranhChapForm: TranhChapDat = {
+  MaVu: '',
+  LoaiTranhChap: '',
+  MaThua: '',
+  SoTo: '',
+  DiaChiThuaDat: '',
+  DienTichTranhChap: 0,
+  BenKhieuNai: '',
+  CCCDKhieuNai: '',
+  SDTKhieuNai: '',
+  BenBiKhieuNai: '',
+  CCCDBiKhieuNai: '',
+  NgayKhieuNai: '',
+  NoiDung: '',
+  MucDo: 'Trung bình',
+  TrangThai: 'Chờ xử lý',
+  CanBoThuLy: '',
+  PhuongAnGiaiQuyet: '',
+  NgayGiaiQuyet: '',
+  KetQuaGiaiQuyet: '',
+  GhiChu: '',
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): TranhChapDat {
+  const id = Number(item.MaBienDong);
+  return {
+    MaBienDongId: Number.isFinite(id) ? id : undefined,
+    MaVu: item.MaVu || item.MaBienDongText || (Number.isFinite(id) ? `TC${String(id).padStart(3, '0')}` : ''),
+    LoaiTranhChap: item.LoaiTranhChap || '',
+    MaThua: item.MaThua || '',
+    SoTo: item.SoTo || '',
+    DiaChiThuaDat: item.DiaChiThuaDat || '',
+    DienTichTranhChap: toNumber(item.DienTichTranhChap),
+    BenKhieuNai: item.BenKhieuNai || '',
+    CCCDKhieuNai: item.CCCDKhieuNai || '',
+    SDTKhieuNai: item.SDTKhieuNai || '',
+    BenBiKhieuNai: item.BenBiKhieuNai || '',
+    CCCDBiKhieuNai: item.CCCDBiKhieuNai || '',
+    NgayKhieuNai: toDateString(item.NgayKhieuNai),
+    NoiDung: item.NoiDung || '',
+    MucDo: item.MucDo || 'Trung bình',
+    TrangThai: item.TrangThai || 'Chờ xử lý',
+    CanBoThuLy: item.CanBoThuLy || '',
+    PhuongAnGiaiQuyet: item.PhuongAnGiaiQuyet || '',
+    NgayGiaiQuyet: toDateString(item.NgayGiaiQuyet),
+    KetQuaGiaiQuyet: item.KetQuaGiaiQuyet || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
 export default function TranhChapPage() {
+  const [records, setRecords] = useState<TranhChapDat[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterMucDo, setFilterMucDo] = useState<string>('all');
   const [selectedVu, setSelectedVu] = useState<TranhChapDat | null>(null);
+  const [addForm, setAddForm] = useState<TranhChapDat>(emptyTranhChapForm);
+  const [editForm, setEditForm] = useState<TranhChapDat>(emptyTranhChapForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredData = mockTranhChap.filter((item) => {
+  const loadData = async () => {
+    const result = await bienDongDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'TRANH_CHAP_DAT' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    if (!addForm.MaThua.trim()) {
+      alert('Mã thửa là bắt buộc');
+      return;
+    }
+
+    const payload = {
+      LoaiBanGhi: 'TRANH_CHAP_DAT',
+      MaBienDongText: addForm.MaVu || null,
+      MaVu: addForm.MaVu || null,
+      MaThua: addForm.MaThua,
+      SoTo: addForm.SoTo || null,
+      LoaiBienDong: addForm.LoaiTranhChap || 'Tranh chấp đất',
+      NgayBienDong: addForm.NgayKhieuNai || new Date().toISOString().slice(0, 10),
+      LoaiTranhChap: addForm.LoaiTranhChap || null,
+      DiaChiThuaDat: addForm.DiaChiThuaDat || null,
+      DienTichTranhChap: toNumber(addForm.DienTichTranhChap),
+      BenKhieuNai: addForm.BenKhieuNai || null,
+      CCCDKhieuNai: addForm.CCCDKhieuNai || null,
+      SDTKhieuNai: addForm.SDTKhieuNai || null,
+      BenBiKhieuNai: addForm.BenBiKhieuNai || null,
+      CCCDBiKhieuNai: addForm.CCCDBiKhieuNai || null,
+      NgayKhieuNai: addForm.NgayKhieuNai || null,
+      NoiDung: addForm.NoiDung || null,
+      MucDo: addForm.MucDo || null,
+      TrangThai: addForm.TrangThai || 'Chờ xử lý',
+      CanBoThuLy: addForm.CanBoThuLy || null,
+      PhuongAnGiaiQuyet: addForm.PhuongAnGiaiQuyet || null,
+      NgayGiaiQuyet: addForm.NgayGiaiQuyet || null,
+      KetQuaGiaiQuyet: addForm.KetQuaGiaiQuyet || null,
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await bienDongDatApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tạo vụ tranh chấp');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyTranhChapForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedVu?.MaBienDongId) {
+      alert('Không xác định được bản ghi để cập nhật');
+      return;
+    }
+
+    const payload = {
+      MaBienDongText: editForm.MaVu || null,
+      MaVu: editForm.MaVu || null,
+      MaThua: editForm.MaThua || '',
+      SoTo: editForm.SoTo || null,
+      LoaiBienDong: editForm.LoaiTranhChap || 'Tranh chấp đất',
+      NgayBienDong: editForm.NgayKhieuNai || new Date().toISOString().slice(0, 10),
+      LoaiTranhChap: editForm.LoaiTranhChap || null,
+      DiaChiThuaDat: editForm.DiaChiThuaDat || null,
+      DienTichTranhChap: toNumber(editForm.DienTichTranhChap),
+      BenKhieuNai: editForm.BenKhieuNai || null,
+      CCCDKhieuNai: editForm.CCCDKhieuNai || null,
+      SDTKhieuNai: editForm.SDTKhieuNai || null,
+      BenBiKhieuNai: editForm.BenBiKhieuNai || null,
+      CCCDBiKhieuNai: editForm.CCCDBiKhieuNai || null,
+      NgayKhieuNai: editForm.NgayKhieuNai || null,
+      NoiDung: editForm.NoiDung || null,
+      MucDo: editForm.MucDo || null,
+      TrangThai: editForm.TrangThai || 'Chờ xử lý',
+      CanBoThuLy: editForm.CanBoThuLy || null,
+      PhuongAnGiaiQuyet: editForm.PhuongAnGiaiQuyet || null,
+      NgayGiaiQuyet: editForm.NgayGiaiQuyet || null,
+      KetQuaGiaiQuyet: editForm.KetQuaGiaiQuyet || null,
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await bienDongDatApi.update(selectedVu.MaBienDongId, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật vụ tranh chấp');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedVu(null);
+    setEditForm(emptyTranhChapForm);
+    await loadData();
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaVu.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.BenKhieuNai.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -199,12 +365,12 @@ export default function TranhChapPage() {
   });
 
   const stats = {
-    total: mockTranhChap.length,
-    choXuLy: mockTranhChap.filter(r => r.TrangThai === 'Chờ xử lý').length,
-    dangGiaiQuyet: mockTranhChap.filter(r => r.TrangThai === 'Đang giải quyết').length,
-    daGiaiQuyet: mockTranhChap.filter(r => r.TrangThai === 'Đã giải quyết').length,
-    phucTap: mockTranhChap.filter(r => r.MucDo === 'Phức tạp' || r.MucDo === 'Nghiêm trọng').length,
-    tongDienTich: mockTranhChap.reduce((sum, r) => sum + r.DienTichTranhChap, 0)
+    total: records.length,
+    choXuLy: records.filter(r => r.TrangThai === 'Chờ xử lý').length,
+    dangGiaiQuyet: records.filter(r => r.TrangThai === 'Đang giải quyết').length,
+    daGiaiQuyet: records.filter(r => r.TrangThai === 'Đã giải quyết').length,
+    phucTap: records.filter(r => r.MucDo === 'Phức tạp' || r.MucDo === 'Nghiêm trọng').length,
+    tongDienTich: records.reduce((sum, r) => sum + r.DienTichTranhChap, 0)
   };
 
   const getTrangThaiBadge = (trangThai: string) => {
@@ -239,7 +405,13 @@ export default function TranhChapPage() {
               <p className="text-orange-100">Theo dõi, giải quyết các vụ tranh chấp quyền sử dụng đất</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (open) setAddForm(emptyTranhChapForm);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="w-full 2xl:w-auto bg-white text-orange-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -254,7 +426,7 @@ export default function TranhChapPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Loại tranh chấp *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiTranhChap || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiTranhChap: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại tranh chấp" /></SelectTrigger>
                     <SelectContent>
                       {loaiTranhChapOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -263,7 +435,7 @@ export default function TranhChapPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Mức độ</Label>
-                  <Select>
+                  <Select value={addForm.MucDo || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, MucDo: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn mức độ" /></SelectTrigger>
                     <SelectContent>
                       {mucDoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -272,38 +444,38 @@ export default function TranhChapPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa liên quan *</Label>
-                  <Input placeholder="Nhập mã thửa" />
+                  <Input placeholder="Nhập mã thửa" value={addForm.MaThua} onChange={(e) => setAddForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ *</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input placeholder="Nhập số tờ" value={addForm.SoTo} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Địa chỉ thửa đất</Label>
-                  <Input placeholder="Nhập địa chỉ" />
+                  <Input placeholder="Nhập địa chỉ" value={addForm.DiaChiThuaDat} onChange={(e) => setAddForm((prev) => ({ ...prev, DiaChiThuaDat: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Diện tích tranh chấp (m²)</Label>
-                  <Input type="number" placeholder="Nhập diện tích" />
+                  <Input type="number" placeholder="Nhập diện tích" value={addForm.DienTichTranhChap} onChange={(e) => setAddForm((prev) => ({ ...prev, DienTichTranhChap: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày khiếu nại</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayKhieuNai} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayKhieuNai: e.target.value }))} />
                 </div>
                 <div className="col-span-2 border-t pt-4 mt-2">
                   <h4 className="font-semibold mb-3">Bên khiếu nại</h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Họ tên *</Label>
-                      <Input placeholder="Nhập họ tên" />
+                      <Input placeholder="Nhập họ tên" value={addForm.BenKhieuNai} onChange={(e) => setAddForm((prev) => ({ ...prev, BenKhieuNai: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
                       <Label>CCCD</Label>
-                      <Input placeholder="Nhập CCCD" />
+                      <Input placeholder="Nhập CCCD" value={addForm.CCCDKhieuNai} onChange={(e) => setAddForm((prev) => ({ ...prev, CCCDKhieuNai: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
                       <Label>Số điện thoại</Label>
-                      <Input placeholder="Nhập SĐT" />
+                      <Input placeholder="Nhập SĐT" value={addForm.SDTKhieuNai} onChange={(e) => setAddForm((prev) => ({ ...prev, SDTKhieuNai: e.target.value }))} />
                     </div>
                   </div>
                 </div>
@@ -312,26 +484,26 @@ export default function TranhChapPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Họ tên *</Label>
-                      <Input placeholder="Nhập họ tên" />
+                      <Input placeholder="Nhập họ tên" value={addForm.BenBiKhieuNai} onChange={(e) => setAddForm((prev) => ({ ...prev, BenBiKhieuNai: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
                       <Label>CCCD</Label>
-                      <Input placeholder="Nhập CCCD" />
+                      <Input placeholder="Nhập CCCD" value={addForm.CCCDBiKhieuNai} onChange={(e) => setAddForm((prev) => ({ ...prev, CCCDBiKhieuNai: e.target.value }))} />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Nội dung tranh chấp *</Label>
-                  <Textarea placeholder="Mô tả chi tiết nội dung tranh chấp" rows={3} />
+                  <Textarea placeholder="Mô tả chi tiết nội dung tranh chấp" rows={3} value={addForm.NoiDung} onChange={(e) => setAddForm((prev) => ({ ...prev, NoiDung: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Tiếp nhận</Button>
+                <Button onClick={handleCreate}>Tiếp nhận</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -615,7 +787,7 @@ export default function TranhChapPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedVu?.MaVu === item.MaVu} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedVu(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedVu(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedVu(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -630,11 +802,11 @@ export default function TranhChapPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Loại tranh chấp</Label>
-                                  <Input defaultValue={item.LoaiTranhChap} />
+                                  <Input value={editForm.LoaiTranhChap} onChange={(e) => setEditForm((prev) => ({ ...prev, LoaiTranhChap: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mức độ</Label>
-                                  <Select defaultValue={item.MucDo}>
+                                  <Select value={editForm.MucDo} onValueChange={(value) => setEditForm((prev) => ({ ...prev, MucDo: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {mucDoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -643,11 +815,11 @@ export default function TranhChapPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày khiếu nại</Label>
-                                  <Input type="date" defaultValue={item.NgayKhieuNai} />
+                                  <Input type="date" value={editForm.NgayKhieuNai} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayKhieuNai: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -662,19 +834,19 @@ export default function TranhChapPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Mã thửa</Label>
-                                  <Input defaultValue={item.MaThua} />
+                                  <Input value={editForm.MaThua} onChange={(e) => setEditForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tờ</Label>
-                                  <Input defaultValue={item.SoTo} />
+                                  <Input value={editForm.SoTo} onChange={(e) => setEditForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>DT tranh chấp (m²)</Label>
-                                  <Input type="number" defaultValue={item.DienTichTranhChap} />
+                                  <Input type="number" value={editForm.DienTichTranhChap} onChange={(e) => setEditForm((prev) => ({ ...prev, DienTichTranhChap: toNumber(e.target.value) }))} />
                                 </div>
                                 <div className="space-y-2 col-span-3">
                                   <Label>Địa chỉ thửa đất</Label>
-                                  <Input defaultValue={item.DiaChiThuaDat} />
+                                  <Input value={editForm.DiaChiThuaDat} onChange={(e) => setEditForm((prev) => ({ ...prev, DiaChiThuaDat: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -684,15 +856,15 @@ export default function TranhChapPage() {
                               <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                   <Label>Họ tên</Label>
-                                  <Input defaultValue={item.BenKhieuNai} />
+                                  <Input value={editForm.BenKhieuNai} onChange={(e) => setEditForm((prev) => ({ ...prev, BenKhieuNai: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD</Label>
-                                  <Input defaultValue={item.CCCDKhieuNai} />
+                                  <Input value={editForm.CCCDKhieuNai} onChange={(e) => setEditForm((prev) => ({ ...prev, CCCDKhieuNai: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Điện thoại</Label>
-                                  <Input defaultValue={item.SDTKhieuNai} />
+                                  <Input value={editForm.SDTKhieuNai} onChange={(e) => setEditForm((prev) => ({ ...prev, SDTKhieuNai: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
@@ -702,18 +874,18 @@ export default function TranhChapPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Họ tên</Label>
-                                  <Input defaultValue={item.BenBiKhieuNai} />
+                                  <Input value={editForm.BenBiKhieuNai} onChange={(e) => setEditForm((prev) => ({ ...prev, BenBiKhieuNai: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>CCCD</Label>
-                                  <Input defaultValue={item.CCCDBiKhieuNai} />
+                                  <Input value={editForm.CCCDBiKhieuNai} onChange={(e) => setEditForm((prev) => ({ ...prev, CCCDBiKhieuNai: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Nội dung tranh chấp</Label>
-                              <Textarea defaultValue={item.NoiDung} rows={2} />
+                              <Textarea value={editForm.NoiDung} onChange={(e) => setEditForm((prev) => ({ ...prev, NoiDung: e.target.value }))} rows={2} />
                             </div>
 
                             <div className="bg-green-50 p-4 rounded-lg">
@@ -721,31 +893,31 @@ export default function TranhChapPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Cán bộ thụ lý</Label>
-                                  <Input defaultValue={item.CanBoThuLy} />
+                                  <Input value={editForm.CanBoThuLy} onChange={(e) => setEditForm((prev) => ({ ...prev, CanBoThuLy: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày giải quyết</Label>
-                                  <Input type="date" defaultValue={item.NgayGiaiQuyet} />
+                                  <Input type="date" value={editForm.NgayGiaiQuyet} onChange={(e) => setEditForm((prev) => ({ ...prev, NgayGiaiQuyet: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Phương án giải quyết</Label>
-                                  <Textarea defaultValue={item.PhuongAnGiaiQuyet} />
+                                  <Textarea value={editForm.PhuongAnGiaiQuyet} onChange={(e) => setEditForm((prev) => ({ ...prev, PhuongAnGiaiQuyet: e.target.value }))} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Kết quả giải quyết</Label>
-                                  <Textarea defaultValue={item.KetQuaGiaiQuyet} />
+                                  <Textarea value={editForm.KetQuaGiaiQuyet} onChange={(e) => setEditForm((prev) => ({ ...prev, KetQuaGiaiQuyet: e.target.value }))} />
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>

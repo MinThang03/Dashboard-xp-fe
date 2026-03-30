@@ -1,21 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  FileSearch, MapPin, Users, CheckCircle2, Search, Download, Eye, FileText,
-  Layers, Home, Clock, TreePine
-} from 'lucide-react';
+import { FileSearch, MapPin, Users, CheckCircle2, Search, Download, Eye, FileText, Layers, Home, Clock, TreePine } from 'lucide-react';
+import { thuaDatApi } from '@/lib/api';
 
-// Mock data tra cứu đất đai
-interface ThongTinDat {
+type TraCuuDatRecord = {
   MaThua: string;
   SoTo: string;
   DiaChiThuaDat: string;
@@ -31,243 +28,162 @@ interface ThongTinDat {
   SoSoDo: string;
   NgayCapSoDo: string;
   TrangThaiPhapLy: string;
-  ToaDoX: string;
-  ToaDoY: string;
+  ToaDoX: number;
+  ToaDoY: number;
   LoThoBan: string;
   HanCheSuDung: string;
+  LoaiBanGhi: string;
+};
+
+function mapFromApi(item: any): TraCuuDatRecord {
+  return {
+    MaThua: item.MaThua || '',
+    SoTo: item.SoTo || item.SoToBanDo || '',
+    DiaChiThuaDat: item.DiaChiThuaDat || '',
+    DienTich: Number(item.DienTich || 0),
+    LoaiDat: item.LoaiDat || '',
+    MucDichSuDung: item.MucDichSuDung || '',
+    ChuSoHuu: item.ChuSoHuu || '',
+    CCCD: item.CCCD || '',
+    DiaChiThuongTru: item.DiaChiThuongTru || item.DiaChi || '',
+    SoDienThoai: item.SoDienThoai || '',
+    NguonGocSuDung: item.NguonGocSuDung || '',
+    ThoiHanSuDung: item.ThoiHanSuDung || '',
+    SoSoDo: item.SoSoDo || '',
+    NgayCapSoDo: item.NgayCapSoDo ? String(item.NgayCapSoDo).slice(0, 10) : '',
+    TrangThaiPhapLy: item.TrangThaiPhapLy || item.TrangThai || '',
+    ToaDoX: Number(item.ToaDoX || 0),
+    ToaDoY: Number(item.ToaDoY || 0),
+    LoThoBan: item.LoThoBan || '',
+    HanCheSuDung: item.HanCheSuDung || '',
+    LoaiBanGhi: item.LoaiBanGhi || '',
+  };
 }
 
-const mockThongTinDat: ThongTinDat[] = [
-  {
-    MaThua: '123',
-    SoTo: '45',
-    DiaChiThuaDat: 'Khu phố 3, phường ABC, quận XYZ',
-    DienTich: 250,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở tại đô thị',
-    ChuSoHuu: 'Nguyễn Văn An',
-    CCCD: '001234567890',
-    DiaChiThuongTru: '123 Đường ABC, phường XYZ',
-    SoDienThoai: '0901234567',
-    NguonGocSuDung: 'Nhà nước giao đất có thu tiền',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: 'BT001234',
-    NgayCapSoDo: '2020-05-15',
-    TrangThaiPhapLy: 'Đã cấp sổ đỏ',
-    ToaDoX: '106.652347',
-    ToaDoY: '10.771256',
-    LoThoBan: 'Đất vàng',
-    HanCheSuDung: 'Không'
-  },
-  {
-    MaThua: '456',
-    SoTo: '67',
-    DiaChiThuaDat: 'Thôn 2, xã DEF',
-    DienTich: 1500,
-    LoaiDat: 'Đất nông nghiệp',
-    MucDichSuDung: 'Trồng cây hàng năm',
-    ChuSoHuu: 'Trần Thị Bình',
-    CCCD: '001234567891',
-    DiaChiThuongTru: '456 Đường DEF, xã DEF',
-    SoDienThoai: '0902345678',
-    NguonGocSuDung: 'Nhà nước giao đất không thu tiền',
-    ThoiHanSuDung: '50 năm (2045)',
-    SoSoDo: 'BT002345',
-    NgayCapSoDo: '2018-03-20',
-    TrangThaiPhapLy: 'Đã cấp sổ đỏ',
-    ToaDoX: '106.543678',
-    ToaDoY: '10.654321',
-    LoThoBan: 'Đất xanh',
-    HanCheSuDung: 'Không được chuyển mục đích sử dụng'
-  },
-  {
-    MaThua: '789',
-    SoTo: '89',
-    DiaChiThuaDat: 'Khu công nghiệp GHI',
-    DienTich: 5000,
-    LoaiDat: 'Đất công nghiệp',
-    MucDichSuDung: 'Sản xuất công nghiệp',
-    ChuSoHuu: 'Công ty TNHH ABC',
-    CCCD: '0108765432',
-    DiaChiThuongTru: '789 KCN GHI',
-    SoDienThoai: '0903456789',
-    NguonGocSuDung: 'Nhà nước cho thuê đất',
-    ThoiHanSuDung: '50 năm (2055)',
-    SoSoDo: 'BT003456',
-    NgayCapSoDo: '2015-08-10',
-    TrangThaiPhapLy: 'Đã cấp sổ đỏ',
-    ToaDoX: '106.432567',
-    ToaDoY: '10.543210',
-    LoThoBan: 'Đất tím',
-    HanCheSuDung: 'Theo quy hoạch khu công nghiệp'
-  },
-  {
-    MaThua: '234',
-    SoTo: '12',
-    DiaChiThuaDat: 'Khu phố 1, phường JKL',
-    DienTich: 180,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở tại đô thị',
-    ChuSoHuu: 'Phạm Văn Cường',
-    CCCD: '001234567892',
-    DiaChiThuongTru: '234 Đường JKL',
-    SoDienThoai: '0904567890',
-    NguonGocSuDung: 'Mua bán chuyển nhượng',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: '',
-    NgayCapSoDo: '',
-    TrangThaiPhapLy: 'Đang làm sổ đỏ',
-    ToaDoX: '106.567890',
-    ToaDoY: '10.678901',
-    LoThoBan: 'Đất vàng',
-    HanCheSuDung: 'Không'
-  },
-  {
-    MaThua: '567',
-    SoTo: '34',
-    DiaChiThuaDat: 'Thôn 3, xã MNO',
-    DienTich: 800,
-    LoaiDat: 'Đất lâm nghiệp',
-    MucDichSuDung: 'Trồng rừng sản xuất',
-    ChuSoHuu: 'Hoàng Thị Dung',
-    CCCD: '001234567893',
-    DiaChiThuongTru: '567 Thôn 3, xã MNO',
-    SoDienThoai: '0905678901',
-    NguonGocSuDung: 'Nhà nước giao đất',
-    ThoiHanSuDung: '50 năm (2050)',
-    SoSoDo: 'BT004567',
-    NgayCapSoDo: '2012-11-25',
-    TrangThaiPhapLy: 'Đã cấp sổ đỏ',
-    ToaDoX: '106.345678',
-    ToaDoY: '10.456789',
-    LoThoBan: 'Đất xanh',
-    HanCheSuDung: 'Rừng phòng hộ, không được khai thác'
-  },
-  {
-    MaThua: '890',
-    SoTo: '56',
-    DiaChiThuaDat: 'Khu phố 5, phường PQR',
-    DienTich: 320,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở tại đô thị',
-    ChuSoHuu: 'Lê Văn Em',
-    CCCD: '001234567894',
-    DiaChiThuongTru: '890 Đường PQR',
-    SoDienThoai: '0906789012',
-    NguonGocSuDung: 'Thừa kế',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: 'BT005678',
-    NgayCapSoDo: '2022-02-14',
-    TrangThaiPhapLy: 'Đã cấp sổ đỏ',
-    ToaDoX: '106.678901',
-    ToaDoY: '10.789012',
-    LoThoBan: 'Đất vàng',
-    HanCheSuDung: 'Không'
-  },
-  {
-    MaThua: '345',
-    SoTo: '78',
-    DiaChiThuaDat: 'Khu đô thị mới STU',
-    DienTich: 400,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở tại đô thị',
-    ChuSoHuu: 'Nguyễn Thị Giang',
-    CCCD: '001234567895',
-    DiaChiThuongTru: '345 KĐT STU',
-    SoDienThoai: '0907890123',
-    NguonGocSuDung: 'Nhà nước giao đất có thu tiền',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: '',
-    NgayCapSoDo: '',
-    TrangThaiPhapLy: 'Chờ cấp sổ',
-    ToaDoX: '106.789012',
-    ToaDoY: '10.890123',
-    LoThoBan: 'Đất đỏ',
-    HanCheSuDung: 'Theo quy hoạch khu đô thị'
-  }
-];
-
-const loaiDatOptions = ['Đất ở', 'Đất nông nghiệp', 'Đất lâm nghiệp', 'Đất công nghiệp', 'Đất thương mại', 'Khác'];
-const trangThaiOptions = ['Đã cấp sổ đỏ', 'Đang làm sổ đỏ', 'Chờ cấp sổ', 'Chưa làm sổ'];
-
 export default function TraCuuDatPage() {
+  const [records, setRecords] = useState<TraCuuDatRecord[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<string>('all');
   const [filterLoaiDat, setFilterLoaiDat] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
-  const [selectedThua, setSelectedThua] = useState<ThongTinDat | null>(null);
+  const [selected, setSelected] = useState<TraCuuDatRecord | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
-  const filteredData = mockThongTinDat.filter((item) => {
-    let matchesSearch = false;
-    if (searchQuery === '') {
-      matchesSearch = true;
-    } else if (searchType === 'all') {
-      matchesSearch =
-        item.MaThua.includes(searchQuery) ||
-        item.SoTo.includes(searchQuery) ||
-        item.ChuSoHuu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.CCCD.includes(searchQuery) ||
-        item.SoSoDo.toLowerCase().includes(searchQuery.toLowerCase());
-    } else if (searchType === 'thua') {
-      matchesSearch = item.MaThua.includes(searchQuery);
-    } else if (searchType === 'to') {
-      matchesSearch = item.SoTo.includes(searchQuery);
-    } else if (searchType === 'chusohu') {
-      matchesSearch = item.ChuSoHuu.toLowerCase().includes(searchQuery.toLowerCase());
-    } else if (searchType === 'cccd') {
-      matchesSearch = item.CCCD.includes(searchQuery);
-    } else if (searchType === 'sodo') {
-      matchesSearch = item.SoSoDo.toLowerCase().includes(searchQuery.toLowerCase());
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await thuaDatApi.getList({ page: 1, limit: 5000 });
+      if (result.success && Array.isArray(result.data)) {
+        setRecords(result.data.map(mapFromApi));
+      }
+    } finally {
+      setLoading(false);
     }
-
-    const matchesLoaiDat = filterLoaiDat === 'all' || item.LoaiDat === filterLoaiDat;
-    const matchesTrangThai = filterTrangThai === 'all' || item.TrangThaiPhapLy === filterTrangThai;
-    return matchesSearch && matchesLoaiDat && matchesTrangThai;
-  });
-
-  const stats = {
-    tongHoSo: mockThongTinDat.length,
-    daCo: mockThongTinDat.filter(r => r.TrangThaiPhapLy === 'Đã cấp sổ đỏ').length,
-    chuaCo: mockThongTinDat.filter(r => r.TrangThaiPhapLy !== 'Đã cấp sổ đỏ').length,
-    tongDienTich: mockThongTinDat.reduce((sum, r) => sum + r.DienTich, 0),
-    chuSoHuu: new Set(mockThongTinDat.map(r => r.CCCD)).size,
-    datO: mockThongTinDat.filter(r => r.LoaiDat === 'Đất ở').length
   };
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loaiDatOptions = useMemo(() => {
+    return Array.from(new Set(records.map((x) => x.LoaiDat).filter(Boolean))).sort();
+  }, [records]);
+
+  const trangThaiOptions = useMemo(() => {
+    return Array.from(new Set(records.map((x) => x.TrangThaiPhapLy).filter(Boolean))).sort();
+  }, [records]);
+
+  const filtered = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+    return records.filter((x) => {
+      let matchesSearch = true;
+
+      if (keyword) {
+        if (searchType === 'thua') {
+          matchesSearch = x.MaThua.toLowerCase().includes(keyword);
+        } else if (searchType === 'to') {
+          matchesSearch = x.SoTo.toLowerCase().includes(keyword);
+        } else if (searchType === 'chusohuu') {
+          matchesSearch = x.ChuSoHuu.toLowerCase().includes(keyword);
+        } else if (searchType === 'cccd') {
+          matchesSearch = x.CCCD.toLowerCase().includes(keyword);
+        } else if (searchType === 'sodo') {
+          matchesSearch = x.SoSoDo.toLowerCase().includes(keyword);
+        } else {
+          matchesSearch = [x.MaThua, x.SoTo, x.ChuSoHuu, x.CCCD, x.SoSoDo, x.DiaChiThuaDat]
+            .join(' ')
+            .toLowerCase()
+            .includes(keyword);
+        }
+      }
+
+      const matchesLoaiDat = filterLoaiDat === 'all' || x.LoaiDat === filterLoaiDat;
+      const matchesTrangThai = filterTrangThai === 'all' || x.TrangThaiPhapLy === filterTrangThai;
+      return matchesSearch && matchesLoaiDat && matchesTrangThai;
+    });
+  }, [records, searchQuery, searchType, filterLoaiDat, filterTrangThai]);
+
+  const openView = (record: TraCuuDatRecord) => {
+    setSelected(record);
+    setIsViewOpen(true);
+  };
+
+  const stats = useMemo(() => {
+    const tongHoSo = records.length;
+    const daCo = records.filter((r) => r.TrangThaiPhapLy.toLowerCase().includes('đã cấp')).length;
+    const chuaCo = tongHoSo - daCo;
+    const tongDienTich = records.reduce((sum, r) => sum + r.DienTich, 0);
+    const chuSoHuu = new Set(records.map((r) => r.CCCD).filter(Boolean)).size;
+    const datO = records.filter((r) => r.LoaiDat.toLowerCase().includes('đất ở')).length;
+    return { tongHoSo, daCo, chuaCo, tongDienTich, chuSoHuu, datO };
+  }, [records]);
+
   const getTrangThaiBadge = (trangThai: string) => {
-    switch (trangThai) {
-      case 'Đã cấp sổ đỏ': return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      case 'Đang làm sổ đỏ': return <Badge className="bg-blue-500 hover:bg-blue-600"><Clock className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      case 'Chờ cấp sổ': return <Badge className="bg-amber-500 hover:bg-amber-600"><Clock className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      default: return <Badge variant="secondary">{trangThai}</Badge>;
+    if (!trangThai) return <Badge variant="secondary">Chưa cập nhật</Badge>;
+    const value = trangThai.toLowerCase();
+    if (value.includes('đã cấp')) {
+      return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />{trangThai}</Badge>;
     }
+    if (value.includes('đang')) {
+      return <Badge className="bg-blue-500 hover:bg-blue-600"><Clock className="h-3 w-3 mr-1" />{trangThai}</Badge>;
+    }
+    if (value.includes('chờ') || value.includes('chưa')) {
+      return <Badge className="bg-amber-500 hover:bg-amber-600"><Clock className="h-3 w-3 mr-1" />{trangThai}</Badge>;
+    }
+    return <Badge variant="outline">{trangThai}</Badge>;
   };
 
   const getLoaiDatBadge = (loaiDat: string) => {
-    switch (loaiDat) {
-      case 'Đất ở': return <Badge className="bg-rose-500 hover:bg-rose-600"><Home className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
-      case 'Đất nông nghiệp': return <Badge className="bg-green-500 hover:bg-green-600"><TreePine className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
-      case 'Đất lâm nghiệp': return <Badge className="bg-emerald-600 hover:bg-emerald-700"><TreePine className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
-      case 'Đất công nghiệp': return <Badge className="bg-purple-500 hover:bg-purple-600"><Layers className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
-      default: return <Badge variant="outline">{loaiDat}</Badge>;
+    if (!loaiDat) return <Badge variant="outline">Chưa rõ</Badge>;
+    const value = loaiDat.toLowerCase();
+    if (value.includes('đất ở')) {
+      return <Badge className="bg-rose-500 hover:bg-rose-600"><Home className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
     }
+    if (value.includes('nông nghiệp')) {
+      return <Badge className="bg-green-500 hover:bg-green-600"><TreePine className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
+    }
+    if (value.includes('lâm nghiệp')) {
+      return <Badge className="bg-emerald-600 hover:bg-emerald-700"><TreePine className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
+    }
+    if (value.includes('công nghiệp')) {
+      return <Badge className="bg-purple-500 hover:bg-purple-600"><Layers className="h-3 w-3 mr-1" />{loaiDat}</Badge>;
+    }
+    return <Badge variant="outline">{loaiDat}</Badge>;
   };
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
-      {/* Header */}
       <div className="bg-gradient-to-r from-secondary via-primary to-secondary rounded-lg p-4 sm:p-5 xl:p-6 text-white">
         <div className="flex items-center gap-3">
           <FileSearch className="h-8 w-8" />
           <div>
-            <h1 className="text-2xl font-bold">Tra cứu Hồ sơ Địa chính</h1>
-            <p className="text-teal-100">Tra cứu thông tin thửa đất, sổ đỏ, chủ sở hữu</p>
+            <h1 className="text-2xl font-bold">Tra cứu hồ sơ đất đai</h1>
+            <p className="text-teal-100">Tra cứu thông tin thửa đất, sổ đỏ, chủ sở hữu theo dữ liệu backend</p>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card className="border-l-4 border-l-teal-500">
           <CardHeader className="pb-2">
@@ -331,25 +247,24 @@ export default function TraCuuDatPage() {
 
         <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng DT (m²)</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng DT (m2)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Layers className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.tongDienTich.toLocaleString()}</span>
+              <span className="text-2xl font-bold">{stats.tongDienTich.toLocaleString('vi-VN')}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
             Tìm kiếm thông tin đất đai
           </CardTitle>
-          <CardDescription>Nhập thông tin để tra cứu hồ sơ địa chính</CardDescription>
+          <CardDescription>Nhập thông tin để tra cứu hồ sơ địa chính | Kết quả: {filtered.length} hồ sơ</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
@@ -361,7 +276,7 @@ export default function TraCuuDatPage() {
                 <SelectItem value="all">Tất cả</SelectItem>
                 <SelectItem value="thua">Mã thửa</SelectItem>
                 <SelectItem value="to">Số tờ bản đồ</SelectItem>
-                <SelectItem value="chusohu">Tên chủ sở hữu</SelectItem>
+                <SelectItem value="chusohuu">Tên chủ sở hữu</SelectItem>
                 <SelectItem value="cccd">Số CCCD</SelectItem>
                 <SelectItem value="sodo">Số sổ đỏ</SelectItem>
               </SelectContent>
@@ -381,7 +296,7 @@ export default function TraCuuDatPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả loại đất</SelectItem>
-                {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                {loaiDatOptions.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterTrangThai} onValueChange={setFilterTrangThai}>
@@ -390,22 +305,21 @@ export default function TraCuuDatPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                {trangThaiOptions.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline">
+            <Button variant="outline" onClick={loadData}>
               <Download className="mr-2 h-4 w-4" />
-              Xuất Excel
+              Làm mới
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Kết quả tra cứu</CardTitle>
-          <CardDescription>Tìm thấy {filteredData.length} thửa đất</CardDescription>
+          <CardDescription>Tìm thấy {filtered.length} thửa đất {loading ? '(đang tải...)' : ''}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -422,160 +336,155 @@ export default function TraCuuDatPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={`${item.MaThua}-${item.SoTo}`}>
+              {filtered.map((x) => (
+                <TableRow key={`${x.MaThua}-${x.LoaiBanGhi || x.SoTo}`}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      {item.MaThua} / {item.SoTo}
+                      {x.MaThua || '-'} / {x.SoTo || '-'}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="max-w-[200px] truncate" title={item.DiaChiThuaDat}>
-                      {item.DiaChiThuaDat}
-                    </div>
+                    <div className="max-w-[200px] truncate" title={x.DiaChiThuaDat}>{x.DiaChiThuaDat || '-'}</div>
                   </TableCell>
-                  <TableCell>{getLoaiDatBadge(item.LoaiDat)}</TableCell>
-                  <TableCell className="font-medium">{item.DienTich.toLocaleString()} m²</TableCell>
+                  <TableCell>{getLoaiDatBadge(x.LoaiDat)}</TableCell>
+                  <TableCell className="font-medium">{x.DienTich.toLocaleString('vi-VN')} m2</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
                       <Users className="h-3 w-3" />
-                      {item.ChuSoHuu}
+                      {x.ChuSoHuu || '-'}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {item.SoSoDo ? (
-                      <span className="text-primary font-medium">{item.SoSoDo}</span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{getTrangThaiBadge(item.TrangThaiPhapLy)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end">
-                      <Dialog open={isViewOpen && selectedThua?.MaThua === item.MaThua} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedThua(null); }}>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedThua(item); setIsViewOpen(true); }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Chi tiết thửa đất</DialogTitle>
-                            <DialogDescription>Thửa {item.MaThua}, Tờ bản đồ {item.SoTo}</DialogDescription>
-                          </DialogHeader>
-                          <div className="grid grid-cols-2 gap-4 py-4">
-                            <div className="col-span-2 border-b pb-4 mb-2">
-                              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                <MapPin className="h-4 w-4" />
-                                Thông tin thửa đất
-                              </h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Mã thửa / Số tờ</p>
-                                  <p className="font-medium">{item.MaThua} / {item.SoTo}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Diện tích</p>
-                                  <p className="font-medium">{item.DienTich.toLocaleString()} m²</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Loại đất</p>
-                                  {getLoaiDatBadge(item.LoaiDat)}
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Mục đích sử dụng</p>
-                                  <p className="font-medium">{item.MucDichSuDung}</p>
-                                </div>
-                                <div className="space-y-1 col-span-2">
-                                  <p className="text-sm text-muted-foreground">Địa chỉ</p>
-                                  <p className="font-medium">{item.DiaChiThuaDat}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Tọa độ X</p>
-                                  <p className="font-medium">{item.ToaDoX}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Tọa độ Y</p>
-                                  <p className="font-medium">{item.ToaDoY}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Lô thổ bản</p>
-                                  <p className="font-medium">{item.LoThoBan}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Hạn chế sử dụng</p>
-                                  <p className="font-medium">{item.HanCheSuDung}</p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="col-span-2 border-b pb-4 mb-2">
-                              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                <Users className="h-4 w-4" />
-                                Thông tin chủ sở hữu
-                              </h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Họ tên</p>
-                                  <p className="font-medium">{item.ChuSoHuu}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Số CCCD</p>
-                                  <p className="font-medium">{item.CCCD}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Điện thoại</p>
-                                  <p className="font-medium">{item.SoDienThoai}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Địa chỉ thường trú</p>
-                                  <p className="font-medium">{item.DiaChiThuongTru}</p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="col-span-2">
-                              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                Thông tin pháp lý
-                              </h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Nguồn gốc sử dụng</p>
-                                  <p className="font-medium">{item.NguonGocSuDung}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Thời hạn sử dụng</p>
-                                  <p className="font-medium">{item.ThoiHanSuDung}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Số sổ đỏ</p>
-                                  <p className="font-medium">{item.SoSoDo || 'Chưa cấp'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Ngày cấp</p>
-                                  <p className="font-medium">{item.NgayCapSoDo || 'Chưa cấp'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-muted-foreground">Trạng thái pháp lý</p>
-                                  {getTrangThaiBadge(item.TrangThaiPhapLy)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                  <TableCell>{x.SoSoDo ? <span className="text-primary font-medium">{x.SoSoDo}</span> : <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell>{getTrangThaiBadge(x.TrangThaiPhapLy)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" onClick={() => openView(x)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
+              {!loading && filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">Không có dữ liệu</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Hướng dẫn tra cứu */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chi tiết thửa đất</DialogTitle>
+            <DialogDescription>Thửa {selected?.MaThua || '-'}, Tờ bản đồ {selected?.SoTo || '-'}</DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="col-span-2 border-b pb-4 mb-2">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Thông tin thửa đất
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Mã thửa / Số tờ</p>
+                    <p className="font-medium">{selected.MaThua || '-'} / {selected.SoTo || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Diện tích</p>
+                    <p className="font-medium">{selected.DienTich.toLocaleString('vi-VN')} m2</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Loại đất</p>
+                    {getLoaiDatBadge(selected.LoaiDat)}
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Mục đích sử dụng</p>
+                    <p className="font-medium">{selected.MucDichSuDung || '-'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Địa chỉ</p>
+                    <p className="font-medium">{selected.DiaChiThuaDat || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Tọa độ X</p>
+                    <p className="font-medium">{selected.ToaDoX || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Tọa độ Y</p>
+                    <p className="font-medium">{selected.ToaDoY || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Lô thổ bản</p>
+                    <p className="font-medium">{selected.LoThoBan || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Hạn chế sử dụng</p>
+                    <p className="font-medium">{selected.HanCheSuDung || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-2 border-b pb-4 mb-2">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Thông tin chủ sở hữu
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Họ tên</p>
+                    <p className="font-medium">{selected.ChuSoHuu || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Số CCCD</p>
+                    <p className="font-medium">{selected.CCCD || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Điện thoại</p>
+                    <p className="font-medium">{selected.SoDienThoai || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Địa chỉ thường trú</p>
+                    <p className="font-medium">{selected.DiaChiThuongTru || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Thông tin pháp lý
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Nguồn gốc sử dụng</p>
+                    <p className="font-medium">{selected.NguonGocSuDung || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Thời hạn sử dụng</p>
+                    <p className="font-medium">{selected.ThoiHanSuDung || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Số sổ đỏ</p>
+                    <p className="font-medium">{selected.SoSoDo || 'Chưa cấp'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Ngày cấp</p>
+                    <p className="font-medium">{selected.NgayCapSoDo || 'Chưa cấp'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Trạng thái pháp lý</p>
+                    {getTrangThaiBadge(selected.TrangThaiPhapLy)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card className="border-l-4 border-l-blue-500">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-blue-600">
@@ -583,13 +492,10 @@ export default function TraCuuDatPage() {
             Hướng dẫn tra cứu
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-            <li>Có thể tra cứu theo mã thửa, số tờ bản đồ, tên chủ sở hữu, số CCCD hoặc số sổ đỏ</li>
-            <li>Sử dụng bộ lọc để thu hẹp phạm vi tìm kiếm theo loại đất hoặc trạng thái pháp lý</li>
-            <li>Nhấn vào biểu tượng <Eye className="inline h-3 w-3" /> để xem chi tiết thông tin thửa đất</li>
-            <li>Xuất Excel để lưu trữ và báo cáo</li>
-          </ul>
+        <CardContent className="space-y-1 text-muted-foreground text-sm">
+          <p>- Có thể tra cứu theo mã thửa, số tờ bản đồ, tên chủ sở hữu, CCCD hoặc số sổ đỏ.</p>
+          <p>- Sử dụng bộ lọc để thu hẹp kết quả theo loại đất và trạng thái pháp lý.</p>
+          <p>- Nhấn biểu tượng mắt để xem toàn bộ thông tin chi tiết của thửa đất.</p>
         </CardContent>
       </Card>
     </div>

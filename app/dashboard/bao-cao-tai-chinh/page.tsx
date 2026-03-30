@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,12 +33,59 @@ import {
   TrendingDown,
   DollarSign,
 } from 'lucide-react';
-import { mockBaoCaoTaiChinh } from '@/lib/mock-data';
+import { nganSachApi } from '@/lib/api';
+
+type BaoCaoTaiChinhRecord = {
+  MaNganSach: number;
+  MaBaoCao: string;
+  TenBaoCao: string;
+  LoaiBaoCao: string;
+  KyBaoCao: string;
+  NgayLap: string;
+  NguoiLap: string;
+  TrangThai: string;
+  GhiChu: string;
+  SoLieuTaiChinh: {
+    TongThu: number;
+    TongChi: number;
+    TonQuy: number;
+  };
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): BaoCaoTaiChinhRecord {
+  return {
+    MaNganSach: Number(item.MaNganSach),
+    MaBaoCao: item.MaBaoCao || item.MaNganSach || '',
+    TenBaoCao: item.TenBaoCao || '',
+    LoaiBaoCao: item.LoaiBaoCao || 'Báo cáo tháng',
+    KyBaoCao: item.KyBaoCao || '',
+    NgayLap: toDateString(item.NgayLap),
+    NguoiLap: item.NguoiLap || '',
+    TrangThai: item.TrangThai || 'Chờ duyệt',
+    GhiChu: item.GhiChu || '',
+    SoLieuTaiChinh: {
+      TongThu: toNumber(item.TongThu),
+      TongChi: toNumber(item.TongChi),
+      TonQuy: toNumber(item.TonQuy),
+    },
+  };
+}
 
 export default function BaoCaoTaiChinhPage() {
   const router = useRouter();
+  const [reports, setReports] = useState<BaoCaoTaiChinhRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [selectedReport, setSelectedReport] = useState<BaoCaoTaiChinhRecord | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -56,21 +103,34 @@ export default function BaoCaoTaiChinhPage() {
     GhiChu: '',
   });
 
+  const loadData = async () => {
+    const result = await nganSachApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'BAO_CAO_TAI_CHINH' });
+    if (result.success && Array.isArray(result.data)) {
+      setReports(result.data.map(mapFromApi));
+      return;
+    }
+    setReports([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Tính toán thống kê
   const stats = {
-    baoCaoThang: mockBaoCaoTaiChinh.filter(bc => bc.LoaiBaoCao === 'Báo cáo tháng').length,
-    baoCaoQuy: mockBaoCaoTaiChinh.filter(bc => bc.LoaiBaoCao === 'Báo cáo quý').length,
-    daDuyet: mockBaoCaoTaiChinh.filter(bc => bc.TrangThai === 'Đã duyệt').length,
-    choDuyet: mockBaoCaoTaiChinh.filter(bc => bc.TrangThai === 'Chờ duyệt').length,
+    baoCaoThang: reports.filter((bc) => bc.LoaiBaoCao === 'Báo cáo tháng').length,
+    baoCaoQuy: reports.filter((bc) => bc.LoaiBaoCao === 'Báo cáo quý' || bc.LoaiBaoCao === 'Báo cáo năm').length,
+    daDuyet: reports.filter((bc) => bc.TrangThai === 'Đã duyệt').length,
+    choDuyet: reports.filter((bc) => bc.TrangThai === 'Chờ duyệt').length,
   };
 
   // Lọc dữ liệu
-  const filteredData = mockBaoCaoTaiChinh.filter(bc =>
+  const filteredData = reports.filter((bc) =>
     bc.TenBaoCao.toLowerCase().includes(searchQuery.toLowerCase()) ||
     bc.KyBaoCao.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleView = (report: any) => {
+  const handleView = (report: BaoCaoTaiChinhRecord) => {
     setSelectedReport(report);
     setIsViewOpen(true);
   };
@@ -82,9 +142,9 @@ export default function BaoCaoTaiChinhPage() {
         bc.MaBaoCao,
         bc.TenBaoCao,
         bc.KyBaoCao,
-        bc.TongThu,
-        bc.TongChi,
-        bc.TonQuy,
+        bc.SoLieuTaiChinh?.TongThu ?? 0,
+        bc.SoLieuTaiChinh?.TongChi ?? 0,
+        bc.SoLieuTaiChinh?.TonQuy ?? 0,
         bc.TrangThai
       ])
     ].map(row => row.join(',')).join('\n');
@@ -112,7 +172,7 @@ export default function BaoCaoTaiChinhPage() {
     setIsAddOpen(true);
   };
 
-  const handleEdit = (report: any) => {
+  const handleEdit = (report: BaoCaoTaiChinhRecord) => {
     setSelectedReport(report);
     setFormData({
       TenBaoCao: report.TenBaoCao || '',
@@ -129,18 +189,46 @@ export default function BaoCaoTaiChinhPage() {
     setIsEditOpen(true);
   };
 
-  const handleSaveReport = () => {
-    console.log('Saving report:', formData);
+  const handleSaveReport = async () => {
+    const year = formData.NgayLap ? Number(String(formData.NgayLap).slice(0, 4)) : new Date().getFullYear();
+    const payload = {
+      LoaiBanGhi: 'BAO_CAO_TAI_CHINH',
+      Nam: year,
+      TongDuToan: toNumber(formData.TongThu),
+      DaGiaiNgan: toNumber(formData.TongChi),
+      TrangThai: formData.TrangThai || 'Chờ duyệt',
+      TenBaoCao: formData.TenBaoCao || null,
+      LoaiBaoCao: formData.LoaiBaoCao || null,
+      KyBaoCao: formData.KyBaoCao || null,
+      NgayLap: formData.NgayLap || null,
+      NguoiLap: formData.NguoiLap || null,
+      TongThu: toNumber(formData.TongThu),
+      TongChi: toNumber(formData.TongChi),
+      TonQuy: toNumber(formData.TonQuy),
+      GhiChu: formData.GhiChu || null,
+    };
+
+    const result = isEditOpen && selectedReport
+      ? await nganSachApi.update(selectedReport.MaNganSach, payload)
+      : await nganSachApi.create(payload);
+
+    if (!result.success) {
+      alert(result.message || 'Không thể lưu báo cáo tài chính');
+      return;
+    }
+
     setIsAddOpen(false);
     setIsEditOpen(false);
+    setSelectedReport(null);
+    await loadData();
   };
 
   const handleFilter = () => {
     setIsFilterOpen(true);
   };
 
-  const handleDownload = (item: any) => {
-    const content = `Báo cáo: ${item.TenBaoCao}\nMã: ${item.MaBaoCao}\nKỳ: ${item.KyBaoCao}\nTổng thu: ${item.TongThu}\nTổng chi: ${item.TongChi}\nTồn quỹ: ${item.TonQuy}`;
+  const handleDownload = (item: BaoCaoTaiChinhRecord) => {
+    const content = `Báo cáo: ${item.TenBaoCao}\nMã: ${item.MaBaoCao}\nKỳ: ${item.KyBaoCao}\nTổng thu: ${item.SoLieuTaiChinh?.TongThu ?? 0}\nTổng chi: ${item.SoLieuTaiChinh?.TongChi ?? 0}\nTồn quỹ: ${item.SoLieuTaiChinh?.TonQuy ?? 0}`;
     const blob = new Blob([content], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,41 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  MapPin,
-  Search,
-  Plus,
-  Download,
-  User,
-  Calendar,
-  FileText,
-  AlertTriangle,
-  Eye,
-  Edit,
-  Map,
-  Building2,
-  LandPlot,
-  Scale,
-  ClipboardList,
-  CheckCircle2,
-  Clock,
-  XCircle
-} from 'lucide-react';
-import {
-  ALERT_PERIOD_LABELS,
-  ALERT_RISK_LABELS,
-  type AlertPeriod,
-  type AlertRiskLevel,
-  filterSignalsByCommonFilters,
-  getLandAlerts,
-} from '@/lib/frontend-dss';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Plus, Pencil, Trash2, Eye, MapPin } from 'lucide-react';
+import { thuaDatApi } from '@/lib/api';
 
-// Mock data theo database schema DiaChinhHoSo
-interface DiaChinhHoSo {
-  MaHoSo: string;
+type DiaChinhRecord = {
   MaThua: string;
+  MaHoSo: string;
   SoTo: string;
   DienTich: number;
   LoaiDat: string;
@@ -60,772 +32,380 @@ interface DiaChinhHoSo {
   CanBoNhapLieu: string;
   TrangThai: string;
   GhiChu: string;
+};
+
+type DiaChinhForm = DiaChinhRecord;
+
+const emptyForm: DiaChinhForm = {
+  MaThua: '',
+  MaHoSo: '',
+  SoTo: '',
+  DienTich: 0,
+  LoaiDat: '',
+  MucDichSuDung: '',
+  ChuSoHuu: '',
+  CCCD: '',
+  DiaChiThuaDat: '',
+  ToaDoX: 0,
+  ToaDoY: 0,
+  NguonGocSuDung: '',
+  ThoiHanSuDung: '',
+  SoSoDo: '',
+  NgayCapSoDo: '',
+  NgayNhapLieu: '',
+  CanBoNhapLieu: '',
+  TrangThai: 'Đang xử lý',
+  GhiChu: '',
+};
+
+function toNumber(value: string): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
-const mockDiaChinhData: DiaChinhHoSo[] = [
-  {
-    MaHoSo: 'DC001',
-    MaThua: '123/45',
-    SoTo: 'Tờ 15',
-    DienTich: 120.5,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở đô thị',
-    ChuSoHuu: 'Nguyễn Văn An',
-    CCCD: '001234567890',
-    DiaChiThuaDat: 'Số 15, Đường Trần Phú, Khu phố 3',
-    ToaDoX: 21.0285,
-    ToaDoY: 105.8542,
-    NguonGocSuDung: 'Nhà nước giao có thu tiền',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: 'AO 123456',
-    NgayCapSoDo: '2020-05-15',
-    NgayNhapLieu: '2024-01-15',
-    CanBoNhapLieu: 'Trần Văn Bình',
-    TrangThai: 'Đã cấp sổ',
-    GhiChu: 'Hồ sơ đầy đủ'
-  },
-  {
-    MaHoSo: 'DC002',
-    MaThua: '156/78',
-    SoTo: 'Tờ 12',
-    DienTich: 85.3,
-    LoaiDat: 'Đất nông nghiệp',
-    MucDichSuDung: 'Đất trồng cây hàng năm',
-    ChuSoHuu: 'Trần Thị Bình',
-    CCCD: '001234567891',
-    DiaChiThuaDat: 'Khu đồng A, Thôn 2',
-    ToaDoX: 21.0290,
-    ToaDoY: 105.8550,
-    NguonGocSuDung: 'Nhà nước giao không thu tiền',
-    ThoiHanSuDung: '50 năm',
-    SoSoDo: '',
-    NgayCapSoDo: '',
-    NgayNhapLieu: '2024-01-16',
-    CanBoNhapLieu: 'Nguyễn Thị Lan',
-    TrangThai: 'Chờ cấp sổ',
-    GhiChu: 'Đang chờ xác minh nguồn gốc'
-  },
-  {
-    MaHoSo: 'DC003',
-    MaThua: '234/12',
-    SoTo: 'Tờ 18',
-    DienTich: 200.0,
-    LoaiDat: 'Đất thương mại',
-    MucDichSuDung: 'Đất thương mại dịch vụ',
-    ChuSoHuu: 'Công ty TNHH ABC',
-    CCCD: '0100123456',
-    DiaChiThuaDat: 'Số 45, Đường Lê Lợi, Khu phố 1',
-    ToaDoX: 21.0275,
-    ToaDoY: 105.8530,
-    NguonGocSuDung: 'Nhà nước cho thuê đất',
-    ThoiHanSuDung: '50 năm',
-    SoSoDo: '',
-    NgayCapSoDo: '',
-    NgayNhapLieu: '2024-01-17',
-    CanBoNhapLieu: 'Lê Văn Cường',
-    TrangThai: 'Tranh chấp',
-    GhiChu: 'Có tranh chấp ranh giới với thửa liền kề'
-  },
-  {
-    MaHoSo: 'DC004',
-    MaThua: '345/67',
-    SoTo: 'Tờ 20',
-    DienTich: 150.8,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở nông thôn',
-    ChuSoHuu: 'Phạm Thị Dung',
-    CCCD: '001234567892',
-    DiaChiThuaDat: 'Thôn 3, Xã ABC',
-    ToaDoX: 21.0265,
-    ToaDoY: 105.8520,
-    NguonGocSuDung: 'Thừa kế quyền sử dụng đất',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: '',
-    NgayCapSoDo: '',
-    NgayNhapLieu: '2024-01-18',
-    CanBoNhapLieu: 'Trần Văn Bình',
-    TrangThai: 'Đang xử lý',
-    GhiChu: 'Đang thẩm định hồ sơ'
-  },
-  {
-    MaHoSo: 'DC005',
-    MaThua: '456/89',
-    SoTo: 'Tờ 22',
-    DienTich: 300.0,
-    LoaiDat: 'Đất công cộng',
-    MucDichSuDung: 'Đất xây dựng công trình công cộng',
-    ChuSoHuu: 'UBND Xã/Phường',
-    CCCD: '',
-    DiaChiThuaDat: 'Khu trung tâm, Khu phố 2',
-    ToaDoX: 21.0295,
-    ToaDoY: 105.8560,
-    NguonGocSuDung: 'Đất quản lý nhà nước',
-    ThoiHanSuDung: 'Không xác định',
-    SoSoDo: 'CN 789012',
-    NgayCapSoDo: '2018-03-20',
-    NgayNhapLieu: '2024-01-10',
-    CanBoNhapLieu: 'Nguyễn Thị Lan',
-    TrangThai: 'Đã cấp sổ',
-    GhiChu: 'Đất công viên cây xanh'
-  },
-  {
-    MaHoSo: 'DC006',
-    MaThua: '567/90',
-    SoTo: 'Tờ 25',
-    DienTich: 95.2,
-    LoaiDat: 'Đất ở',
-    MucDichSuDung: 'Đất ở đô thị',
-    ChuSoHuu: 'Hoàng Văn Em',
-    CCCD: '001234567893',
-    DiaChiThuaDat: 'Số 78, Đường Nguyễn Huệ, Khu phố 4',
-    ToaDoX: 21.0280,
-    ToaDoY: 105.8545,
-    NguonGocSuDung: 'Chuyển nhượng quyền sử dụng đất',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: 'AO 654321',
-    NgayCapSoDo: '2022-08-10',
-    NgayNhapLieu: '2024-01-20',
-    CanBoNhapLieu: 'Lê Văn Cường',
-    TrangThai: 'Đã cấp sổ',
-    GhiChu: ''
-  },
-  {
-    MaHoSo: 'DC007',
-    MaThua: '678/01',
-    SoTo: 'Tờ 28',
-    DienTich: 500.0,
-    LoaiDat: 'Đất nông nghiệp',
-    MucDichSuDung: 'Đất trồng cây lâu năm',
-    ChuSoHuu: 'Nguyễn Thị Phương',
-    CCCD: '001234567894',
-    DiaChiThuaDat: 'Khu đồng B, Thôn 1',
-    ToaDoX: 21.0260,
-    ToaDoY: 105.8510,
-    NguonGocSuDung: 'Nhà nước giao không thu tiền',
-    ThoiHanSuDung: '50 năm',
-    SoSoDo: 'AO 987654',
-    NgayCapSoDo: '2021-12-05',
-    NgayNhapLieu: '2024-01-22',
-    CanBoNhapLieu: 'Trần Văn Bình',
-    TrangThai: 'Đã cấp sổ',
-    GhiChu: 'Vườn cây ăn trái'
-  },
-  {
-    MaHoSo: 'DC008',
-    MaThua: '789/12',
-    SoTo: 'Tờ 30',
-    DienTich: 180.5,
-    LoaiDat: 'Đất hỗn hợp',
-    MucDichSuDung: 'Đất ở kết hợp thương mại',
-    ChuSoHuu: 'Lê Văn Giang',
-    CCCD: '001234567895',
-    DiaChiThuaDat: 'Số 123, Đường Hai Bà Trưng, Khu phố 5',
-    ToaDoX: 21.0300,
-    ToaDoY: 105.8570,
-    NguonGocSuDung: 'Nhà nước giao có thu tiền',
-    ThoiHanSuDung: 'Lâu dài',
-    SoSoDo: '',
-    NgayCapSoDo: '',
-    NgayNhapLieu: '2024-01-25',
-    CanBoNhapLieu: 'Nguyễn Thị Lan',
-    TrangThai: 'Chờ cấp sổ',
-    GhiChu: 'Hồ sơ hoàn thiện, chờ in sổ'
-  }
-];
-
-const loaiDatOptions = ['Đất ở', 'Đất nông nghiệp', 'Đất thương mại', 'Đất công cộng', 'Đất hỗn hợp'];
-const trangThaiOptions = ['Đã cấp sổ', 'Chờ cấp sổ', 'Đang xử lý', 'Tranh chấp'];
+function mapFromApi(item: any): DiaChinhRecord {
+  return {
+    MaThua: item.MaThua || '',
+    MaHoSo: item.MaHoSo || '',
+    SoTo: item.SoTo || item.SoToBanDo || '',
+    DienTich: Number(item.DienTich || 0),
+    LoaiDat: item.LoaiDat || '',
+    MucDichSuDung: item.MucDichSuDung || '',
+    ChuSoHuu: item.ChuSoHuu || '',
+    CCCD: item.CCCD || '',
+    DiaChiThuaDat: item.DiaChiThuaDat || '',
+    ToaDoX: Number(item.ToaDoX || 0),
+    ToaDoY: Number(item.ToaDoY || 0),
+    NguonGocSuDung: item.NguonGocSuDung || '',
+    ThoiHanSuDung: item.ThoiHanSuDung || '',
+    SoSoDo: item.SoSoDo || '',
+    NgayCapSoDo: item.NgayCapSoDo ? String(item.NgayCapSoDo).slice(0, 10) : '',
+    NgayNhapLieu: item.NgayNhapLieu ? String(item.NgayNhapLieu).slice(0, 10) : '',
+    CanBoNhapLieu: item.CanBoNhapLieu || '',
+    TrangThai: item.TrangThai || 'Đang xử lý',
+    GhiChu: item.GhiChu || '',
+  };
+}
 
 export default function DiaChinhPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterLoaiDat, setFilterLoaiDat] = useState<string>('all');
-  const [selectedRecord, setSelectedRecord] = useState<DiaChinhHoSo | null>(null);
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [records, setRecords] = useState<DiaChinhRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<DiaChinhRecord | null>(null);
+  const [form, setForm] = useState<DiaChinhForm>(emptyForm);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
-  const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
-  const filteredRecords = mockDiaChinhData.filter((record) => {
-    const matchesSearch =
-      record.MaHoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.ChuSoHuu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.MaThua.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.DiaChiThuaDat.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || record.TrangThai === filterStatus;
-    const matchesLoaiDat = filterLoaiDat === 'all' || record.LoaiDat === filterLoaiDat;
-    return matchesSearch && matchesStatus && matchesLoaiDat;
-  });
-
-  const stats = {
-    total: mockDiaChinhData.length,
-    daCap: mockDiaChinhData.filter((r) => r.TrangThai === 'Đã cấp sổ').length,
-    choCap: mockDiaChinhData.filter((r) => r.TrangThai === 'Chờ cấp sổ').length,
-    dangXuLy: mockDiaChinhData.filter((r) => r.TrangThai === 'Đang xử lý').length,
-    tranhChap: mockDiaChinhData.filter((r) => r.TrangThai === 'Tranh chấp').length,
-    tongDienTich: mockDiaChinhData.reduce((sum, r) => sum + r.DienTich, 0),
-  };
-
-  const landSignals = filterSignalsByCommonFilters(getLandAlerts(stats.tranhChap), {
-    period: filterPeriod,
-    risk: filterRisk,
-  });
-
-  const getTrangThaiBadge = (trangThai: string) => {
-    switch (trangThai) {
-      case 'Đã cấp sổ': return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      case 'Chờ cấp sổ': return <Badge className="bg-amber-500 hover:bg-amber-600"><Clock className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      case 'Đang xử lý': return <Badge className="bg-blue-500 hover:bg-blue-600"><ClipboardList className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      case 'Tranh chấp': return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />{trangThai}</Badge>;
-      default: return <Badge variant="secondary">{trangThai}</Badge>;
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await thuaDatApi.getList({ page: 1, limit: 1000, loaiBanGhi: 'DIA_CHINH' });
+      if (result.success && Array.isArray(result.data)) {
+        setRecords(result.data.map(mapFromApi));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getLoaiDatBadge = (loaiDat: string) => {
-    const colors: Record<string, string> = {
-      'Đất ở': 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-      'Đất nông nghiệp': 'bg-green-100 text-green-800 hover:bg-green-200',
-      'Đất thương mại': 'bg-purple-100 text-purple-800 hover:bg-purple-200',
-      'Đất công cộng': 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-      'Đất hỗn hợp': 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return records;
+    return records.filter((x) =>
+      [x.MaThua, x.SoTo, x.ChuSoHuu, x.DiaChiThuaDat, x.LoaiDat].some((v) => v.toLowerCase().includes(keyword)),
+    );
+  }, [records, search]);
+
+  const handleCreate = async () => {
+    if (!form.MaThua.trim()) {
+      alert('Mã thửa là bắt buộc');
+      return;
+    }
+
+    const payload = {
+      LoaiBanGhi: 'DIA_CHINH',
+      MaThua: form.MaThua.trim(),
+      SoThua: form.MaThua.trim(),
+      SoToBanDo: form.SoTo || null,
+      MaHoSo: form.MaHoSo || null,
+      SoTo: form.SoTo || null,
+      DienTich: form.DienTich,
+      LoaiDat: form.LoaiDat || null,
+      MucDichSuDung: form.MucDichSuDung || null,
+      ChuSoHuu: form.ChuSoHuu || null,
+      CCCD: form.CCCD || null,
+      DiaChiThuaDat: form.DiaChiThuaDat || null,
+      ToaDoX: form.ToaDoX,
+      ToaDoY: form.ToaDoY,
+      NguonGocSuDung: form.NguonGocSuDung || null,
+      ThoiHanSuDung: form.ThoiHanSuDung || null,
+      SoSoDo: form.SoSoDo || null,
+      NgayCapSoDo: form.NgayCapSoDo || null,
+      NgayNhapLieu: form.NgayNhapLieu || null,
+      CanBoNhapLieu: form.CanBoNhapLieu || null,
+      TrangThai: form.TrangThai || 'Đang xử lý',
+      GhiChu: form.GhiChu || null,
     };
-    return <Badge className={colors[loaiDat] || 'bg-gray-100 text-gray-800'}>{loaiDat}</Badge>;
+
+    const result = await thuaDatApi.create(payload);
+    if (result.success) {
+      setIsAddOpen(false);
+      setForm(emptyForm);
+      await loadData();
+      return;
+    }
+    alert(result.message || 'Không thể thêm hồ sơ địa chính');
+  };
+
+  const handleUpdate = async () => {
+    if (!selected) return;
+
+    const payload = {
+      SoToBanDo: form.SoTo || null,
+      MaHoSo: form.MaHoSo || null,
+      SoTo: form.SoTo || null,
+      DienTich: form.DienTich,
+      LoaiDat: form.LoaiDat || null,
+      MucDichSuDung: form.MucDichSuDung || null,
+      ChuSoHuu: form.ChuSoHuu || null,
+      CCCD: form.CCCD || null,
+      DiaChiThuaDat: form.DiaChiThuaDat || null,
+      ToaDoX: form.ToaDoX,
+      ToaDoY: form.ToaDoY,
+      NguonGocSuDung: form.NguonGocSuDung || null,
+      ThoiHanSuDung: form.ThoiHanSuDung || null,
+      SoSoDo: form.SoSoDo || null,
+      NgayCapSoDo: form.NgayCapSoDo || null,
+      NgayNhapLieu: form.NgayNhapLieu || null,
+      CanBoNhapLieu: form.CanBoNhapLieu || null,
+      TrangThai: form.TrangThai,
+      GhiChu: form.GhiChu || null,
+    };
+
+    const result = await thuaDatApi.update(selected.MaThua, payload);
+    if (result.success) {
+      setIsEditOpen(false);
+      setSelected(null);
+      await loadData();
+      return;
+    }
+    alert(result.message || 'Không thể cập nhật hồ sơ địa chính');
+  };
+
+  const handleDelete = async (record: DiaChinhRecord) => {
+    if (!window.confirm(`Xóa hồ sơ thửa ${record.MaThua}?`)) return;
+    const result = await thuaDatApi.delete(record.MaThua);
+    if (result.success) {
+      await loadData();
+      return;
+    }
+    alert(result.message || 'Không thể xóa hồ sơ địa chính');
+  };
+
+  const openEdit = (record: DiaChinhRecord) => {
+    setSelected(record);
+    setForm({ ...record });
+    setIsEditOpen(true);
+  };
+
+  const openView = (record: DiaChinhRecord) => {
+    setSelected(record);
+    setIsViewOpen(true);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-secondary via-primary to-secondary rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <MapPin className="h-8 w-8" />
-            <div>
-              <h1 className="text-2xl font-bold">Quản lý Địa chính</h1>
-              <p className="text-teal-100">Hồ sơ địa chính, cấp sổ đỏ, biến động đất đai</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" className="bg-white/20 hover:bg-white/30 border-0">
-              <Map className="mr-2 h-4 w-4" />
-              Xem bản đồ
-            </Button>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-white text-teal-600 hover:bg-white/90">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Thêm hồ sơ
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Thêm hồ sơ địa chính mới</DialogTitle>
-                  <DialogDescription>Nhập thông tin hồ sơ đất đai</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Mã thửa *</Label>
-                    <Input placeholder="Nhập mã thửa" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Số tờ *</Label>
-                    <Input placeholder="Nhập số tờ" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Diện tích (m²) *</Label>
-                    <Input type="number" placeholder="Nhập diện tích" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Loại đất *</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Chọn loại đất" /></SelectTrigger>
-                      <SelectContent>
-                        {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Mục đích sử dụng</Label>
-                    <Input placeholder="Nhập mục đích sử dụng" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Chủ sở hữu *</Label>
-                    <Input placeholder="Nhập tên chủ sở hữu" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>CCCD/Mã số DN</Label>
-                    <Input placeholder="Nhập CCCD hoặc Mã số DN" />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Địa chỉ thửa đất *</Label>
-                    <Input placeholder="Nhập địa chỉ thửa đất" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tọa độ X</Label>
-                    <Input type="number" step="0.0001" placeholder="Vĩ độ" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tọa độ Y</Label>
-                    <Input type="number" step="0.0001" placeholder="Kinh độ" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nguồn gốc sử dụng</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Chọn nguồn gốc" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="giao-co-thu">Nhà nước giao có thu tiền</SelectItem>
-                        <SelectItem value="giao-khong-thu">Nhà nước giao không thu tiền</SelectItem>
-                        <SelectItem value="cho-thue">Nhà nước cho thuê đất</SelectItem>
-                        <SelectItem value="chuyen-nhuong">Chuyển nhượng quyền sử dụng đất</SelectItem>
-                        <SelectItem value="thua-ke">Thừa kế quyền sử dụng đất</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Thời hạn sử dụng</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Chọn thời hạn" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lau-dai">Lâu dài</SelectItem>
-                        <SelectItem value="50-nam">50 năm</SelectItem>
-                        <SelectItem value="khac">Khác</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Trạng thái</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Chọn trạng thái" /></SelectTrigger>
-                      <SelectContent>
-                        {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cán bộ nhập liệu</Label>
-                    <Input placeholder="Tên cán bộ" />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Ghi chú</Label>
-                    <Textarea placeholder="Nhập ghi chú" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                  <Button onClick={() => setIsAddOpen(false)}>Lưu hồ sơ</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng hồ sơ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-teal-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã cấp sổ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daCap}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chờ cấp sổ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.choCap}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.dangXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tranh chấp</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.tranhChap}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-cyan-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng DT (m²)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <LandPlot className="h-5 w-5 text-cyan-500" />
-              <span className="text-2xl font-bold">{stats.tongDienTich.toLocaleString()}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Tìm theo mã, thửa, chủ sở hữu, địa chỉ..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={filterLoaiDat} onValueChange={setFilterLoaiDat}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Loại đất" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả loại đất</SelectItem>
-                {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Xuất Excel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
+    <div className="w-full px-4 py-4 space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách hồ sơ địa chính</CardTitle>
-          <CardDescription>Tìm thấy {filteredRecords.length} hồ sơ</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Quản lý địa chính
+          </CardTitle>
+          <CardDescription>Tìm thấy {filtered.length} hồ sơ thửa đất</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm theo mã thửa, số tờ, chủ sở hữu, địa chỉ..."
+              />
+            </div>
+            <Button onClick={() => { setForm(emptyForm); setIsAddOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Thêm hồ sơ
+            </Button>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Mã hồ sơ</TableHead>
-                <TableHead>Thửa/Tờ</TableHead>
+                <TableHead>Mã thửa</TableHead>
+                <TableHead>Số tờ</TableHead>
                 <TableHead>Chủ sở hữu</TableHead>
-                <TableHead className="text-right">Diện tích</TableHead>
                 <TableHead>Loại đất</TableHead>
-                <TableHead>Địa chỉ</TableHead>
-                <TableHead>Số sổ đỏ</TableHead>
+                <TableHead>Diện tích</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRecords.map((record) => (
-                <TableRow key={record.MaHoSo}>
-                  <TableCell className="font-medium text-primary">{record.MaHoSo}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">{record.MaThua}</div>
-                      <div className="text-muted-foreground">{record.SoTo}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">{record.ChuSoHuu}</div>
-                        <div className="text-xs text-muted-foreground">{record.CCCD}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">{record.DienTich} m²</TableCell>
-                  <TableCell>{getLoaiDatBadge(record.LoaiDat)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={record.DiaChiThuaDat}>
-                    {record.DiaChiThuaDat}
-                  </TableCell>
-                  <TableCell>
-                    {record.SoSoDo || <span className="text-muted-foreground">Chưa có</span>}
-                  </TableCell>
-                  <TableCell>{getTrangThaiBadge(record.TrangThai)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      {/* View Dialog */}
-                      <Dialog open={isViewOpen && selectedRecord?.MaHoSo === record.MaHoSo} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedRecord(null); }}>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedRecord(record); setIsViewOpen(true); }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Chi tiết hồ sơ địa chính</DialogTitle>
-                            <DialogDescription>Mã hồ sơ: {record.MaHoSo}</DialogDescription>
-                          </DialogHeader>
-                          <div className="grid grid-cols-2 gap-4 py-4">
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Mã thửa</p>
-                              <p className="font-medium">{record.MaThua}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Số tờ</p>
-                              <p className="font-medium">{record.SoTo}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Diện tích</p>
-                              <p className="font-medium">{record.DienTich} m²</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Loại đất</p>
-                              <p className="font-medium">{record.LoaiDat}</p>
-                            </div>
-                            <div className="space-y-1 col-span-2">
-                              <p className="text-sm text-muted-foreground">Mục đích sử dụng</p>
-                              <p className="font-medium">{record.MucDichSuDung}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Chủ sở hữu</p>
-                              <p className="font-medium">{record.ChuSoHuu}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">CCCD/Mã số DN</p>
-                              <p className="font-medium">{record.CCCD || '-'}</p>
-                            </div>
-                            <div className="space-y-1 col-span-2">
-                              <p className="text-sm text-muted-foreground">Địa chỉ thửa đất</p>
-                              <p className="font-medium">{record.DiaChiThuaDat}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Tọa độ</p>
-                              <p className="font-medium">X: {record.ToaDoX}, Y: {record.ToaDoY}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Nguồn gốc sử dụng</p>
-                              <p className="font-medium">{record.NguonGocSuDung}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Thời hạn sử dụng</p>
-                              <p className="font-medium">{record.ThoiHanSuDung}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Số sổ đỏ</p>
-                              <p className="font-medium">{record.SoSoDo || 'Chưa cấp'}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Ngày cấp sổ đỏ</p>
-                              <p className="font-medium">{record.NgayCapSoDo || '-'}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Trạng thái</p>
-                              {getTrangThaiBadge(record.TrangThai)}
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Ngày nhập liệu</p>
-                              <p className="font-medium">{record.NgayNhapLieu}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Cán bộ nhập liệu</p>
-                              <p className="font-medium">{record.CanBoNhapLieu}</p>
-                            </div>
-                            {record.GhiChu && (
-                              <div className="space-y-1 col-span-2">
-                                <p className="text-sm text-muted-foreground">Ghi chú</p>
-                                <p className="font-medium">{record.GhiChu}</p>
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* Edit Dialog */}
-                      <Dialog open={isEditOpen && selectedRecord?.MaHoSo === record.MaHoSo} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedRecord(null); }}>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedRecord(record); setIsEditOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Cập nhật hồ sơ địa chính</DialogTitle>
-                            <DialogDescription>Mã hồ sơ: {record.MaHoSo}</DialogDescription>
-                          </DialogHeader>
-                          <div className="grid grid-cols-2 gap-4 py-4">
-                            <div className="space-y-2">
-                              <Label>Mã thửa</Label>
-                              <Input defaultValue={record.MaThua} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Số tờ</Label>
-                              <Input defaultValue={record.SoTo} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Diện tích (m²)</Label>
-                              <Input type="number" defaultValue={record.DienTich} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Loại đất</Label>
-                              <Select defaultValue={record.LoaiDat}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {loaiDatOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2 col-span-2">
-                              <Label>Mục đích sử dụng</Label>
-                              <Input defaultValue={record.MucDichSuDung} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Chủ sở hữu</Label>
-                              <Input defaultValue={record.ChuSoHuu} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>CCCD/Mã số DN</Label>
-                              <Input defaultValue={record.CCCD} />
-                            </div>
-                            <div className="space-y-2 col-span-2">
-                              <Label>Địa chỉ thửa đất</Label>
-                              <Input defaultValue={record.DiaChiThuaDat} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Số sổ đỏ</Label>
-                              <Input defaultValue={record.SoSoDo} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Ngày cấp sổ đỏ</Label>
-                              <Input type="date" defaultValue={record.NgayCapSoDo} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Trạng thái</Label>
-                              <Select defaultValue={record.TrangThai}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Cán bộ cập nhật</Label>
-                              <Input defaultValue={record.CanBoNhapLieu} />
-                            </div>
-                            <div className="space-y-2 col-span-2">
-                              <Label>Ghi chú</Label>
-                              <Textarea defaultValue={record.GhiChu} />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-
-                      <Button variant="ghost" size="icon">
-                        <Map className="h-4 w-4" />
-                      </Button>
+              {filtered.map((x) => (
+                <TableRow key={x.MaThua}>
+                  <TableCell>{x.MaThua}</TableCell>
+                  <TableCell>{x.SoTo}</TableCell>
+                  <TableCell>{x.ChuSoHuu}</TableCell>
+                  <TableCell>{x.LoaiDat}</TableCell>
+                  <TableCell>{x.DienTich.toLocaleString('vi-VN')}</TableCell>
+                  <TableCell><Badge variant="outline">{x.TrangThai}</Badge></TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => openView(x)}><Eye className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(x)}><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => handleDelete(x)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
+              {!loading && filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">Không có dữ liệu</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Cảnh báo tranh chấp */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-3">
-            <Select value={filterPeriod} onValueChange={(v) => setFilterPeriod(v as AlertPeriod)}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Thời gian" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(ALERT_PERIOD_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterRisk} onValueChange={(v) => setFilterRisk(v as AlertRiskLevel | 'all')}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Mức độ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả mức độ</SelectItem>
-                {Object.entries(ALERT_RISK_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Thêm hồ sơ địa chính</DialogTitle>
+            <DialogDescription>Lưu đầy đủ thông tin hồ sơ và thửa đất</DialogDescription>
+          </DialogHeader>
+          <DiaChinhFormView form={form} setForm={setForm} disableMaThua={false} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
+            <Button onClick={handleCreate}>Lưu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {landSignals.map((signal) => (
-        <Card
-          key={signal.id}
-          className={
-            signal.level === 'critical'
-              ? 'border-l-4 border-l-red-500'
-              : signal.level === 'warning'
-                ? 'border-l-4 border-l-amber-500'
-                : 'border-l-4 border-l-blue-500'
-          }
-        >
-          <CardHeader>
-            <CardTitle
-              className={
-                signal.level === 'critical'
-                  ? 'flex items-center gap-2 text-red-600'
-                  : signal.level === 'warning'
-                    ? 'flex items-center gap-2 text-amber-600'
-                    : 'flex items-center gap-2 text-blue-600'
-              }
-            >
-              <AlertTriangle className="h-5 w-5" />
-              {signal.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{signal.description}</p>
-          </CardContent>
-        </Card>
-      ))}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Cập nhật hồ sơ địa chính</DialogTitle>
+            <DialogDescription>Mã thửa: {selected?.MaThua}</DialogDescription>
+          </DialogHeader>
+          <DiaChinhFormView form={form} setForm={setForm} disableMaThua />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
+            <Button onClick={handleUpdate}>Cập nhật</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chi tiết hồ sơ địa chính</DialogTitle>
+            <DialogDescription>Mã thửa: {selected?.MaThua}</DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><strong>Mã hồ sơ:</strong> {selected.MaHoSo || '-'}</div>
+              <div><strong>Số tờ:</strong> {selected.SoTo || '-'}</div>
+              <div><strong>Chủ sở hữu:</strong> {selected.ChuSoHuu || '-'}</div>
+              <div><strong>CCCD:</strong> {selected.CCCD || '-'}</div>
+              <div><strong>Loại đất:</strong> {selected.LoaiDat || '-'}</div>
+              <div><strong>Diện tích:</strong> {selected.DienTich.toLocaleString('vi-VN')} m2</div>
+              <div><strong>Sổ đỏ:</strong> {selected.SoSoDo || '-'}</div>
+              <div><strong>Ngày cấp:</strong> {selected.NgayCapSoDo || '-'}</div>
+              <div className="col-span-2"><strong>Địa chỉ:</strong> {selected.DiaChiThuaDat || '-'}</div>
+              <div className="col-span-2"><strong>Mục đích sử dụng:</strong> {selected.MucDichSuDung || '-'}</div>
+              <div className="col-span-2"><strong>Ghi chú:</strong> {selected.GhiChu || '-'}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DiaChinhFormView({
+  form,
+  setForm,
+  disableMaThua,
+}: {
+  form: DiaChinhForm;
+  setForm: (value: DiaChinhForm) => void;
+  disableMaThua: boolean;
+}) {
+  const setField = (key: keyof DiaChinhForm, value: string) => {
+    if (key === 'DienTich' || key === 'ToaDoX' || key === 'ToaDoY') {
+      setForm({ ...form, [key]: toNumber(value) });
+      return;
+    }
+    setForm({ ...form, [key]: value } as DiaChinhForm);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-3 py-2">
+      <Field label="Mã thửa" value={form.MaThua} onChange={(v) => setField('MaThua', v)} disabled={disableMaThua} />
+      <Field label="Mã hồ sơ" value={form.MaHoSo} onChange={(v) => setField('MaHoSo', v)} />
+      <Field label="Số tờ" value={form.SoTo} onChange={(v) => setField('SoTo', v)} />
+      <Field label="Diện tích" type="number" value={String(form.DienTich)} onChange={(v) => setField('DienTich', v)} />
+      <Field label="Loại đất" value={form.LoaiDat} onChange={(v) => setField('LoaiDat', v)} />
+      <Field label="Mục đích sử dụng" value={form.MucDichSuDung} onChange={(v) => setField('MucDichSuDung', v)} />
+      <Field label="Chủ sở hữu" value={form.ChuSoHuu} onChange={(v) => setField('ChuSoHuu', v)} />
+      <Field label="CCCD" value={form.CCCD} onChange={(v) => setField('CCCD', v)} />
+      <Field label="Tọa độ X" type="number" value={String(form.ToaDoX)} onChange={(v) => setField('ToaDoX', v)} />
+      <Field label="Tọa độ Y" type="number" value={String(form.ToaDoY)} onChange={(v) => setField('ToaDoY', v)} />
+      <Field label="Nguồn gốc sử dụng" value={form.NguonGocSuDung} onChange={(v) => setField('NguonGocSuDung', v)} />
+      <Field label="Thời hạn sử dụng" value={form.ThoiHanSuDung} onChange={(v) => setField('ThoiHanSuDung', v)} />
+      <Field label="Số sổ đỏ" value={form.SoSoDo} onChange={(v) => setField('SoSoDo', v)} />
+      <Field label="Ngày cấp sổ đỏ" type="date" value={form.NgayCapSoDo} onChange={(v) => setField('NgayCapSoDo', v)} />
+      <Field label="Ngày nhập liệu" type="date" value={form.NgayNhapLieu} onChange={(v) => setField('NgayNhapLieu', v)} />
+      <Field label="Cán bộ nhập liệu" value={form.CanBoNhapLieu} onChange={(v) => setField('CanBoNhapLieu', v)} />
+      <div className="space-y-1 col-span-2">
+        <Label>Trạng thái</Label>
+        <Input value={form.TrangThai} onChange={(e) => setField('TrangThai', e.target.value)} />
+      </div>
+      <div className="col-span-2 space-y-1">
+        <Label>Địa chỉ thửa đất</Label>
+        <Input value={form.DiaChiThuaDat} onChange={(e) => setField('DiaChiThuaDat', e.target.value)} />
+      </div>
+      <div className="col-span-2 space-y-1">
+        <Label>Ghi chú</Label>
+        <Textarea value={form.GhiChu} onChange={(e) => setField('GhiChu', e.target.value)} rows={2} />
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
     </div>
   );
 }

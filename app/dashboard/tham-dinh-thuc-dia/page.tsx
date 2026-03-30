@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,11 @@ import {
   Map, MapPin, CheckCircle2, Clock, Search, Plus, Download, Eye, Edit,
   User, Calendar, AlertTriangle, FileCheck, Camera, Ruler
 } from 'lucide-react';
+import { bienDongDatApi } from '@/lib/api';
 
 // Mock data thẩm định thực địa
 interface ThamDinhThucDia {
+  MaBienDongId?: number;
   MaThamDinh: string;
   MaHoSo: string;
   DiaChi: string;
@@ -157,16 +159,166 @@ const loaiThamDinhOptions = ['Cấp sổ đỏ mới', 'Cấp đổi sổ', 'Chu
 const trangThaiOptions = ['Chờ thẩm định', 'Đang thẩm định', 'Hoàn thành', 'Phát hiện sai lệch', 'Hủy'];
 const ketQuaOptions = ['Đúng hồ sơ', 'Sai diện tích', 'Sai ranh giới', 'Sai mục đích SDĐ', 'Không đủ điều kiện'];
 
+const emptyThamDinhForm: ThamDinhThucDia = {
+  MaThamDinh: '',
+  MaHoSo: '',
+  DiaChi: '',
+  MaThua: '',
+  SoTo: '',
+  LoaiThamDinh: '',
+  NgayThamDinh: '',
+  CanBoThamDinh: '',
+  DonViThamDinh: '',
+  DienTichHoSo: 0,
+  DienTichThucTe: 0,
+  TrangThai: 'Chờ thẩm định',
+  KetQuaThamDinh: '',
+  MoTaSaiLech: '',
+  HinhAnhChungCu: 0,
+  DeXuatXuLy: '',
+  GhiChu: '',
+};
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+function mapFromApi(item: any): ThamDinhThucDia {
+  const id = Number(item.MaBienDong);
+  return {
+    MaBienDongId: Number.isFinite(id) ? id : undefined,
+    MaThamDinh: item.MaBienDongText || (Number.isFinite(id) ? `TD${String(id).padStart(3, '0')}` : ''),
+    MaHoSo: item.MaHoSo || '',
+    DiaChi: item.DiaChiThuaDat || '',
+    MaThua: item.MaThua || '',
+    SoTo: item.SoTo || '',
+    LoaiThamDinh: item.LoaiThamDinh || '',
+    NgayThamDinh: toDateString(item.NgayThamDinh),
+    CanBoThamDinh: item.CanBoThamDinh || '',
+    DonViThamDinh: item.DonViThamDinh || '',
+    DienTichHoSo: toNumber(item.DienTichHoSo),
+    DienTichThucTe: toNumber(item.DienTichThucTe),
+    TrangThai: item.TrangThai || 'Chờ thẩm định',
+    KetQuaThamDinh: item.KetQuaThamDinh || '',
+    MoTaSaiLech: item.MoTaSaiLech || '',
+    HinhAnhChungCu: toNumber(item.HinhAnhChungCu),
+    DeXuatXuLy: item.DeXuatXuLy || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
 export default function ThamDinhThucDiaPage() {
+  const [records, setRecords] = useState<ThamDinhThucDia[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [selectedTD, setSelectedTD] = useState<ThamDinhThucDia | null>(null);
+  const [addForm, setAddForm] = useState<ThamDinhThucDia>(emptyThamDinhForm);
+  const [editForm, setEditForm] = useState<ThamDinhThucDia>(emptyThamDinhForm);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredData = mockThamDinh.filter((item) => {
+  const loadData = async () => {
+    const result = await bienDongDatApi.getList({ page: 1, limit: 5000, loaiBanGhi: 'THAM_DINH_THUC_DIA' });
+    if (result.success && Array.isArray(result.data)) {
+      setRecords(result.data.map(mapFromApi));
+      return;
+    }
+    setRecords([]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async () => {
+    if (!addForm.MaThua.trim()) {
+      alert('Mã thửa là bắt buộc');
+      return;
+    }
+
+    const payload = {
+      LoaiBanGhi: 'THAM_DINH_THUC_DIA',
+      MaBienDongText: addForm.MaThamDinh || null,
+      MaHoSo: addForm.MaHoSo || null,
+      MaThua: addForm.MaThua,
+      SoTo: addForm.SoTo || null,
+      LoaiBienDong: addForm.LoaiThamDinh || 'Thẩm định thực địa',
+      NgayBienDong: addForm.NgayThamDinh || new Date().toISOString().slice(0, 10),
+      DiaChiThuaDat: addForm.DiaChi || null,
+      LoaiThamDinh: addForm.LoaiThamDinh || null,
+      NgayThamDinh: addForm.NgayThamDinh || null,
+      CanBoThamDinh: addForm.CanBoThamDinh || null,
+      DonViThamDinh: addForm.DonViThamDinh || null,
+      DienTichHoSo: toNumber(addForm.DienTichHoSo),
+      DienTichThucTe: toNumber(addForm.DienTichThucTe),
+      TrangThai: addForm.TrangThai || 'Chờ thẩm định',
+      KetQuaThamDinh: addForm.KetQuaThamDinh || null,
+      MoTaSaiLech: addForm.MoTaSaiLech || null,
+      HinhAnhChungCu: toNumber(addForm.HinhAnhChungCu),
+      DeXuatXuLy: addForm.DeXuatXuLy || null,
+      GhiChu: addForm.GhiChu || null,
+    };
+
+    const result = await bienDongDatApi.create(payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể tạo hồ sơ thẩm định');
+      return;
+    }
+
+    setIsAddOpen(false);
+    setAddForm(emptyThamDinhForm);
+    await loadData();
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedTD?.MaBienDongId) {
+      alert('Không xác định được bản ghi để cập nhật');
+      return;
+    }
+
+    const payload = {
+      MaBienDongText: editForm.MaThamDinh || null,
+      MaHoSo: editForm.MaHoSo || null,
+      MaThua: editForm.MaThua || '',
+      SoTo: editForm.SoTo || null,
+      LoaiBienDong: editForm.LoaiThamDinh || 'Thẩm định thực địa',
+      NgayBienDong: editForm.NgayThamDinh || new Date().toISOString().slice(0, 10),
+      DiaChiThuaDat: editForm.DiaChi || null,
+      LoaiThamDinh: editForm.LoaiThamDinh || null,
+      NgayThamDinh: editForm.NgayThamDinh || null,
+      CanBoThamDinh: editForm.CanBoThamDinh || null,
+      DonViThamDinh: editForm.DonViThamDinh || null,
+      DienTichHoSo: toNumber(editForm.DienTichHoSo),
+      DienTichThucTe: toNumber(editForm.DienTichThucTe),
+      TrangThai: editForm.TrangThai || 'Chờ thẩm định',
+      KetQuaThamDinh: editForm.KetQuaThamDinh || null,
+      MoTaSaiLech: editForm.MoTaSaiLech || null,
+      HinhAnhChungCu: toNumber(editForm.HinhAnhChungCu),
+      DeXuatXuLy: editForm.DeXuatXuLy || null,
+      GhiChu: editForm.GhiChu || null,
+    };
+
+    const result = await bienDongDatApi.update(selectedTD.MaBienDongId, payload);
+    if (!result.success) {
+      alert(result.message || 'Không thể cập nhật hồ sơ thẩm định');
+      return;
+    }
+
+    setIsEditOpen(false);
+    setSelectedTD(null);
+    setEditForm(emptyThamDinhForm);
+    await loadData();
+  };
+
+  const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaThamDinh.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.MaHoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -178,12 +330,12 @@ export default function ThamDinhThucDiaPage() {
   });
 
   const stats = {
-    total: mockThamDinh.length,
-    choThamDinh: mockThamDinh.filter(r => r.TrangThai === 'Chờ thẩm định').length,
-    dangThamDinh: mockThamDinh.filter(r => r.TrangThai === 'Đang thẩm định').length,
-    hoanThanh: mockThamDinh.filter(r => r.TrangThai === 'Hoàn thành').length,
-    saiLech: mockThamDinh.filter(r => r.TrangThai === 'Phát hiện sai lệch').length,
-    tongAnh: mockThamDinh.reduce((sum, r) => sum + r.HinhAnhChungCu, 0)
+    total: records.length,
+    choThamDinh: records.filter(r => r.TrangThai === 'Chờ thẩm định').length,
+    dangThamDinh: records.filter(r => r.TrangThai === 'Đang thẩm định').length,
+    hoanThanh: records.filter(r => r.TrangThai === 'Hoàn thành').length,
+    saiLech: records.filter(r => r.TrangThai === 'Phát hiện sai lệch').length,
+    tongAnh: records.reduce((sum, r) => sum + r.HinhAnhChungCu, 0)
   };
 
   const getTrangThaiBadge = (trangThai: string) => {
@@ -215,7 +367,13 @@ export default function ThamDinhThucDiaPage() {
               <p className="text-blue-100">Cập nhật thông tin thực tế khi thẩm định tại hiện trường</p>
             </div>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (open) setAddForm(emptyThamDinhForm);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="w-full 2xl:w-auto bg-white text-blue-600 hover:bg-white/90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -230,11 +388,11 @@ export default function ThamDinhThucDiaPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Mã hồ sơ gốc *</Label>
-                  <Input placeholder="Nhập mã hồ sơ" />
+                  <Input placeholder="Nhập mã hồ sơ" value={addForm.MaHoSo} onChange={(e) => setAddForm((prev) => ({ ...prev, MaHoSo: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Loại thẩm định *</Label>
-                  <Select>
+                  <Select value={addForm.LoaiThamDinh || undefined} onValueChange={(value) => setAddForm((prev) => ({ ...prev, LoaiThamDinh: value }))}>
                     <SelectTrigger><SelectValue placeholder="Chọn loại" /></SelectTrigger>
                     <SelectContent>
                       {loaiThamDinhOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -243,35 +401,35 @@ export default function ThamDinhThucDiaPage() {
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Địa chỉ *</Label>
-                  <Input placeholder="Nhập địa chỉ thửa đất" />
+                  <Input placeholder="Nhập địa chỉ thửa đất" value={addForm.DiaChi} onChange={(e) => setAddForm((prev) => ({ ...prev, DiaChi: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa</Label>
-                  <Input placeholder="Nhập mã thửa" />
+                  <Input placeholder="Nhập mã thửa" value={addForm.MaThua} onChange={(e) => setAddForm((prev) => ({ ...prev, MaThua: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input placeholder="Nhập số tờ" value={addForm.SoTo} onChange={(e) => setAddForm((prev) => ({ ...prev, SoTo: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Diện tích theo hồ sơ (m²)</Label>
-                  <Input type="number" placeholder="Nhập diện tích" />
+                  <Input type="number" placeholder="Nhập diện tích" value={addForm.DienTichHoSo} onChange={(e) => setAddForm((prev) => ({ ...prev, DienTichHoSo: toNumber(e.target.value) }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Ngày thẩm định dự kiến</Label>
-                  <Input type="date" />
+                  <Input type="date" value={addForm.NgayThamDinh} onChange={(e) => setAddForm((prev) => ({ ...prev, NgayThamDinh: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Cán bộ thẩm định *</Label>
-                  <Input placeholder="Chọn cán bộ" />
+                  <Input placeholder="Chọn cán bộ" value={addForm.CanBoThamDinh} onChange={(e) => setAddForm((prev) => ({ ...prev, CanBoThamDinh: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Đơn vị thẩm định</Label>
-                  <Input placeholder="Nhập đơn vị" defaultValue="Phòng Địa chính" />
+                  <Input placeholder="Nhập đơn vị" value={addForm.DonViThamDinh} onChange={(e) => setAddForm((prev) => ({ ...prev, DonViThamDinh: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea placeholder="Nhập ghi chú" value={addForm.GhiChu} onChange={(e) => setAddForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Hình ảnh hồ sơ ban đầu</Label>
@@ -280,7 +438,7 @@ export default function ThamDinhThucDiaPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>Tạo hồ sơ</Button>
+                <Button onClick={handleCreate}>Tạo hồ sơ</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -562,7 +720,7 @@ export default function ThamDinhThucDiaPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedTD?.MaThamDinh === item.MaThamDinh} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedTD(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedTD(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedTD(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -574,11 +732,11 @@ export default function ThamDinhThucDiaPage() {
                           <div className="grid grid-cols-2 gap-4 py-4">
                             <div className="space-y-2 col-span-2">
                               <Label>Địa chỉ</Label>
-                              <Input defaultValue={item.DiaChi} />
+                              <Input value={editForm.DiaChi} onChange={(e) => setEditForm((prev) => ({ ...prev, DiaChi: e.target.value }))} />
                             </div>
                             <div className="space-y-2">
                               <Label>Loại thẩm định</Label>
-                              <Select defaultValue={item.LoaiThamDinh}>
+                              <Select value={editForm.LoaiThamDinh} onValueChange={(value) => setEditForm((prev) => ({ ...prev, LoaiThamDinh: value }))}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {loaiThamDinhOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -587,15 +745,15 @@ export default function ThamDinhThucDiaPage() {
                             </div>
                             <div className="space-y-2">
                               <Label>Cán bộ thẩm định</Label>
-                              <Input defaultValue={item.CanBoThamDinh} />
+                              <Input value={editForm.CanBoThamDinh} onChange={(e) => setEditForm((prev) => ({ ...prev, CanBoThamDinh: e.target.value }))} />
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Đơn vị thẩm định</Label>
-                              <Input defaultValue={item.DonViThamDinh} />
+                              <Input value={editForm.DonViThamDinh} onChange={(e) => setEditForm((prev) => ({ ...prev, DonViThamDinh: e.target.value }))} />
                             </div>
                             <div className="space-y-2">
                               <Label>Trạng thái</Label>
-                              <Select defaultValue={item.TrangThai}>
+                              <Select value={editForm.TrangThai} onValueChange={(value) => setEditForm((prev) => ({ ...prev, TrangThai: value }))}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -604,7 +762,7 @@ export default function ThamDinhThucDiaPage() {
                             </div>
                             <div className="space-y-2">
                               <Label>Kết quả thẩm định</Label>
-                              <Select defaultValue={item.KetQuaThamDinh}>
+                              <Select value={editForm.KetQuaThamDinh || undefined} onValueChange={(value) => setEditForm((prev) => ({ ...prev, KetQuaThamDinh: value }))}>
                                 <SelectTrigger><SelectValue placeholder="Chọn kết quả" /></SelectTrigger>
                                 <SelectContent>
                                   {ketQuaOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -613,11 +771,11 @@ export default function ThamDinhThucDiaPage() {
                             </div>
                             <div className="space-y-2">
                               <Label>Diện tích thực tế (m²)</Label>
-                              <Input type="number" defaultValue={item.DienTichThucTe || ''} />
+                              <Input type="number" value={editForm.DienTichThucTe} onChange={(e) => setEditForm((prev) => ({ ...prev, DienTichThucTe: toNumber(e.target.value) }))} />
                             </div>
                             <div className="space-y-2">
                               <Label>Số hình ảnh chứng cứ</Label>
-                              <Input type="number" defaultValue={item.HinhAnhChungCu} />
+                              <Input type="number" value={editForm.HinhAnhChungCu} onChange={(e) => setEditForm((prev) => ({ ...prev, HinhAnhChungCu: toNumber(e.target.value) }))} />
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Thêm hình ảnh kết quả thẩm định</Label>
@@ -625,20 +783,20 @@ export default function ThamDinhThucDiaPage() {
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Mô tả sai lệch (nếu có)</Label>
-                              <Textarea defaultValue={item.MoTaSaiLech} placeholder="Mô tả chi tiết sai lệch phát hiện được" />
+                              <Textarea value={editForm.MoTaSaiLech} onChange={(e) => setEditForm((prev) => ({ ...prev, MoTaSaiLech: e.target.value }))} placeholder="Mô tả chi tiết sai lệch phát hiện được" />
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Đề xuất xử lý</Label>
-                              <Textarea defaultValue={item.DeXuatXuLy} placeholder="Đề xuất phương án xử lý" />
+                              <Textarea value={editForm.DeXuatXuLy} onChange={(e) => setEditForm((prev) => ({ ...prev, DeXuatXuLy: e.target.value }))} placeholder="Đề xuất phương án xử lý" />
                             </div>
                             <div className="space-y-2 col-span-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea value={editForm.GhiChu} onChange={(e) => setEditForm((prev) => ({ ...prev, GhiChu: e.target.value }))} />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
