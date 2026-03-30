@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { leHoiApi } from '@/lib/api';
 
 interface LeHoi {
   MaLeHoi: string;
@@ -173,6 +174,52 @@ const trangThaiColors = {
   'Đang diễn ra': 'bg-purple-100 text-purple-700'
 };
 
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  const parsed = String(value);
+  return parsed.length >= 10 ? parsed.slice(0, 10) : parsed;
+}
+
+function toNumericId(value: string): number {
+  const direct = Number(value);
+  if (Number.isFinite(direct)) return direct;
+  const matched = value.match(/\d+/);
+  return matched ? Number(matched[0]) : Number.NaN;
+}
+
+function mapFromApi(item: any): LeHoi {
+  const trangThai = (item.TrangThai || 'Đang chuẩn bị') as LeHoi['TrangThai'];
+
+  return {
+    MaLeHoi: String(item.MaLeHoi ?? ''),
+    TenLeHoi: item.TenLeHoi || '',
+    DiaDiem: item.DiaDiem || '',
+    ThoiGian: toDateString(item.ThoiGianToChuc),
+    QuyMo: Number(item.SoLuongKhach || 0),
+    DuKien: Number(item.SoLuongDuKien || 0),
+    TrangThai: trangThai,
+    LoaiLeHoi: item.LoaiLeHoi || '',
+    NguoiChuTri: item.NguoiChuTri || '',
+    KinhPhi: Number(item.ChiPhiToChuc || 0),
+    MoTa: item.MoTa || '',
+  };
+}
+
+function mapToApi(data: Partial<LeHoi>) {
+  return {
+    TenLeHoi: data.TenLeHoi || null,
+    DiaDiem: data.DiaDiem || null,
+    ThoiGianToChuc: data.ThoiGian || null,
+    SoLuongKhach: data.QuyMo || 0,
+    SoLuongDuKien: data.DuKien || 0,
+    TrangThai: data.TrangThai || 'Đang chuẩn bị',
+    LoaiLeHoi: data.LoaiLeHoi || null,
+    NguoiChuTri: data.NguoiChuTri || null,
+    ChiPhiToChuc: data.KinhPhi || 0,
+    MoTa: data.MoTa || null,
+  };
+}
+
 export default function LeHoiPage() {
   const [leHoiList, setLeHoiList] = useState<LeHoi[]>(mockLeHoi);
   const [searchTerm, setSearchTerm] = useState('');
@@ -182,6 +229,17 @@ export default function LeHoiPage() {
   const [addDialog, setAddDialog] = useState(false);
   const [selectedLeHoi, setSelectedLeHoi] = useState<LeHoi | null>(null);
   const [formData, setFormData] = useState<Partial<LeHoi>>({});
+
+  const loadData = async () => {
+    const result = await leHoiApi.getList({ page: 1, limit: 1000 });
+    if (result.success && Array.isArray(result.data)) {
+      setLeHoiList(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Thống kê
   const tongLeHoi = leHoiList.length;
@@ -230,14 +288,32 @@ export default function LeHoiPage() {
     setAddDialog(true);
   };
 
-  const handleDelete = (maLeHoi: string) => {
+  const handleDelete = async (maLeHoi: string) => {
     if (confirm('Bạn có chắc muốn xóa lễ hội này?')) {
+      const id = toNumericId(maLeHoi);
+      if (Number.isFinite(id)) {
+        const result = await leHoiApi.delete(id);
+        if (result.success) {
+          await loadData();
+          return;
+        }
+      }
       setLeHoiList(leHoiList.filter(lh => lh.MaLeHoi !== maLeHoi));
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (selectedLeHoi && formData) {
+      const id = toNumericId(selectedLeHoi.MaLeHoi);
+      if (Number.isFinite(id)) {
+        const result = await leHoiApi.update(id, mapToApi(formData));
+        if (result.success) {
+          setEditDialog(false);
+          await loadData();
+          return;
+        }
+      }
+
       setLeHoiList(leHoiList.map(lh =>
         lh.MaLeHoi === selectedLeHoi.MaLeHoi ? { ...lh, ...formData } : lh
       ));
@@ -245,8 +321,15 @@ export default function LeHoiPage() {
     }
   };
 
-  const handleSaveAdd = () => {
+  const handleSaveAdd = async () => {
     if (formData.TenLeHoi) {
+      const result = await leHoiApi.create(mapToApi(formData));
+      if (result.success) {
+        setAddDialog(false);
+        await loadData();
+        return;
+      }
+
       const newLeHoi: LeHoi = {
         MaLeHoi: `LH${String(leHoiList.length + 1).padStart(3, '0')}`,
         TenLeHoi: formData.TenLeHoi || '',

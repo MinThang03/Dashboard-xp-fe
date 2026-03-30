@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { 
   FileCheck, Clock, CheckCircle2, TrendingUp, Search, Plus, Download,
-  Eye, Edit, AlertTriangle, Calendar, User, FileText, ClipboardList, 
+  Eye, Edit, Trash2, AlertTriangle, Calendar, User, FileText, ClipboardList, 
   XCircle, RotateCw, Send
 } from 'lucide-react';
 import {
@@ -383,6 +383,25 @@ export default function CapSoDoPage() {
     await loadData();
   };
 
+  const handleDelete = async (record: HoSoCapSoDo) => {
+    if (!record.MaThua) {
+      alert('Không xác định được hồ sơ để xóa');
+      return;
+    }
+
+    if (!window.confirm(`Xóa hồ sơ ${record.MaHoSo || record.MaThua}?`)) {
+      return;
+    }
+
+    const result = await thuaDatApi.delete(record.MaThua);
+    if (!result.success) {
+      alert(result.message || 'Không thể xóa hồ sơ');
+      return;
+    }
+
+    await loadData();
+  };
+
   const filteredData = records.filter((item) => {
     const matchesSearch =
       item.MaHoSo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -668,7 +687,7 @@ export default function CapSoDoPage() {
             </TableHeader>
             <TableBody>
               {filteredData.map((item) => (
-                <TableRow key={item.MaHoSo}>
+                <TableRow key={item.MaThua || item.MaHoSo}>
                   <TableCell className="font-medium text-primary">{item.MaHoSo}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -711,7 +730,7 @@ export default function CapSoDoPage() {
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {/* View Dialog */}
-                      <Dialog open={isViewOpen && selectedHoSo?.MaHoSo === item.MaHoSo} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedHoSo(null); }}>
+                      <Dialog open={isViewOpen && selectedHoSo?.MaThua === item.MaThua} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedHoSo(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedHoSo(item); setIsViewOpen(true); }}>
                             <Eye className="h-4 w-4" />
@@ -803,7 +822,7 @@ export default function CapSoDoPage() {
                       </Dialog>
 
                       {/* Edit Dialog */}
-                      <Dialog open={isEditOpen && selectedHoSo?.MaHoSo === item.MaHoSo} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedHoSo(null); }}>
+                      <Dialog open={isEditOpen && selectedHoSo?.MaThua === item.MaThua} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedHoSo(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedHoSo(item); setEditForm({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
@@ -928,6 +947,10 @@ export default function CapSoDoPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

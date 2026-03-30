@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   AlertTriangle, MapPin, Clock, XCircle, Search, Plus, Download, Eye, Edit,
-  CheckCircle2, Scale, Users, FileText, Calendar, Gavel, MessageSquare
+  Trash2, CheckCircle2, Scale, Users, FileText, Calendar, Gavel, MessageSquare
 } from 'lucide-react';
 import { bienDongDatApi } from '@/lib/api';
 
@@ -350,6 +350,25 @@ export default function TranhChapPage() {
     setIsEditOpen(false);
     setSelectedVu(null);
     setEditForm(emptyTranhChapForm);
+    await loadData();
+  };
+
+  const handleDelete = async (record: TranhChapDat) => {
+    if (!record.MaBienDongId) {
+      alert('Không xác định được bản ghi để xóa');
+      return;
+    }
+
+    if (!window.confirm(`Xóa vụ tranh chấp ${record.MaVu}?`)) {
+      return;
+    }
+
+    const result = await bienDongDatApi.delete(record.MaBienDongId);
+    if (!result.success) {
+      alert(result.message || 'Không thể xóa vụ tranh chấp');
+      return;
+    }
+
     await loadData();
   };
 
@@ -921,6 +940,10 @@ export default function TranhChapPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

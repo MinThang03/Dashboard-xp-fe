@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   Clock,
   Eye,
   Edit,
+  Trash2,
   X,
   Users,
   Award,
@@ -42,6 +43,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { langNgheApi } from '@/lib/api';
 
 // Mock data cho làng nghề
 const mockLangNghe = [
@@ -192,7 +194,64 @@ interface LangNghe {
   GhiChu: string;
 }
 
+function mapFromApi(item: any): LangNghe {
+  const status = item.TinhTrang || (item.TrangThai === true ? 'Phát triển' : 'Ổn định');
+
+  return {
+    MaLangNghe: Number(item.MaLangNghe || 0),
+    MaLN: item.MaLN || `LN-${String(item.MaLangNghe || '').padStart(3, '0')}`,
+    TenLangNghe: item.TenLangNghe || '',
+    NgheNghiep: item.LoaiNghe || '',
+    LoaiNgheNghiep: item.LoaiNgheNghiep || item.LoaiNghe || '',
+    DiaChi: item.DiaChi || '',
+    DienTich: Number(item.DienTich || 0),
+    SoHoNghe: Number(item.SoHoNghe || 0),
+    SoNgheNhan: Number(item.SoNgheNhan || 0),
+    SoLaoDong: Number(item.SoLaoDong || 0),
+    DoanhThuNam: Number(item.DoanhThuNam || 0),
+    NamThanhLap: Number(item.NamThanhLap || new Date().getFullYear()),
+    DanhHieu: item.DanhHieu || '',
+    NamCongNhan: Number(item.NamCongNhan || new Date().getFullYear()),
+    TrangThai: String(status),
+    SanPhamChinh: item.SanPhamChinh || '',
+    ThiTruong: item.ThiTruong || '',
+    HoTro: item.HoTro || '',
+    MoTa: item.MoTa || '',
+    LienHe: item.LienHe || '',
+    DienThoai: item.DienThoai || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
+function mapToApi(data: Partial<LangNghe>) {
+  return {
+    MaLN: data.MaLN || null,
+    TenLangNghe: data.TenLangNghe || null,
+    LoaiNghe: data.NgheNghiep || null,
+    LoaiNgheNghiep: data.LoaiNgheNghiep || null,
+    DiaChi: data.DiaChi || null,
+    DienTich: data.DienTich || 0,
+    SoHoNghe: data.SoHoNghe || 0,
+    SoNgheNhan: data.SoNgheNhan || 0,
+    SoLaoDong: data.SoLaoDong || 0,
+    DoanhThuNam: data.DoanhThuNam || 0,
+    NamThanhLap: data.NamThanhLap || null,
+    DanhHieu: data.DanhHieu || null,
+    NamCongNhan: data.NamCongNhan || null,
+    TinhTrang: data.TrangThai || null,
+    TrangThai: data.TrangThai === 'Suy giảm' ? false : true,
+    SanPhamChinh: data.SanPhamChinh || null,
+    ThiTruong: data.ThiTruong || null,
+    HoTro: data.HoTro || null,
+    MoTa: data.MoTa || null,
+    LienHe: data.LienHe || null,
+    DienThoai: data.DienThoai || null,
+    GhiChu: data.GhiChu || null,
+  };
+}
+
 export default function LangNghePage() {
+  const [langNgheList, setLangNgheList] = useState<LangNghe[]>(mockLangNghe);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -231,8 +290,19 @@ export default function LangNghePage() {
   const normalizeText = (value: unknown) =>
     typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
 
+  const loadData = async () => {
+    const result = await langNgheApi.getList({ page: 1, limit: 1000 });
+    if (result.success && Array.isArray(result.data)) {
+      setLangNgheList(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Filter data
-  const filteredData = mockLangNghe.filter((item) => {
+  const filteredData = langNgheList.filter((item) => {
     const normalizedQuery = normalizeText(searchQuery);
     const matchSearch =
       normalizeText(item.MaLN).includes(normalizedQuery) ||
@@ -247,12 +317,12 @@ export default function LangNghePage() {
 
   // Stats
   const stats = {
-    total: mockLangNghe.length,
-    totalHo: mockLangNghe.reduce((sum, l) => sum + l.SoHoNghe, 0),
-    totalNgheNhan: mockLangNghe.reduce((sum, l) => sum + l.SoNgheNhan, 0),
-    totalLabor: mockLangNghe.reduce((sum, l) => sum + l.SoLaoDong, 0),
-    totalRevenue: mockLangNghe.reduce((sum, l) => sum + l.DoanhThuNam, 0),
-    developing: mockLangNghe.filter(l => l.TrangThai === 'Phát triển').length,
+    total: langNgheList.length,
+    totalHo: langNgheList.reduce((sum, l) => sum + l.SoHoNghe, 0),
+    totalNgheNhan: langNgheList.reduce((sum, l) => sum + l.SoNgheNhan, 0),
+    totalLabor: langNgheList.reduce((sum, l) => sum + l.SoLaoDong, 0),
+    totalRevenue: langNgheList.reduce((sum, l) => sum + l.DoanhThuNam, 0),
+    developing: langNgheList.filter(l => l.TrangThai === 'Phát triển').length,
   };
 
   // Handlers
@@ -316,8 +386,74 @@ export default function LangNghePage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleDelete = async (record: LangNghe) => {
+    if (!confirm(`Bạn có chắc muốn xóa làng nghề "${record.TenLangNghe}"?`)) {
+      return;
+    }
+
+    const result = await langNgheApi.delete(record.MaLangNghe);
+    if (result.success) {
+      await loadData();
+      return;
+    }
+
+    setLangNgheList((current) => current.filter((item) => item.MaLangNghe !== record.MaLangNghe));
+  };
+
+  const handleSave = async () => {
+    if (editDialogOpen && selectedRecord) {
+      const result = await langNgheApi.update(selectedRecord.MaLangNghe, mapToApi(formData));
+      if (result.success) {
+        setEditDialogOpen(false);
+        await loadData();
+        return;
+      }
+    }
+
+    if (addDialogOpen) {
+      const result = await langNgheApi.create(mapToApi(formData));
+      if (result.success) {
+        setAddDialogOpen(false);
+        await loadData();
+        return;
+      }
+    }
+
     console.log('Saving:', formData);
+    setLangNgheList((current) => {
+      if (editDialogOpen && selectedRecord) {
+        return current.map((item) =>
+          item.MaLangNghe === selectedRecord.MaLangNghe ? { ...item, ...formData } as LangNghe : item,
+        );
+      }
+
+      const fallbackItem: LangNghe = {
+        MaLangNghe: current.length + 1,
+        MaLN: formData.MaLN,
+        TenLangNghe: formData.TenLangNghe,
+        NgheNghiep: formData.NgheNghiep,
+        LoaiNgheNghiep: formData.LoaiNgheNghiep,
+        DiaChi: formData.DiaChi,
+        DienTich: formData.DienTich,
+        SoHoNghe: formData.SoHoNghe,
+        SoNgheNhan: formData.SoNgheNhan,
+        SoLaoDong: formData.SoLaoDong,
+        DoanhThuNam: formData.DoanhThuNam,
+        NamThanhLap: formData.NamThanhLap,
+        DanhHieu: formData.DanhHieu,
+        NamCongNhan: formData.NamCongNhan,
+        TrangThai: formData.TrangThai,
+        SanPhamChinh: formData.SanPhamChinh,
+        ThiTruong: formData.ThiTruong,
+        HoTro: formData.HoTro,
+        MoTa: formData.MoTa,
+        LienHe: formData.LienHe,
+        DienThoai: formData.DienThoai,
+        GhiChu: formData.GhiChu,
+      };
+
+      return [...current, fallbackItem];
+    });
     setEditDialogOpen(false);
     setAddDialogOpen(false);
   };
@@ -555,6 +691,14 @@ export default function LangNghePage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                     </div>
                   </td>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { diTichApi } from '@/lib/api';
 
 interface DiTich {
   MaDiTich: string;
@@ -170,6 +171,51 @@ const tinhTrangColors = {
   'Nguy cấp': 'bg-red-100 text-red-700'
 };
 
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  const parsed = String(value);
+  return parsed.length >= 10 ? parsed.slice(0, 10) : parsed;
+}
+
+function toNumericId(value: string): number {
+  const direct = Number(value);
+  if (Number.isFinite(direct)) return direct;
+  const matched = value.match(/\d+/);
+  return matched ? Number(matched[0]) : Number.NaN;
+}
+
+function mapFromApi(item: any): DiTich {
+  const capDo = (item.CapXepHang || item.CapDo || 'Huyện') as DiTich['CapDo'];
+  const tinhTrang = (item.TinhTrang || 'Tốt') as DiTich['TinhTrang'];
+
+  return {
+    MaDiTich: String(item.MaDiTich ?? ''),
+    TenDiTich: item.TenDiTich || '',
+    DiaChi: item.DiaChi || '',
+    CapDo: capDo,
+    LoaiDiTich: item.LoaiDiTich || '',
+    NamXayDung: Number(item.NamXayDung || 0),
+    TinhTrang: tinhTrang,
+    LuotKhachThang: Number(item.LuotKhachThang || 0),
+    MoTa: item.MoTa || '',
+    NgayCapNhat: toDateString(item.NgayCapNhat || item.NgayTao),
+  };
+}
+
+function mapToApi(data: Partial<DiTich>) {
+  return {
+    TenDiTich: data.TenDiTich || null,
+    DiaChi: data.DiaChi || null,
+    CapXepHang: data.CapDo || null,
+    LoaiDiTich: data.LoaiDiTich || null,
+    NamXayDung: data.NamXayDung || null,
+    TinhTrang: data.TinhTrang || 'Tốt',
+    LuotKhachThang: data.LuotKhachThang || 0,
+    MoTa: data.MoTa || null,
+    NgayCapNhat: data.NgayCapNhat || null,
+  };
+}
+
 export default function DiTichPage() {
   const [diTichList, setDiTichList] = useState<DiTich[]>(mockDiTich);
   const [searchTerm, setSearchTerm] = useState('');
@@ -180,6 +226,17 @@ export default function DiTichPage() {
   const [addDialog, setAddDialog] = useState(false);
   const [selectedDiTich, setSelectedDiTich] = useState<DiTich | null>(null);
   const [formData, setFormData] = useState<Partial<DiTich>>({});
+
+  const loadData = async () => {
+    const result = await diTichApi.getList({ page: 1, limit: 1000 });
+    if (result.success && Array.isArray(result.data)) {
+      setDiTichList(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Thống kê
   const tongDiTich = diTichList.length;
@@ -235,14 +292,32 @@ export default function DiTichPage() {
     setAddDialog(true);
   };
 
-  const handleDelete = (maDiTich: string) => {
+  const handleDelete = async (maDiTich: string) => {
     if (confirm('Bạn có chắc muốn xóa di tích này?')) {
+      const id = toNumericId(maDiTich);
+      if (Number.isFinite(id)) {
+        const result = await diTichApi.delete(id);
+        if (result.success) {
+          await loadData();
+          return;
+        }
+      }
       setDiTichList(diTichList.filter(dt => dt.MaDiTich !== maDiTich));
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (selectedDiTich && formData) {
+      const id = toNumericId(selectedDiTich.MaDiTich);
+      if (Number.isFinite(id)) {
+        const result = await diTichApi.update(id, mapToApi(formData));
+        if (result.success) {
+          setEditDialog(false);
+          await loadData();
+          return;
+        }
+      }
+
       setDiTichList(diTichList.map(dt =>
         dt.MaDiTich === selectedDiTich.MaDiTich ? { ...dt, ...formData } : dt
       ));
@@ -250,8 +325,19 @@ export default function DiTichPage() {
     }
   };
 
-  const handleSaveAdd = () => {
+  const handleSaveAdd = async () => {
     if (formData.TenDiTich) {
+      const payload = mapToApi({
+        ...formData,
+        NgayCapNhat: formData.NgayCapNhat || new Date().toISOString().slice(0, 10),
+      });
+      const result = await diTichApi.create(payload);
+      if (result.success) {
+        setAddDialog(false);
+        await loadData();
+        return;
+      }
+
       const newDiTich: DiTich = {
         MaDiTich: `DT${String(diTichList.length + 1).padStart(3, '0')}`,
         TenDiTich: formData.TenDiTich || '',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   Clock,
   Eye,
   Edit,
+  Trash2,
   X,
   Users,
   Star,
@@ -44,6 +45,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { coSoKinhDoanhDuLichApi } from '@/lib/api';
 
 // Mock data cho kinh doanh du lịch
 const mockDuLich = [
@@ -234,7 +236,65 @@ interface DuLich {
   GhiChu: string;
 }
 
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  const parsed = String(value);
+  return parsed.length >= 10 ? parsed.slice(0, 10) : parsed;
+}
+
+function mapFromApi(item: any): DuLich {
+  return {
+    MaDuLich: Number(item.MaCoSo || 0),
+    MaCoSo: item.MaCoSoCode || `DL-${String(item.MaCoSo || '').padStart(3, '0')}`,
+    TenCoSo: item.TenCoSo || '',
+    LoaiHinh: item.LoaiHinh || '',
+    PhanLoai: item.PhanLoai || '',
+    ChuSoHuu: item.ChuCoSo || '',
+    DienThoai: item.SoDienThoai || '',
+    Email: item.Email || '',
+    DiaChi: item.DiaChi || '',
+    SoPhong: Number(item.SoPhong || 0),
+    SucChua: Number(item.SucChua || 0),
+    SaoXepHang: Number(item.SaoXepHang || 0),
+    GiayCN: item.GiayCN || '',
+    NgayCapPhep: toDateString(item.NgayCapPhep),
+    NgayHetHan: toDateString(item.NgayHetHan),
+    DoanhThuThang: Number(item.DoanhThuThang || 0),
+    LuotKhachThang: Number(item.LuotKhachThang || 0),
+    TrangThai: item.TrangThai || 'Hoạt động',
+    DanhGiaTB: Number(item.DanhGiaTB || 0),
+    TienIch: item.TienIch || '',
+    GhiChu: item.GhiChu || '',
+  };
+}
+
+function mapToApi(data: Partial<DuLich>) {
+  return {
+    MaCoSoCode: data.MaCoSo || null,
+    TenCoSo: data.TenCoSo || null,
+    LoaiHinh: data.LoaiHinh || null,
+    PhanLoai: data.PhanLoai || null,
+    ChuCoSo: data.ChuSoHuu || null,
+    SoDienThoai: data.DienThoai || null,
+    Email: data.Email || null,
+    DiaChi: data.DiaChi || null,
+    SoPhong: data.SoPhong || 0,
+    SucChua: data.SucChua || 0,
+    SaoXepHang: data.SaoXepHang || 0,
+    GiayCN: data.GiayCN || null,
+    NgayCapPhep: data.NgayCapPhep || null,
+    NgayHetHan: data.NgayHetHan || null,
+    DoanhThuThang: data.DoanhThuThang || 0,
+    LuotKhachThang: data.LuotKhachThang || 0,
+    DanhGiaTB: data.DanhGiaTB || 0,
+    TrangThai: data.TrangThai || 'Hoạt động',
+    TienIch: data.TienIch || null,
+    GhiChu: data.GhiChu || null,
+  };
+}
+
 export default function KinhDoanhDuLichPage() {
+  const [duLichList, setDuLichList] = useState<DuLich[]>(mockDuLich);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -272,8 +332,19 @@ export default function KinhDoanhDuLichPage() {
   const normalizeText = (value: unknown) =>
     typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
 
+  const loadData = async () => {
+    const result = await coSoKinhDoanhDuLichApi.getList({ page: 1, limit: 1000 });
+    if (result.success && Array.isArray(result.data)) {
+      setDuLichList(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // Filter data
-  const filteredData = mockDuLich.filter((item) => {
+  const filteredData = duLichList.filter((item) => {
     const normalizedQuery = normalizeText(searchQuery);
     const matchSearch =
       normalizeText(item.MaCoSo).includes(normalizedQuery) ||
@@ -288,12 +359,14 @@ export default function KinhDoanhDuLichPage() {
 
   // Stats
   const stats = {
-    total: mockDuLich.length,
-    totalRooms: mockDuLich.reduce((sum, d) => sum + d.SoPhong, 0),
-    totalRevenue: mockDuLich.reduce((sum, d) => sum + d.DoanhThuThang, 0),
-    totalGuests: mockDuLich.reduce((sum, d) => sum + d.LuotKhachThang, 0),
-    active: mockDuLich.filter(d => d.TrangThai === 'Hoạt động').length,
-    avgRating: (mockDuLich.reduce((sum, d) => sum + d.DanhGiaTB, 0) / mockDuLich.length).toFixed(1),
+    total: duLichList.length,
+    totalRooms: duLichList.reduce((sum, d) => sum + d.SoPhong, 0),
+    totalRevenue: duLichList.reduce((sum, d) => sum + d.DoanhThuThang, 0),
+    totalGuests: duLichList.reduce((sum, d) => sum + d.LuotKhachThang, 0),
+    active: duLichList.filter(d => d.TrangThai === 'Hoạt động').length,
+    avgRating: duLichList.length
+      ? (duLichList.reduce((sum, d) => sum + d.DanhGiaTB, 0) / duLichList.length).toFixed(1)
+      : '0.0',
   };
 
   // Handlers
@@ -355,8 +428,73 @@ export default function KinhDoanhDuLichPage() {
     setAddDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleDelete = async (record: DuLich) => {
+    if (!confirm(`Bạn có chắc muốn xóa cơ sở "${record.TenCoSo}"?`)) {
+      return;
+    }
+
+    const result = await coSoKinhDoanhDuLichApi.delete(record.MaDuLich);
+    if (result.success) {
+      await loadData();
+      return;
+    }
+
+    setDuLichList((current) => current.filter((item) => item.MaDuLich !== record.MaDuLich));
+  };
+
+  const handleSave = async () => {
+    if (editDialogOpen && selectedRecord) {
+      const result = await coSoKinhDoanhDuLichApi.update(selectedRecord.MaDuLich, mapToApi(formData));
+      if (result.success) {
+        setEditDialogOpen(false);
+        await loadData();
+        return;
+      }
+    }
+
+    if (addDialogOpen) {
+      const result = await coSoKinhDoanhDuLichApi.create(mapToApi(formData));
+      if (result.success) {
+        setAddDialogOpen(false);
+        await loadData();
+        return;
+      }
+    }
+
     console.log('Saving:', formData);
+    setDuLichList((current) => {
+      if (editDialogOpen && selectedRecord) {
+        return current.map((item) =>
+          item.MaDuLich === selectedRecord.MaDuLich ? { ...item, ...formData } as DuLich : item,
+        );
+      }
+
+      const fallbackItem: DuLich = {
+        MaDuLich: current.length + 1,
+        MaCoSo: formData.MaCoSo,
+        TenCoSo: formData.TenCoSo,
+        LoaiHinh: formData.LoaiHinh,
+        PhanLoai: formData.PhanLoai,
+        ChuSoHuu: formData.ChuSoHuu,
+        DienThoai: formData.DienThoai,
+        Email: formData.Email,
+        DiaChi: formData.DiaChi,
+        SoPhong: formData.SoPhong,
+        SucChua: formData.SucChua,
+        SaoXepHang: formData.SaoXepHang,
+        GiayCN: formData.GiayCN,
+        NgayCapPhep: formData.NgayCapPhep,
+        NgayHetHan: formData.NgayHetHan,
+        DoanhThuThang: formData.DoanhThuThang,
+        LuotKhachThang: formData.LuotKhachThang,
+        TrangThai: formData.TrangThai,
+        DanhGiaTB: formData.DanhGiaTB,
+        TienIch: formData.TienIch,
+        GhiChu: formData.GhiChu,
+      };
+
+      return [...current, fallbackItem];
+    });
     setEditDialogOpen(false);
     setAddDialogOpen(false);
   };
@@ -618,6 +756,14 @@ export default function KinhDoanhDuLichPage() {
                         onClick={() => handleEdit(record)}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleDelete(record)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                     </div>
                   </td>

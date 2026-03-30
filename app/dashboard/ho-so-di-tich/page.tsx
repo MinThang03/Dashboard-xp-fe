@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { hoSoDiTichApi } from '@/lib/api';
 
 interface HoSoDiTich {
   MaHoSo: string;
@@ -145,6 +146,52 @@ const capDoColors = {
   'Huyện': 'bg-green-100 text-green-700'
 };
 
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  const parsed = String(value);
+  return parsed.length >= 10 ? parsed.slice(0, 10) : parsed;
+}
+
+function toNumericId(value: string): number {
+  const direct = Number(value);
+  if (Number.isFinite(direct)) return direct;
+  const matched = value.match(/\d+/);
+  return matched ? Number(matched[0]) : Number.NaN;
+}
+
+function mapFromApi(item: any): HoSoDiTich {
+  const capDo = (item.CapDo || 'Huyện') as HoSoDiTich['CapDo'];
+  const trangThai = (item.TrangThai || 'Đã nộp') as HoSoDiTich['TrangThai'];
+
+  return {
+    MaHoSo: String(item.MaHoSo ?? ''),
+    TenDiTich: item.TenDiTich || '',
+    CapDo: capDo,
+    LoaiHoSo: item.LoaiHoSo || '',
+    TrangThai: trangThai,
+    NgayNop: toDateString(item.NgayNop || item.NgayLap),
+    NgayDuyet: toDateString(item.NgayDuyet),
+    NguoiNop: item.NguoiNop || '',
+    TaiLieu: item.TaiLieu || '',
+    GhiChu: item.GhiChu || item.NoiDung || '',
+  };
+}
+
+function mapToApi(data: Partial<HoSoDiTich>) {
+  return {
+    TenDiTich: data.TenDiTich || null,
+    CapDo: data.CapDo || null,
+    LoaiHoSo: data.LoaiHoSo || null,
+    TrangThai: data.TrangThai || 'Đã nộp',
+    NgayNop: data.NgayNop || null,
+    NgayDuyet: data.NgayDuyet || null,
+    NguoiNop: data.NguoiNop || null,
+    TaiLieu: data.TaiLieu || null,
+    GhiChu: data.GhiChu || null,
+    NoiDung: data.GhiChu || null,
+  };
+}
+
 export default function HoSoDiTichPage() {
   const [hoSoList, setHoSoList] = useState<HoSoDiTich[]>(mockHoSo);
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,6 +201,17 @@ export default function HoSoDiTichPage() {
   const [addDialog, setAddDialog] = useState(false);
   const [selectedHoSo, setSelectedHoSo] = useState<HoSoDiTich | null>(null);
   const [formData, setFormData] = useState<Partial<HoSoDiTich>>({});
+
+  const loadData = async () => {
+    const result = await hoSoDiTichApi.getList({ page: 1, limit: 1000 });
+    if (result.success && Array.isArray(result.data)) {
+      setHoSoList(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Thống kê
   const tongHoSo = hoSoList.length;
@@ -192,14 +250,32 @@ export default function HoSoDiTichPage() {
     setAddDialog(true);
   };
 
-  const handleDelete = (maHoSo: string) => {
+  const handleDelete = async (maHoSo: string) => {
     if (confirm('Bạn có chắc muốn xóa hồ sơ này?')) {
+      const id = toNumericId(maHoSo);
+      if (Number.isFinite(id)) {
+        const result = await hoSoDiTichApi.delete(id);
+        if (result.success) {
+          await loadData();
+          return;
+        }
+      }
       setHoSoList(hoSoList.filter(hs => hs.MaHoSo !== maHoSo));
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (selectedHoSo && formData) {
+      const id = toNumericId(selectedHoSo.MaHoSo);
+      if (Number.isFinite(id)) {
+        const result = await hoSoDiTichApi.update(id, mapToApi(formData));
+        if (result.success) {
+          setEditDialog(false);
+          await loadData();
+          return;
+        }
+      }
+
       setHoSoList(hoSoList.map(hs =>
         hs.MaHoSo === selectedHoSo.MaHoSo ? { ...hs, ...formData } : hs
       ));
@@ -207,8 +283,15 @@ export default function HoSoDiTichPage() {
     }
   };
 
-  const handleSaveAdd = () => {
+  const handleSaveAdd = async () => {
     if (formData.TenDiTich) {
+      const result = await hoSoDiTichApi.create(mapToApi(formData));
+      if (result.success) {
+        setAddDialog(false);
+        await loadData();
+        return;
+      }
+
       const newHoSo: HoSoDiTich = {
         MaHoSo: `HS${String(hoSoList.length + 1).padStart(3, '0')}`,
         TenDiTich: formData.TenDiTich || '',

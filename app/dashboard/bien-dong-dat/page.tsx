@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Activity, TrendingUp, AlertCircle, BarChart3, Search, Plus, Download,
-  Eye, Edit, CheckCircle2, Clock, XCircle, ArrowRightLeft, Scissors,
+  Eye, Edit, Trash2, CheckCircle2, Clock, XCircle, ArrowRightLeft, Scissors,
   Merge, FileText, User, Calendar, LandPlot
 } from 'lucide-react';
 import { bienDongDatApi } from '@/lib/api';
@@ -340,6 +340,25 @@ export default function BienDongDatPage() {
     setIsEditOpen(false);
     setSelectedBienDong(null);
     setEditForm(emptyBienDongForm);
+    await loadData();
+  };
+
+  const handleDelete = async (record: BienDongDat) => {
+    if (!record.MaBienDongId) {
+      alert('Không xác định được bản ghi để xóa');
+      return;
+    }
+
+    if (!window.confirm(`Xóa biến động ${record.MaBienDong}?`)) {
+      return;
+    }
+
+    const result = await bienDongDatApi.delete(record.MaBienDongId);
+    if (!result.success) {
+      alert(result.message || 'Không thể xóa biến động đất đai');
+      return;
+    }
+
     await loadData();
   };
 
@@ -907,6 +926,10 @@ export default function BienDongDatPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -911,6 +911,30 @@ export const bienDongDatApi = {
 };
 
 // ============== MÔI TRƯỜNG ==============
+export const racThaiApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/rac-thai?${query}`);
+  },
+  getStats: () => apiCall('/rac-thai/stats'),
+  getById: (id: number) => apiCall(`/rac-thai/${id}`),
+  create: (data: any) => apiCall('/rac-thai', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/rac-thai/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/rac-thai/${id}`, { method: 'DELETE' }),
+};
+
+export const baoCaoONhiemApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/bao-cao-o-nhiem?${query}`);
+  },
+  getStats: () => apiCall('/bao-cao-o-nhiem/stats'),
+  getById: (id: number) => apiCall(`/bao-cao-o-nhiem/${id}`),
+  create: (data: any) => apiCall('/bao-cao-o-nhiem', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/bao-cao-o-nhiem/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/bao-cao-o-nhiem/${id}`, { method: 'DELETE' }),
+};
+
 export const tramQuanTracMTApi = {
   getList: (params?: { page?: number; limit?: number }) => {
     const query = new URLSearchParams(params as any).toString();
@@ -984,6 +1008,43 @@ export const langNgheApi = {
   delete: (id: number) => apiCall(`/lang-nghe/${id}`, { method: 'DELETE' }),
 };
 
+export const hoSoDiTichApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/ho-so-di-tich?${query}`);
+  },
+  getStats: () => apiCall('/ho-so-di-tich/stats'),
+  getById: (id: number) => apiCall(`/ho-so-di-tich/${id}`),
+  create: (data: any) => apiCall('/ho-so-di-tich', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/ho-so-di-tich/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/ho-so-di-tich/${id}`, { method: 'DELETE' }),
+};
+
+export const coSoKinhDoanhDuLichApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/co-so-kinh-doanh-du-lich?${query}`);
+  },
+  getStats: () => apiCall('/co-so-kinh-doanh-du-lich/stats'),
+  getById: (id: number) => apiCall(`/co-so-kinh-doanh-du-lich/${id}`),
+  create: (data: any) => apiCall('/co-so-kinh-doanh-du-lich', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) =>
+    apiCall(`/co-so-kinh-doanh-du-lich/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/co-so-kinh-doanh-du-lich/${id}`, { method: 'DELETE' }),
+};
+
+export const ruiRoQuyHoachApi = {
+  getList: (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return apiCall(`/rui-ro-quy-hoach?${query}`);
+  },
+  getStats: () => apiCall('/rui-ro-quy-hoach/stats'),
+  getById: (id: number) => apiCall(`/rui-ro-quy-hoach/${id}`),
+  create: (data: any) => apiCall('/rui-ro-quy-hoach', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiCall(`/rui-ro-quy-hoach/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/rui-ro-quy-hoach/${id}`, { method: 'DELETE' }),
+};
+
 export const sanPhamOCOPApi = {
   getList: (params?: { page?: number; limit?: number }) => {
     const query = new URLSearchParams(params as any).toString();
@@ -1035,12 +1096,17 @@ export const api = {
   quyHoach: quyHoachApi,
   thuaDat: thuaDatApi,
   bienDongDat: bienDongDatApi,
+  racThai: racThaiApi,
+  baoCaoONhiem: baoCaoONhiemApi,
   tramQuanTracMT: tramQuanTracMTApi,
   diemThuGomRac: diemThuGomRacApi,
   diemNongMoiTruong: diemNongMoiTruongApi,
   diTich: diTichApi,
   leHoi: leHoiApi,
   langNghe: langNgheApi,
+  hoSoDiTich: hoSoDiTichApi,
+  coSoKinhDoanhDuLich: coSoKinhDoanhDuLichApi,
+  ruiRoQuyHoach: ruiRoQuyHoachApi,
   sanPhamOCOP: sanPhamOCOPApi,
 };
 

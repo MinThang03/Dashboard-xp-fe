@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,12 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Zap, AlertTriangle, TrendingUp, BarChart3, Search, Plus, Download, Eye, Edit,
+  Zap, AlertTriangle, TrendingUp, BarChart3, Search, Plus, Download, Eye, Edit, Trash2,
   MapPin, Brain, ShieldAlert, Lightbulb, AlertCircle, CheckCircle2
 } from 'lucide-react';
+import { ruiRoQuyHoachApi } from '@/lib/api';
 
 // Mock data phân tích rủi ro quy hoạch
 interface RuiRoQuyHoach {
+  MaRuiRo?: number;
   MaPhanTich: string;
   KhuVuc: string;
   DiaChi: string;
@@ -151,7 +153,83 @@ const loaiRuiRoOptions = ['Ngập lụt', 'Sạt lở', 'Tranh chấp đất', '
 const mucDoOptions = ['Thấp', 'Trung bình', 'Cao', 'Rất cao'];
 const trangThaiOptions = ['Mới phát hiện', 'Đang theo dõi', 'Cần xử lý', 'Đang xử lý', 'Đã xử lý'];
 
+const emptyRuiRoForm: RuiRoQuyHoach = {
+  MaPhanTich: '',
+  KhuVuc: '',
+  DiaChi: '',
+  MaThua: '',
+  SoTo: '',
+  LoaiRuiRo: '',
+  MucDoRuiRo: 'Trung bình',
+  XacSuat: 0,
+  DoTinCayAI: 0,
+  MoTaRuiRo: '',
+  NguyenNhan: '',
+  KhuyenNghiAI: '',
+  TrangThai: 'Mới phát hiện',
+  NgayPhanTich: new Date().toISOString().slice(0, 10),
+  NgayCapNhat: new Date().toISOString().slice(0, 10),
+  GhiChu: '',
+};
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  const parsed = String(value);
+  return parsed.length >= 10 ? parsed.slice(0, 10) : parsed;
+}
+
+function toNumericId(value: string): number {
+  const direct = Number(value);
+  if (Number.isFinite(direct)) return direct;
+  const matched = value.match(/\d+/);
+  return matched ? Number(matched[0]) : Number.NaN;
+}
+
+function mapFromApi(item: any): RuiRoQuyHoach {
+  return {
+    MaRuiRo: Number(item.MaRuiRo || 0) || undefined,
+    MaPhanTich: item.MaPhanTich || `RRQH${String(item.MaRuiRo || '').padStart(3, '0')}`,
+    KhuVuc: item.KhuVuc || '',
+    DiaChi: item.DiaChi || '',
+    MaThua: item.MaThua || '',
+    SoTo: item.SoTo || '',
+    LoaiRuiRo: item.LoaiRuiRo || '',
+    MucDoRuiRo: item.MucDoRuiRo || item.MucDoNghiemTrong || 'Trung bình',
+    XacSuat: Number(item.XacSuat || 0),
+    DoTinCayAI: Number(item.DoTinCayAI || 0),
+    MoTaRuiRo: item.MoTaRuiRo || '',
+    NguyenNhan: item.NguyenNhan || '',
+    KhuyenNghiAI: item.KhuyenNghiAI || item.BienPhapXuLy || '',
+    TrangThai: item.TrangThai || 'Mới phát hiện',
+    NgayPhanTich: toDateString(item.NgayPhanTich || item.NgayPhatHien),
+    NgayCapNhat: toDateString(item.NgayCapNhat),
+    GhiChu: item.GhiChu || '',
+  };
+}
+
+function mapToApi(data: Partial<RuiRoQuyHoach>) {
+  return {
+    MaPhanTich: data.MaPhanTich || null,
+    KhuVuc: data.KhuVuc || null,
+    DiaChi: data.DiaChi || null,
+    MaThua: data.MaThua || null,
+    SoTo: data.SoTo || null,
+    LoaiRuiRo: data.LoaiRuiRo || null,
+    MucDoRuiRo: data.MucDoRuiRo || 'Trung bình',
+    XacSuat: data.XacSuat || 0,
+    DoTinCayAI: data.DoTinCayAI || 0,
+    MoTaRuiRo: data.MoTaRuiRo || null,
+    NguyenNhan: data.NguyenNhan || null,
+    KhuyenNghiAI: data.KhuyenNghiAI || null,
+    TrangThai: data.TrangThai || 'Mới phát hiện',
+    NgayPhanTich: data.NgayPhanTich || null,
+    NgayCapNhat: data.NgayCapNhat || null,
+    GhiChu: data.GhiChu || null,
+  };
+}
+
 export default function RuiRoQuyHoachPage() {
+  const [ruiRoList, setRuiRoList] = useState<RuiRoQuyHoach[]>(mockRuiRo);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMucDo, setFilterMucDo] = useState<string>('all');
   const [filterLoai, setFilterLoai] = useState<string>('all');
@@ -159,8 +237,20 @@ export default function RuiRoQuyHoachPage() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState<RuiRoQuyHoach>(emptyRuiRoForm);
 
-  const filteredData = mockRuiRo.filter((item) => {
+  const loadData = async () => {
+    const result = await ruiRoQuyHoachApi.getList({ page: 1, limit: 1000 });
+    if (result.success && Array.isArray(result.data)) {
+      setRuiRoList(result.data.map(mapFromApi));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filteredData = ruiRoList.filter((item) => {
     const matchesSearch =
       item.MaPhanTich.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.KhuVuc.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -171,12 +261,64 @@ export default function RuiRoQuyHoachPage() {
   });
 
   const stats = {
-    total: mockRuiRo.length,
-    ruiRoCao: mockRuiRo.filter(r => r.MucDoRuiRo === 'Cao' || r.MucDoRuiRo === 'Rất cao').length,
-    ruiRoTB: mockRuiRo.filter(r => r.MucDoRuiRo === 'Trung bình').length,
-    canXuLy: mockRuiRo.filter(r => r.TrangThai === 'Cần xử lý').length,
-    daXuLy: mockRuiRo.filter(r => r.TrangThai === 'Đã xử lý').length,
-    doTinCayTB: Math.round(mockRuiRo.reduce((sum, r) => sum + r.DoTinCayAI, 0) / mockRuiRo.length)
+    total: ruiRoList.length,
+    ruiRoCao: ruiRoList.filter(r => r.MucDoRuiRo === 'Cao' || r.MucDoRuiRo === 'Rất cao').length,
+    ruiRoTB: ruiRoList.filter(r => r.MucDoRuiRo === 'Trung bình').length,
+    canXuLy: ruiRoList.filter(r => r.TrangThai === 'Cần xử lý').length,
+    daXuLy: ruiRoList.filter(r => r.TrangThai === 'Đã xử lý').length,
+    doTinCayTB: ruiRoList.length
+      ? Math.round(ruiRoList.reduce((sum, r) => sum + r.DoTinCayAI, 0) / ruiRoList.length)
+      : 0,
+  };
+
+  const handleCreate = async () => {
+    const result = await ruiRoQuyHoachApi.create(mapToApi(addFormData));
+    if (result.success) {
+      setIsAddOpen(false);
+      setAddFormData(emptyRuiRoForm);
+      await loadData();
+      return;
+    }
+
+    setRuiRoList((current) => [addFormData, ...current]);
+    setIsAddOpen(false);
+    setAddFormData(emptyRuiRoForm);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedRuiRo) return;
+
+    const id = selectedRuiRo.MaRuiRo || toNumericId(selectedRuiRo.MaPhanTich);
+    if (Number.isFinite(id)) {
+      const result = await ruiRoQuyHoachApi.update(id, mapToApi(selectedRuiRo));
+      if (result.success) {
+        setIsEditOpen(false);
+        await loadData();
+        return;
+      }
+    }
+
+    setRuiRoList((current) =>
+      current.map((item) => (item.MaPhanTich === selectedRuiRo.MaPhanTich ? selectedRuiRo : item)),
+    );
+    setIsEditOpen(false);
+  };
+
+  const handleDelete = async (item: RuiRoQuyHoach) => {
+    if (!confirm(`Bạn có chắc muốn xóa phân tích ${item.MaPhanTich}?`)) {
+      return;
+    }
+
+    const id = item.MaRuiRo || toNumericId(item.MaPhanTich);
+    if (Number.isFinite(id)) {
+      const result = await ruiRoQuyHoachApi.delete(id);
+      if (result.success) {
+        await loadData();
+        return;
+      }
+    }
+
+    setRuiRoList((current) => current.filter((row) => row.MaPhanTich !== item.MaPhanTich));
   };
 
   const getMucDoBadge = (mucDo: string) => {
@@ -213,7 +355,10 @@ export default function RuiRoQuyHoachPage() {
           </div>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full 2xl:w-auto bg-white text-purple-600 hover:bg-white/90">
+              <Button
+                className="w-full 2xl:w-auto bg-white text-purple-600 hover:bg-white/90"
+                onClick={() => setAddFormData(emptyRuiRoForm)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Phân tích mới
               </Button>
@@ -226,23 +371,42 @@ export default function RuiRoQuyHoachPage() {
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2 col-span-2">
                   <Label>Khu vực *</Label>
-                  <Input placeholder="Nhập tên khu vực" />
+                  <Input
+                    placeholder="Nhập tên khu vực"
+                    value={addFormData.KhuVuc}
+                    onChange={(e) => setAddFormData({ ...addFormData, KhuVuc: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Địa chỉ</Label>
-                  <Input placeholder="Nhập địa chỉ chi tiết" />
+                  <Input
+                    placeholder="Nhập địa chỉ chi tiết"
+                    value={addFormData.DiaChi}
+                    onChange={(e) => setAddFormData({ ...addFormData, DiaChi: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Mã thửa (từ - đến)</Label>
-                  <Input placeholder="VD: 100-150" />
+                  <Input
+                    placeholder="VD: 100-150"
+                    value={addFormData.MaThua}
+                    onChange={(e) => setAddFormData({ ...addFormData, MaThua: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Số tờ</Label>
-                  <Input placeholder="Nhập số tờ" />
+                  <Input
+                    placeholder="Nhập số tờ"
+                    value={addFormData.SoTo}
+                    onChange={(e) => setAddFormData({ ...addFormData, SoTo: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Loại rủi ro cần phân tích</Label>
-                  <Select>
+                  <Select
+                    value={addFormData.LoaiRuiRo}
+                    onValueChange={(value) => setAddFormData({ ...addFormData, LoaiRuiRo: value })}
+                  >
                     <SelectTrigger><SelectValue placeholder="Chọn loại" /></SelectTrigger>
                     <SelectContent>
                       {loaiRuiRoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -250,28 +414,38 @@ export default function RuiRoQuyHoachPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Độ ưu tiên</Label>
-                  <Select>
-                    <SelectTrigger><SelectValue placeholder="Chọn độ ưu tiên" /></SelectTrigger>
+                  <Label>Mức độ rủi ro</Label>
+                  <Select
+                    value={addFormData.MucDoRuiRo}
+                    onValueChange={(value) => setAddFormData({ ...addFormData, MucDoRuiRo: value })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Chọn mức độ" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="high">Cao</SelectItem>
-                      <SelectItem value="medium">Trung bình</SelectItem>
-                      <SelectItem value="low">Thấp</SelectItem>
+                      {mucDoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Mô tả tình huống</Label>
-                  <Textarea placeholder="Mô tả chi tiết tình huống cần phân tích" rows={3} />
+                  <Textarea
+                    placeholder="Mô tả chi tiết tình huống cần phân tích"
+                    rows={3}
+                    value={addFormData.MoTaRuiRo}
+                    onChange={(e) => setAddFormData({ ...addFormData, MoTaRuiRo: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label>Ghi chú</Label>
-                  <Textarea placeholder="Nhập ghi chú" />
+                  <Textarea
+                    placeholder="Nhập ghi chú"
+                    value={addFormData.GhiChu}
+                    onChange={(e) => setAddFormData({ ...addFormData, GhiChu: e.target.value })}
+                  />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddOpen(false)}>Hủy</Button>
-                <Button onClick={() => setIsAddOpen(false)}>
+                <Button onClick={handleCreate}>
                   <Brain className="mr-2 h-4 w-4" />
                   Chạy phân tích AI
                 </Button>
@@ -449,7 +623,7 @@ export default function RuiRoQuyHoachPage() {
                       {/* View Dialog */}
                       <Dialog open={isViewOpen && selectedRuiRo?.MaPhanTich === item.MaPhanTich} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedRuiRo(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedRuiRo(item); setIsViewOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedRuiRo({ ...item }); setIsViewOpen(true); }}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -541,7 +715,7 @@ export default function RuiRoQuyHoachPage() {
                       {/* Edit Dialog */}
                       <Dialog open={isEditOpen && selectedRuiRo?.MaPhanTich === item.MaPhanTich} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedRuiRo(null); }}>
                         <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedRuiRo(item); setIsEditOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedRuiRo({ ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -556,23 +730,39 @@ export default function RuiRoQuyHoachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2 col-span-2">
                                   <Label>Khu vực</Label>
-                                  <Input defaultValue={item.KhuVuc} />
+                                  <Input
+                                    value={selectedRuiRo?.KhuVuc || ''}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, KhuVuc: e.target.value }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Địa chỉ</Label>
-                                  <Input defaultValue={item.DiaChi} />
+                                  <Input
+                                    value={selectedRuiRo?.DiaChi || ''}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, DiaChi: e.target.value }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mã thửa</Label>
-                                  <Input defaultValue={item.MaThua} />
+                                  <Input
+                                    value={selectedRuiRo?.MaThua || ''}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, MaThua: e.target.value }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Số tờ</Label>
-                                  <Input defaultValue={item.SoTo} />
+                                  <Input
+                                    value={selectedRuiRo?.SoTo || ''}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, SoTo: e.target.value }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Ngày phân tích</Label>
-                                  <Input type="date" defaultValue={item.NgayPhanTich} />
+                                  <Input
+                                    type="date"
+                                    value={selectedRuiRo?.NgayPhanTich || ''}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, NgayPhanTich: e.target.value }) : prev)}
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -582,11 +772,17 @@ export default function RuiRoQuyHoachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Loại rủi ro</Label>
-                                  <Input defaultValue={item.LoaiRuiRo} />
+                                  <Input
+                                    value={selectedRuiRo?.LoaiRuiRo || ''}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, LoaiRuiRo: e.target.value }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Mức độ rủi ro</Label>
-                                  <Select defaultValue={item.MucDoRuiRo}>
+                                  <Select
+                                    value={selectedRuiRo?.MucDoRuiRo || 'Trung bình'}
+                                    onValueChange={(value) => setSelectedRuiRo((prev) => prev ? ({ ...prev, MucDoRuiRo: value }) : prev)}
+                                  >
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {mucDoOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -595,19 +791,39 @@ export default function RuiRoQuyHoachPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Xác suất xảy ra (%)</Label>
-                                  <Input type="number" min="0" max="100" defaultValue={item.XacSuat} />
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={selectedRuiRo?.XacSuat ?? 0}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, XacSuat: Number(e.target.value) || 0 }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Độ tin cậy AI (%)</Label>
-                                  <Input type="number" min="0" max="100" defaultValue={item.DoTinCayAI} />
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={selectedRuiRo?.DoTinCayAI ?? 0}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, DoTinCayAI: Number(e.target.value) || 0 }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Mô tả rủi ro</Label>
-                                  <Textarea defaultValue={item.MoTaRuiRo} rows={2} />
+                                  <Textarea
+                                    value={selectedRuiRo?.MoTaRuiRo || ''}
+                                    rows={2}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, MoTaRuiRo: e.target.value }) : prev)}
+                                  />
                                 </div>
                                 <div className="space-y-2 col-span-2">
                                   <Label>Nguyên nhân</Label>
-                                  <Textarea defaultValue={item.NguyenNhan} rows={2} />
+                                  <Textarea
+                                    value={selectedRuiRo?.NguyenNhan || ''}
+                                    rows={2}
+                                    onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, NguyenNhan: e.target.value }) : prev)}
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -616,7 +832,11 @@ export default function RuiRoQuyHoachPage() {
                               <h4 className="font-semibold mb-3">Khuyến nghị AI</h4>
                               <div className="space-y-2">
                                 <Label>Khuyến nghị xử lý</Label>
-                                <Textarea defaultValue={item.KhuyenNghiAI} rows={3} />
+                                <Textarea
+                                  value={selectedRuiRo?.KhuyenNghiAI || ''}
+                                  rows={3}
+                                  onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, KhuyenNghiAI: e.target.value }) : prev)}
+                                />
                               </div>
                             </div>
 
@@ -625,7 +845,10 @@ export default function RuiRoQuyHoachPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Trạng thái</Label>
-                                  <Select defaultValue={item.TrangThai}>
+                                  <Select
+                                    value={selectedRuiRo?.TrangThai || 'Mới phát hiện'}
+                                    onValueChange={(value) => setSelectedRuiRo((prev) => prev ? ({ ...prev, TrangThai: value }) : prev)}
+                                  >
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {trangThaiOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -637,15 +860,22 @@ export default function RuiRoQuyHoachPage() {
 
                             <div className="space-y-2">
                               <Label>Ghi chú</Label>
-                              <Textarea defaultValue={item.GhiChu} />
+                              <Textarea
+                                value={selectedRuiRo?.GhiChu || ''}
+                                onChange={(e) => setSelectedRuiRo((prev) => prev ? ({ ...prev, GhiChu: e.target.value }) : prev)}
+                              />
                             </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Hủy</Button>
-                            <Button onClick={() => setIsEditOpen(false)}>Cập nhật</Button>
+                            <Button onClick={handleUpdate}>Cập nhật</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
