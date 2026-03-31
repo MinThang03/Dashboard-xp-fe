@@ -41,7 +41,7 @@ import { Edit, Trash2, X } from 'lucide-react';
 export default function BaoTroXaHoiPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [doiTuongList, setDoiTuongList] = useState<any[]>(mockDoiTuongBaoTro);
+  const [doiTuongList, setDoiTuongList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -52,12 +52,17 @@ export default function BaoTroXaHoiPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await baoTroXaHoiApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setDoiTuongList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setDoiTuongList(response.data);
       }
     };
     loadData();
   }, []);
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaDoiTuong);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
 
   // Tính toán thống kê
   const stats = {
@@ -69,8 +74,8 @@ export default function BaoTroXaHoiPage() {
 
   // Lọc dữ liệu
   const filteredDoiTuong = doiTuongList.filter(dt =>
-    (dt.HoTen || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (dt.LoaiDoiTuong || '').toLowerCase().includes(searchQuery.toLowerCase())
+    String(dt.HoTen ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(dt.LoaiDoiTuong ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -123,14 +128,15 @@ export default function BaoTroXaHoiPage() {
 
   const handleSave = async () => {
     if (isEditOpen && selectedItem) {
-      const id = selectedItem.MaDoiTuong;
+      const id = getRecordId(selectedItem);
+      if (!id) return;
       await baoTroXaHoiApi.update(id, formData);
     } else {
       await baoTroXaHoiApi.create(formData);
     }
     const response = await baoTroXaHoiApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setDoiTuongList((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setDoiTuongList(response.data);
     }
     setIsAddOpen(false);
     setIsEditOpen(false);
@@ -138,10 +144,12 @@ export default function BaoTroXaHoiPage() {
 
   const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa đối tượng ${item.HoTen}?`)) {
-      await baoTroXaHoiApi.delete(item.MaDoiTuong);
+      const id = getRecordId(item);
+      if (!id) return;
+      await baoTroXaHoiApi.delete(id);
       const response = await baoTroXaHoiApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setDoiTuongList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setDoiTuongList(response.data);
       }
     }
   };

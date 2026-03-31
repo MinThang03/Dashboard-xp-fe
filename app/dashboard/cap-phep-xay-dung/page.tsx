@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Hammer, FileCheck, Building2, AlertTriangle, Search, Plus, Download, Eye, Edit,
-  Clock, CheckCircle2, XCircle, MapPin, Calendar, User, Ruler
+  Clock, CheckCircle2, XCircle, MapPin, Calendar, User, Ruler, Trash2
 } from 'lucide-react';
 import { hoSoCapPhepXayDungApi } from '@/lib/api';
 
@@ -252,7 +252,7 @@ export default function CapPhepXayDungPage() {
     GhiChu: '',
   };
   const [searchQuery, setSearchQuery] = useState('');
-  const [records, setRecords] = useState<HoSoCapPhep[]>(mockCapPhepXD);
+  const [records, setRecords] = useState<HoSoCapPhep[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [selectedHoSo, setSelectedHoSo] = useState<HoSoCapPhep | null>(null);
@@ -265,8 +265,8 @@ export default function CapPhepXayDungPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await hoSoCapPhepXayDungApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setRecords((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setRecords(response.data);
       }
     };
     loadData();
@@ -274,9 +274,38 @@ export default function CapPhepXayDungPage() {
 
   const reloadData = async () => {
     const response = await hoSoCapPhepXayDungApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setRecords((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data);
     }
+  };
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaHoSo);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
+
+  const isSameRecord = (a: any, b: any): boolean => {
+    if (!a || !b) return false;
+
+    const idA = getRecordId(a);
+    const idB = getRecordId(b);
+    if (idA && idB) return idA === idB;
+
+    const maA = String(a?.MaHoSo ?? '').trim();
+    const maB = String(b?.MaHoSo ?? '').trim();
+    if (maA && maB) return maA === maB;
+
+    return false;
+  };
+
+  const getRowKey = (item: HoSoCapPhep, index: number): string => {
+    const id = getRecordId(item);
+    if (id) return `hoso-${id}`;
+
+    const maHoSo = String(item.MaHoSo ?? '').trim();
+    if (maHoSo) return `hoso-code-${maHoSo}-${index}`;
+
+    return `hoso-row-${index}`;
   };
 
   const toNum = (value: string) => {
@@ -292,17 +321,28 @@ export default function CapPhepXayDungPage() {
 
   const handleUpdate = async () => {
     if (!selectedHoSo) return;
-    await hoSoCapPhepXayDungApi.update(Number((selectedHoSo as any).MaHoSo), editFormData);
+    const id = getRecordId(selectedHoSo);
+    if (!id) return;
+    await hoSoCapPhepXayDungApi.update(id, editFormData);
     await reloadData();
     setIsEditOpen(false);
   };
 
+  const handleDelete = async (item: HoSoCapPhep) => {
+    const id = getRecordId(item);
+    if (!id) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${item.MaHoSo}?`)) return;
+
+    await hoSoCapPhepXayDungApi.delete(id);
+    await reloadData();
+  };
+
   const filteredData = records.filter((item) => {
     const matchesSearch =
-      (item.MaHoSo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.ChuDauTu || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.MaHoSo ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.ChuDauTu ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.CCCD || '').includes(searchQuery) ||
-      (item.DiaChiCongTrinh || '').toLowerCase().includes(searchQuery.toLowerCase());
+      String(item.DiaChiCongTrinh ?? '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || item.TrangThai === filterStatus;
     const matchesLoai = filterLoai === 'all' || item.LoaiCongTrinh === filterLoai;
     return matchesSearch && matchesStatus && matchesLoai;
@@ -601,8 +641,8 @@ export default function CapPhepXayDungPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.MaHoSo}>
+              {filteredData.map((item, index) => (
+                <TableRow key={getRowKey(item, index)}>
                   <TableCell className="font-medium text-primary">{item.MaHoSo}</TableCell>
                   <TableCell>
                     <div className="text-sm">
@@ -638,7 +678,7 @@ export default function CapPhepXayDungPage() {
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {/* View Dialog */}
-                      <Dialog open={isViewOpen && selectedHoSo?.MaHoSo === item.MaHoSo} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedHoSo(null); }}>
+                      <Dialog open={isViewOpen && isSameRecord(selectedHoSo, item)} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedHoSo(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedHoSo(item); setIsViewOpen(true); }}>
                             <Eye className="h-4 w-4" />
@@ -752,7 +792,7 @@ export default function CapPhepXayDungPage() {
                       </Dialog>
 
                       {/* Edit Dialog */}
-                      <Dialog open={isEditOpen && selectedHoSo?.MaHoSo === item.MaHoSo} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedHoSo(null); }}>
+                      <Dialog open={isEditOpen && isSameRecord(selectedHoSo, item)} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedHoSo(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedHoSo(item); setEditFormData({ ...emptyForm, ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
@@ -884,6 +924,10 @@ export default function CapPhepXayDungPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

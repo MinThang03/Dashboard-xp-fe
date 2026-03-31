@@ -42,7 +42,7 @@ import { Edit, Trash2, X } from 'lucide-react';
 export default function NguoiCoCongPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [nguoiCoCongList, setNguoiCoCongList] = useState<any[]>(mockNguoiCoCong);
+  const [nguoiCoCongList, setNguoiCoCongList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -53,12 +53,17 @@ export default function NguoiCoCongPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await nguoiCoCongApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setNguoiCoCongList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setNguoiCoCongList(response.data);
       }
     };
     loadData();
   }, []);
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaNCC ?? item?.MaNguoiCoCong);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
 
   // Tính toán thống kê
   const stats = {
@@ -70,8 +75,8 @@ export default function NguoiCoCongPage() {
 
   // Lọc dữ liệu
   const filteredNCC = nguoiCoCongList.filter(ncc =>
-    (ncc.HoTen || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (ncc.LoaiDoiTuong || '').toLowerCase().includes(searchQuery.toLowerCase())
+    String(ncc.HoTen ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(ncc.LoaiDoiTuong ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -126,14 +131,15 @@ export default function NguoiCoCongPage() {
 
   const handleSave = async () => {
     if (isEditOpen && selectedItem) {
-      const id = selectedItem.MaNCC ?? selectedItem.MaNguoiCoCong;
+      const id = getRecordId(selectedItem);
+      if (!id) return;
       await nguoiCoCongApi.update(id, formData);
     } else {
       await nguoiCoCongApi.create(formData);
     }
     const response = await nguoiCoCongApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setNguoiCoCongList((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setNguoiCoCongList(response.data);
     }
     setIsAddOpen(false);
     setIsEditOpen(false);
@@ -141,11 +147,12 @@ export default function NguoiCoCongPage() {
 
   const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${item.HoTen}?`)) {
-      const id = item.MaNCC ?? item.MaNguoiCoCong;
+      const id = getRecordId(item);
+      if (!id) return;
       await nguoiCoCongApi.delete(id);
       const response = await nguoiCoCongApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setNguoiCoCongList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setNguoiCoCongList(response.data);
       }
     }
   };

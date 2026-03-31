@@ -12,12 +12,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Building2, AlertTriangle, CheckCircle2, Clock, Search, Plus, Download, Eye, Edit,
-  MapPin, Calendar, User, FileCheck, Ban, Gavel
+  MapPin, Calendar, User, FileCheck, Ban, Gavel, Trash2
 } from 'lucide-react';
 import { theoDoiTratTuXayDungApi } from '@/lib/api';
 
 // Mock data trật tự xây dựng
 interface TratTuXayDung {
+  MaTheoDoi?: number;
   MaKiemTra: string;
   DiaChi: string;
   MaThua: string;
@@ -213,7 +214,7 @@ export default function TratTuXayDungPage() {
     GhiChu: '',
   };
   const [searchQuery, setSearchQuery] = useState('');
-  const [records, setRecords] = useState<TratTuXayDung[]>(mockTratTuXD);
+  const [records, setRecords] = useState<TratTuXayDung[]>([]);
   const [filterKetQua, setFilterKetQua] = useState<string>('all');
   const [filterTrangThai, setFilterTrangThai] = useState<string>('all');
   const [selectedKT, setSelectedKT] = useState<TratTuXayDung | null>(null);
@@ -226,8 +227,8 @@ export default function TratTuXayDungPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await theoDoiTratTuXayDungApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setRecords((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setRecords(response.data);
       }
     };
     loadData();
@@ -235,9 +236,38 @@ export default function TratTuXayDungPage() {
 
   const reloadData = async () => {
     const response = await theoDoiTratTuXayDungApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setRecords((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data);
     }
+  };
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaTheoDoi);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
+
+  const isSameRecord = (a: any, b: any): boolean => {
+    if (!a || !b) return false;
+
+    const idA = getRecordId(a);
+    const idB = getRecordId(b);
+    if (idA && idB) return idA === idB;
+
+    const maA = String(a?.MaKiemTra ?? '').trim();
+    const maB = String(b?.MaKiemTra ?? '').trim();
+    if (maA && maB) return maA === maB;
+
+    return false;
+  };
+
+  const getRowKey = (item: TratTuXayDung, index: number): string => {
+    const id = getRecordId(item);
+    if (id) return `ttxd-${id}`;
+
+    const maKiemTra = String(item.MaKiemTra ?? '').trim();
+    if (maKiemTra) return `ttxd-code-${maKiemTra}-${index}`;
+
+    return `ttxd-row-${index}`;
   };
 
   const handleCreate = async () => {
@@ -248,17 +278,28 @@ export default function TratTuXayDungPage() {
 
   const handleUpdate = async () => {
     if (!selectedKT) return;
-    await theoDoiTratTuXayDungApi.update(Number((selectedKT as any).MaTheoDoi), editFormData);
+    const id = getRecordId(selectedKT);
+    if (!id) return;
+    await theoDoiTratTuXayDungApi.update(id, editFormData);
     await reloadData();
     setIsEditOpen(false);
   };
 
+  const handleDelete = async (item: TratTuXayDung) => {
+    const id = getRecordId(item);
+    if (!id) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa biên bản ${item.MaKiemTra}?`)) return;
+
+    await theoDoiTratTuXayDungApi.delete(id);
+    await reloadData();
+  };
+
   const filteredData = records.filter((item) => {
     const matchesSearch =
-      (item.MaKiemTra || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.ChuDauTu || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.DiaChi || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.SoGiayPhep || '').toLowerCase().includes(searchQuery.toLowerCase());
+      String(item.MaKiemTra ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.ChuDauTu ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.DiaChi ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.SoGiayPhep ?? '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesKetQua = filterKetQua === 'all' || item.KetQuaKiemTra === filterKetQua;
     const matchesTrangThai = filterTrangThai === 'all' || item.TrangThaiXuLy === filterTrangThai;
     return matchesSearch && matchesKetQua && matchesTrangThai;
@@ -593,8 +634,8 @@ export default function TratTuXayDungPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.MaKiemTra}>
+              {filteredData.map((item, index) => (
+                <TableRow key={getRowKey(item, index)}>
                   <TableCell className="font-medium text-primary">{item.MaKiemTra}</TableCell>
                   <TableCell>
                     <div className="max-w-[150px] truncate text-sm" title={item.DiaChi}>
@@ -631,7 +672,7 @@ export default function TratTuXayDungPage() {
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {/* View Dialog */}
-                      <Dialog open={isViewOpen && selectedKT?.MaKiemTra === item.MaKiemTra} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedKT(null); }}>
+                      <Dialog open={isViewOpen && isSameRecord(selectedKT, item)} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedKT(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedKT(item); setIsViewOpen(true); }}>
                             <Eye className="h-4 w-4" />
@@ -752,7 +793,7 @@ export default function TratTuXayDungPage() {
                       </Dialog>
 
                       {/* Edit Dialog */}
-                      <Dialog open={isEditOpen && selectedKT?.MaKiemTra === item.MaKiemTra} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedKT(null); }}>
+                      <Dialog open={isEditOpen && isSameRecord(selectedKT, item)} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedKT(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedKT(item); setEditFormData({ ...emptyForm, ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
@@ -901,6 +942,10 @@ export default function TratTuXayDungPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

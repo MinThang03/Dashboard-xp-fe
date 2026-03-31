@@ -42,7 +42,7 @@ import { viecLamApi } from '@/lib/api';
 export default function ViecLamPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [viecLamList, setViecLamList] = useState<any[]>(mockNguoiThatNghiep);
+  const [viecLamList, setViecLamList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -53,12 +53,17 @@ export default function ViecLamPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await viecLamApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setViecLamList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setViecLamList(response.data);
       }
     };
     loadData();
   }, []);
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaViecLam ?? item?.MaNTV);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
 
   // Tính toán thống kê
   const stats = {
@@ -70,8 +75,8 @@ export default function ViecLamPage() {
 
   // Lọc dữ liệu
   const filteredData = viecLamList.filter(n =>
-    (n.HoTen || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (n.NgheNghiep || '').toLowerCase().includes(searchQuery.toLowerCase())
+    String(n.HoTen ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(n.NgheNghiep ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -129,14 +134,15 @@ export default function ViecLamPage() {
 
   const handleSave = async () => {
     if (isEditOpen && selectedItem) {
-      const id = selectedItem.MaViecLam ?? selectedItem.MaNTV;
+      const id = getRecordId(selectedItem);
+      if (!id) return;
       await viecLamApi.update(id, formData);
     } else {
       await viecLamApi.create(formData);
     }
     const response = await viecLamApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setViecLamList((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setViecLamList(response.data);
     }
     setIsAddOpen(false);
     setIsEditOpen(false);
@@ -144,11 +150,12 @@ export default function ViecLamPage() {
 
   const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hồ sơ ${item.HoTen}?`)) {
-      const id = item.MaViecLam ?? item.MaNTV;
+      const id = getRecordId(item);
+      if (!id) return;
       await viecLamApi.delete(id);
       const response = await viecLamApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setViecLamList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setViecLamList(response.data);
       }
     }
   };

@@ -166,7 +166,7 @@ const tinhTrangColors = {
 };
 
 export default function HaTangPage() {
-  const [haTangList, setHaTangList] = useState<HaTang[]>(mockHaTang);
+  const [haTangList, setHaTangList] = useState<HaTang[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLoai, setSelectedLoai] = useState<string>('all');
   const [selectedTinhTrang, setSelectedTinhTrang] = useState<string>('all');
@@ -179,8 +179,8 @@ export default function HaTangPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setHaTangList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setHaTangList(response.data);
       }
     };
     loadData();
@@ -211,8 +211,8 @@ export default function HaTangPage() {
 
   // Lọc
   const filteredHaTang = haTangList.filter(ht => {
-    const matchSearch = (ht.TenHangMuc || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (ht.ViTri || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = String(ht.TenHangMuc ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       String(ht.ViTri ?? '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchLoai = selectedLoai === 'all' || ht.LoaiHaTang === selectedLoai;
     const matchTinhTrang = selectedTinhTrang === 'all' || ht.TinhTrang === selectedTinhTrang;
     return matchSearch && matchLoai && matchTinhTrang;
@@ -243,8 +243,8 @@ export default function HaTangPage() {
     if (confirm('Bạn có chắc muốn xóa hạng mục này?')) {
       await haTangDoThiApi.delete(Number(maHaTang));
       const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setHaTangList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setHaTangList(response.data);
       }
     }
   };
@@ -253,8 +253,8 @@ export default function HaTangPage() {
     if (selectedHaTang && formData) {
       await haTangDoThiApi.update(Number((selectedHaTang as any).MaHaTang), formData);
       const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setHaTangList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setHaTangList(response.data);
       }
       setEditDialog(false);
     }
@@ -264,8 +264,8 @@ export default function HaTangPage() {
     if (formData.TenHangMuc) {
       await haTangDoThiApi.create(formData);
       const response = await haTangDoThiApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setHaTangList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setHaTangList(response.data);
       }
       setAddDialog(false);
     }

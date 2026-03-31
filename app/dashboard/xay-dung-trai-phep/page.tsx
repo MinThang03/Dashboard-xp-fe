@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Ban, AlertTriangle, Clock, CheckCircle2, Search, Plus, Download, Eye, Edit, MapPin, Calendar, User, Gavel, FileX, DollarSign } from "lucide-react";
+import { Ban, AlertTriangle, Clock, CheckCircle2, Search, Plus, Download, Eye, Edit, MapPin, Calendar, User, Gavel, FileX, DollarSign, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { xayDungTraiPhepApi } from "@/lib/api";
 
 interface XayDungTraiPhep {
+  MaViPham?: number | string;
   MaVuViec: string;
   DiaChi: string;
   MaThua: string;
@@ -192,7 +193,7 @@ const defaultFormData = (): XayDungTraiPhep => ({
 
 export default function XayDungTraiPhepPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [records, setRecords] = useState<XayDungTraiPhep[]>(mockTraiPhep);
+  const [records, setRecords] = useState<XayDungTraiPhep[]>([]);
   const [filterTrangThai, setFilterTrangThai] = useState<string>("all");
   const [filterLoai, setFilterLoai] = useState<string>("all");
   const [selectedVu, setSelectedVu] = useState<XayDungTraiPhep | null>(null);
@@ -204,20 +205,56 @@ export default function XayDungTraiPhepPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await xayDungTraiPhepApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setRecords((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setRecords(response.data);
       }
     };
     loadData();
   }, []);
 
+  const reloadData = async () => {
+    const response = await xayDungTraiPhepApi.getList({ page: 1, limit: 500 });
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data);
+    }
+  };
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaViPham);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
+
+  const isSameRecord = (a: any, b: any): boolean => {
+    if (!a || !b) return false;
+
+    const idA = getRecordId(a);
+    const idB = getRecordId(b);
+    if (idA && idB) return idA === idB;
+
+    const maA = String(a?.MaVuViec ?? "").trim();
+    const maB = String(b?.MaVuViec ?? "").trim();
+    if (maA && maB) return maA === maB;
+
+    return false;
+  };
+
+  const getRowKey = (item: XayDungTraiPhep, index: number): string => {
+    const id = getRecordId(item);
+    if (id) return `xdtp-${id}`;
+
+    const maVuViec = String(item.MaVuViec ?? "").trim();
+    if (maVuViec) return `xdtp-code-${maVuViec}-${index}`;
+
+    return `xdtp-row-${index}`;
+  };
+
   const filteredData = useMemo(() => {
     return records.filter((item) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
-        (item.MaVuViec || "").toLowerCase().includes(q) ||
-        (item.ChuCongTrinh || "").toLowerCase().includes(q) ||
-        (item.DiaChi || "").toLowerCase().includes(q);
+        String(item.MaVuViec ?? "").toLowerCase().includes(q) ||
+        String(item.ChuCongTrinh ?? "").toLowerCase().includes(q) ||
+        String(item.DiaChi ?? "").toLowerCase().includes(q);
       const matchesTrangThai = filterTrangThai === "all" || item.TrangThai === filterTrangThai;
       const matchesLoai = filterLoai === "all" || item.LoaiViPham === filterLoai;
       return matchesSearch && matchesTrangThai && matchesLoai;
@@ -290,18 +327,25 @@ export default function XayDungTraiPhepPage() {
   };
 
   const handleSave = async () => {
-    const id = (selectedVu as any)?.MaViPham;
-    if (isEditOpen && id) {
+    const id = getRecordId(selectedVu);
+    if (isEditOpen) {
+      if (!id) return;
       await xayDungTraiPhepApi.update(id, formData);
     } else {
       await xayDungTraiPhepApi.create(formData);
     }
-    const response = await xayDungTraiPhepApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setRecords((response.data as any).data);
-    }
+    await reloadData();
     setIsAddOpen(false);
     setIsEditOpen(false);
+  };
+
+  const handleDelete = async (item: XayDungTraiPhep) => {
+    const id = getRecordId(item);
+    if (!id) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa vụ ${item.MaVuViec || id}?`)) return;
+
+    await xayDungTraiPhepApi.delete(id);
+    await reloadData();
   };
 
   return (
@@ -615,8 +659,8 @@ export default function XayDungTraiPhepPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.MaVuViec}>
+              {filteredData.map((item, index) => (
+                <TableRow key={getRowKey(item, index)}>
                   <TableCell className="font-medium text-red-600">{item.MaVuViec}</TableCell>
                   <TableCell>
                     <div className="max-w-[150px] truncate text-sm" title={item.DiaChi}>
@@ -647,7 +691,7 @@ export default function XayDungTraiPhepPage() {
                   <TableCell>{getTrangThaiBadge(item.TrangThai)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <Dialog open={isViewOpen && selectedVu?.MaVuViec === item.MaVuViec} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedVu(null); }}>
+                      <Dialog open={isViewOpen && isSameRecord(selectedVu, item)} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedVu(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedVu(item); setIsViewOpen(true); }}>
                             <Eye className="h-4 w-4" />
@@ -774,7 +818,7 @@ export default function XayDungTraiPhepPage() {
                         </DialogContent>
                       </Dialog>
 
-                      <Dialog open={isEditOpen && selectedVu?.MaVuViec === item.MaVuViec} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedVu(null); }}>
+                      <Dialog open={isEditOpen && isSameRecord(selectedVu, item)} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedVu(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
                             <Edit className="h-4 w-4" />
@@ -904,6 +948,10 @@ export default function XayDungTraiPhepPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

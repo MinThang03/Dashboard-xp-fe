@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Home, Users, CheckCircle2, AlertTriangle, Search, Plus, Download, Eye, Edit,
-  Building2, MapPin, Ruler, Calendar, Clock, Warehouse
+  Building2, MapPin, Ruler, Calendar, Clock, Warehouse, Trash2
 } from 'lucide-react';
 import { nhaOCongTrinhApi } from '@/lib/api';
 
@@ -227,7 +227,7 @@ export default function NhaOCongTrinhPage() {
     GhiChu: '',
   };
   const [searchQuery, setSearchQuery] = useState('');
-  const [records, setRecords] = useState<NhaOCongTrinh[]>(mockCongTrinh);
+  const [records, setRecords] = useState<NhaOCongTrinh[]>([]);
   const [filterLoai, setFilterLoai] = useState<string>('all');
   const [filterTinhTrang, setFilterTinhTrang] = useState<string>('all');
   const [selectedCT, setSelectedCT] = useState<NhaOCongTrinh | null>(null);
@@ -240,8 +240,8 @@ export default function NhaOCongTrinhPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await nhaOCongTrinhApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setRecords((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setRecords(response.data);
       }
     };
     loadData();
@@ -249,9 +249,38 @@ export default function NhaOCongTrinhPage() {
 
   const reloadData = async () => {
     const response = await nhaOCongTrinhApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setRecords((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setRecords(response.data);
     }
+  };
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaCongTrinh);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
+
+  const isSameRecord = (a: any, b: any): boolean => {
+    if (!a || !b) return false;
+
+    const idA = getRecordId(a);
+    const idB = getRecordId(b);
+    if (idA && idB) return idA === idB;
+
+    const maA = String(a?.MaCongTrinh ?? '').trim();
+    const maB = String(b?.MaCongTrinh ?? '').trim();
+    if (maA && maB) return maA === maB;
+
+    return false;
+  };
+
+  const getRowKey = (item: NhaOCongTrinh, index: number): string => {
+    const id = getRecordId(item);
+    if (id) return `congtrinh-${id}`;
+
+    const maCongTrinh = String(item.MaCongTrinh ?? '').trim();
+    if (maCongTrinh) return `congtrinh-code-${maCongTrinh}-${index}`;
+
+    return `congtrinh-row-${index}`;
   };
 
   const toNum = (value: string) => {
@@ -267,17 +296,28 @@ export default function NhaOCongTrinhPage() {
 
   const handleUpdate = async () => {
     if (!selectedCT) return;
-    await nhaOCongTrinhApi.update(Number((selectedCT as any).MaCongTrinh), editFormData);
+    const id = getRecordId(selectedCT);
+    if (!id) return;
+    await nhaOCongTrinhApi.update(id, editFormData);
     await reloadData();
     setIsEditOpen(false);
   };
 
+  const handleDelete = async (item: NhaOCongTrinh) => {
+    const id = getRecordId(item);
+    if (!id) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa công trình ${item.TenCongTrinh}?`)) return;
+
+    await nhaOCongTrinhApi.delete(id);
+    await reloadData();
+  };
+
   const filteredData = records.filter((item) => {
     const matchesSearch =
-      (item.MaCongTrinh || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.TenCongTrinh || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.ChuSoHuu || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.DiaChi || '').toLowerCase().includes(searchQuery.toLowerCase());
+      String(item.MaCongTrinh ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.TenCongTrinh ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.ChuSoHuu ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(item.DiaChi ?? '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLoai = filterLoai === 'all' || item.LoaiCongTrinh === filterLoai;
     const matchesTinhTrang = filterTinhTrang === 'all' || item.TinhTrangKienTruc === filterTinhTrang;
     return matchesSearch && matchesLoai && matchesTinhTrang;
@@ -589,8 +629,8 @@ export default function NhaOCongTrinhPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.MaCongTrinh}>
+              {filteredData.map((item, index) => (
+                <TableRow key={getRowKey(item, index)}>
                   <TableCell className="font-medium text-primary">{item.MaCongTrinh}</TableCell>
                   <TableCell>
                     <div className="max-w-[150px] truncate" title={item.TenCongTrinh}>
@@ -620,7 +660,7 @@ export default function NhaOCongTrinhPage() {
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {/* View Dialog */}
-                      <Dialog open={isViewOpen && selectedCT?.MaCongTrinh === item.MaCongTrinh} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedCT(null); }}>
+                      <Dialog open={isViewOpen && isSameRecord(selectedCT, item)} onOpenChange={(open) => { setIsViewOpen(open); if (!open) setSelectedCT(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedCT(item); setIsViewOpen(true); }}>
                             <Eye className="h-4 w-4" />
@@ -725,7 +765,7 @@ export default function NhaOCongTrinhPage() {
                       </Dialog>
 
                       {/* Edit Dialog */}
-                      <Dialog open={isEditOpen && selectedCT?.MaCongTrinh === item.MaCongTrinh} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedCT(null); }}>
+                      <Dialog open={isEditOpen && isSameRecord(selectedCT, item)} onOpenChange={(open) => { setIsEditOpen(open); if (!open) setSelectedCT(null); }}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => { setSelectedCT(item); setEditFormData({ ...emptyForm, ...item }); setIsEditOpen(true); }}>
                             <Edit className="h-4 w-4" />
@@ -859,6 +899,10 @@ export default function NhaOCongTrinhPage() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

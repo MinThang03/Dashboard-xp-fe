@@ -41,7 +41,7 @@ import { Edit, Trash2, X } from 'lucide-react';
 export default function HoNgheoPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [hoNgheoList, setHoNgheoList] = useState<any[]>(mockHoNgheo);
+  const [hoNgheoList, setHoNgheoList] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -52,12 +52,17 @@ export default function HoNgheoPage() {
   useEffect(() => {
     const loadData = async () => {
       const response = await hoNgheoApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setHoNgheoList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setHoNgheoList(response.data);
       }
     };
     loadData();
   }, []);
+
+  const getRecordId = (item: any): number | null => {
+    const id = Number(item?.MaHoNgheo ?? item?.MaHo);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
 
   // Tính toán thống kê từ dữ liệu thực
   const stats = {
@@ -69,8 +74,8 @@ export default function HoNgheoPage() {
 
   // Lọc dữ liệu
   const filteredHoNgheo = hoNgheoList.filter(h =>
-    (h.ChuHo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (h.DiaChi || '').toLowerCase().includes(searchQuery.toLowerCase())
+    String(h.ChuHo ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(h.DiaChi ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleView = (item: any) => {
@@ -125,14 +130,15 @@ export default function HoNgheoPage() {
 
   const handleSave = async () => {
     if (isEditOpen && selectedItem) {
-      const id = selectedItem.MaHoNgheo ?? selectedItem.MaHo;
+      const id = getRecordId(selectedItem);
+      if (!id) return;
       await hoNgheoApi.update(id, formData);
     } else {
       await hoNgheoApi.create(formData);
     }
     const response = await hoNgheoApi.getList({ page: 1, limit: 500 });
-    if (response.success && Array.isArray((response.data as any)?.data)) {
-      setHoNgheoList((response.data as any).data);
+    if (response.success && Array.isArray(response.data)) {
+      setHoNgheoList(response.data);
     }
     setIsAddOpen(false);
     setIsEditOpen(false);
@@ -140,11 +146,12 @@ export default function HoNgheoPage() {
 
   const handleDelete = async (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa hồ sơ hộ ${item.ChuHo}?`)) {
-      const id = item.MaHoNgheo ?? item.MaHo;
+      const id = getRecordId(item);
+      if (!id) return;
       await hoNgheoApi.delete(id);
       const response = await hoNgheoApi.getList({ page: 1, limit: 500 });
-      if (response.success && Array.isArray((response.data as any)?.data)) {
-        setHoNgheoList((response.data as any).data);
+      if (response.success && Array.isArray(response.data)) {
+        setHoNgheoList(response.data);
       }
     }
   };
