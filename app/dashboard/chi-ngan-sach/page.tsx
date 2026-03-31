@@ -574,8 +574,8 @@ export default function ChiNganSachPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.MaChi}>
+              {filteredData.map((item, index) => (
+                <TableRow key={item.MaNganSach ?? (item.MaChi || `row-${index}`)}>
                   <TableCell className="font-medium text-red-600">{item.MaChi}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{item.LoaiChi}</Badge>
