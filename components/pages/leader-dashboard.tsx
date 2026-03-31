@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -55,33 +55,21 @@ import {
 } from 'recharts';
 
 import { OFFICER_MODULES } from '@/lib/officer-modules';
-import {
-  MODULE_STATISTICS,
-  SYSTEM_ALERTS,
-  SUMMARY_STATS,
-  KPI_MONTHLY_DATA,
-  CASES_BY_DEPARTMENT,
-  BUDGET_BY_DEPARTMENT,
-  HOTSPOT_DATA,
-  getHighPriorityAlerts,
-} from '@/lib/dashboard-stats';
-import { FIELD_STATISTICS, OVERALL_STATISTICS, ALERTS, OFFICER_KPI_DATA, FIELD_KPI_DETAILED } from '@/lib/leader-data';
+import { FALLBACK_LEADER_DATA, fetchLeaderDashboardData } from '@/lib/leader-live-data';
 import { getLeaderSignalSnapshot } from '@/lib/frontend-dss';
 
-// Radar data cho KPI theo lĩnh vực
-const radarData = FIELD_STATISTICS.map((field) => ({
-  subject: field.name.split(' - ')[0].slice(0, 10),
-  A: field.completionRate,
-  fullMark: 100,
-}));
-
 export function LeaderDashboard() {
+  const [dashboardData, setDashboardData] = useState(FALLBACK_LEADER_DATA);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const leaderSignals = useMemo(() => getLeaderSignalSnapshot(), []);
-  const highPriorityAlerts = getHighPriorityAlerts();
+  const highPriorityAlerts = useMemo(
+    () => dashboardData.systemAlerts.filter((alert) => alert.priority === 'high'),
+    [dashboardData.systemAlerts],
+  );
   const periodOptions = [
     { value: 'week', label: '7 ngày' },
     { value: 'month', label: 'Tháng này' },
@@ -90,7 +78,7 @@ export function LeaderDashboard() {
   const periodLabel = periodOptions.find((option) => option.value === selectedPeriod)?.label ?? 'Tháng này';
 
   const criticalModules = useMemo(() => {
-    return [...MODULE_STATISTICS]
+    return [...dashboardData.moduleStats]
       .sort((a, b) => b.overdue - a.overdue)
       .slice(0, 4)
       .map((module) => ({
@@ -104,7 +92,7 @@ export function LeaderDashboard() {
   const executiveRecommendations = useMemo(() => {
     const recommendations: string[] = [];
 
-    if (SUMMARY_STATS.overdueCases > 40) {
+    if (dashboardData.summaryStats.overdueCases > 40) {
       recommendations.push('Cần điều phối xử lý nhóm hồ sơ trễ hạn trước 16:00 hôm nay.');
     }
     if (leaderSignals.tongRuiRoHienTai >= 7) {
@@ -120,10 +108,43 @@ export function LeaderDashboard() {
     return recommendations;
   }, [leaderSignals.doTinCayDuBao, leaderSignals.tongRuiRoHienTai]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 1000);
+    const data = await fetchLeaderDashboardData(true).catch(() => null);
+    if (data) {
+      setDashboardData(data);
+    }
+    setIsRefreshing(false);
   };
+
+  const radarData = useMemo(
+    () =>
+      dashboardData.fieldStatistics.map((field) => ({
+        subject: field.name.split(' - ')[0].slice(0, 10),
+        A: field.completionRate,
+        fullMark: 100,
+      })),
+    [dashboardData.fieldStatistics],
+  );
+
+  useEffect(() => {
+    let active = true;
+    setIsLoadingData(true);
+    fetchLeaderDashboardData()
+      .then((data) => {
+        if (active) {
+          setDashboardData(data);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoadingData(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -143,7 +164,7 @@ export function LeaderDashboard() {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || isLoadingData}
             className="gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -249,7 +270,7 @@ export function LeaderDashboard() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-muted-foreground text-sm font-medium">Tỷ lệ đúng hạn</p>
-              <p className="text-4xl font-bold text-foreground mt-2">{SUMMARY_STATS.onTimeRate}%</p>
+              <p className="text-4xl font-bold text-foreground mt-2">{dashboardData.summaryStats.onTimeRate}%</p>
               <div className="flex items-center gap-1 mt-2 text-green-600 text-sm font-medium">
                 <TrendingUp className="w-4 h-4" />
                 <span>+5% so với tháng trước</span>
@@ -267,7 +288,7 @@ export function LeaderDashboard() {
             <div className="flex-1">
               <p className="text-muted-foreground text-sm font-medium">Tổng hồ sơ xử lý</p>
               <p className="text-4xl font-bold text-foreground mt-2">
-                {SUMMARY_STATS.totalCases.toLocaleString()}
+                {dashboardData.summaryStats.totalCases.toLocaleString()}
               </p>
               <div className="flex items-center gap-1 mt-2 text-muted-foreground text-sm">
                 <span>10 chuyên ngành</span>
@@ -284,7 +305,7 @@ export function LeaderDashboard() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-muted-foreground text-sm font-medium">Hồ sơ trễ hạn</p>
-              <p className="text-4xl font-bold text-red-600 mt-2">{SUMMARY_STATS.overdueCases}</p>
+              <p className="text-4xl font-bold text-red-600 mt-2">{dashboardData.summaryStats.overdueCases}</p>
               <div className="flex items-center gap-1 mt-2 text-red-600 text-sm font-medium">
                 <AlertCircle className="w-4 h-4" />
                 <span>Cần xử lý gấp</span>
@@ -301,9 +322,9 @@ export function LeaderDashboard() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-muted-foreground text-sm font-medium">Cảnh báo hệ thống</p>
-              <p className="text-4xl font-bold text-amber-600 mt-2">{SUMMARY_STATS.totalAlerts}</p>
+              <p className="text-4xl font-bold text-amber-600 mt-2">{dashboardData.summaryStats.totalAlerts}</p>
               <div className="flex items-center gap-1 mt-2 text-amber-600 text-sm">
-                <span>{SUMMARY_STATS.criticalAlerts} cảnh báo quan trọng</span>
+                <span>{dashboardData.summaryStats.criticalAlerts} cảnh báo quan trọng</span>
               </div>
             </div>
             <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full">
@@ -317,7 +338,7 @@ export function LeaderDashboard() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-muted-foreground text-sm font-medium">Hài lòng trung bình</p>
-              <p className="text-4xl font-bold text-foreground mt-2">{SUMMARY_STATS.avgSatisfaction}/5.0</p>
+              <p className="text-4xl font-bold text-foreground mt-2">{dashboardData.summaryStats.avgSatisfaction}/5.0</p>
               <div className="flex items-center gap-1 mt-2">
                 {[...Array(5)].map((_, i) => (
                   <span
@@ -398,7 +419,7 @@ export function LeaderDashboard() {
                 Xu hướng hồ sơ đúng hạn vs trễ hạn
               </h3>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={KPI_MONTHLY_DATA}>
+                <AreaChart data={dashboardData.kpiMonthlyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
                   <XAxis dataKey="month" stroke="#9ca3af" />
                   <YAxis stroke="#9ca3af" />
@@ -503,7 +524,7 @@ export function LeaderDashboard() {
                 Lĩnh vực cần chú ý
               </h3>
               <div className="space-y-3">
-                {MODULE_STATISTICS.filter((m) => m.overdue > 0)
+                {dashboardData.moduleStats.filter((m) => m.overdue > 0)
                   .sort((a, b) => b.overdue - a.overdue)
                   .slice(0, 5)
                   .map((module) => {
@@ -543,7 +564,7 @@ export function LeaderDashboard() {
         {/* Tab: 10 Chuyên ngành */}
         <TabsContent value="departments" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {MODULE_STATISTICS.map((module) => {
+            {dashboardData.moduleStats.map((module) => {
               const Icon = module.icon;
               const officerModule = OFFICER_MODULES.find((m) => m.id === module.id);
               const completionRate = Math.round((module.completed / module.total) * 100);
@@ -625,7 +646,7 @@ export function LeaderDashboard() {
               So sánh hồ sơ theo chuyên ngành
             </h3>
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={CASES_BY_DEPARTMENT}>
+              <BarChart data={dashboardData.casesByDepartment}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
                 <XAxis dataKey="name" stroke="#9ca3af" angle={-45} textAnchor="end" height={100} />
                 <YAxis stroke="#9ca3af" />
@@ -657,7 +678,7 @@ export function LeaderDashboard() {
 
             {/* Officer KPI Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {OFFICER_KPI_DATA.map((officer) => (
+              {dashboardData.officerKpiData.map((officer) => (
                 <Card key={officer.id} className="p-4 border-border bg-card hover:shadow-lg transition-all">
                   <div className="space-y-4">
                     {/* Header */}
@@ -767,7 +788,7 @@ export function LeaderDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {FIELD_KPI_DETAILED.map((field) => (
+                  {dashboardData.fieldKpiDetailed.map((field) => (
                     <tr
                       key={field.code}
                       className="border-b border-border/50 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors"
@@ -822,7 +843,7 @@ export function LeaderDashboard() {
 
             {/* Field KPI Details Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {FIELD_KPI_DETAILED.slice(0, 4).map((field) => (
+              {dashboardData.fieldKpiDetailed.slice(0, 4).map((field) => (
                 <Card
                   key={field.code}
                   className="p-4 border-border bg-card cursor-pointer hover:shadow-lg transition-all"
@@ -893,7 +914,7 @@ export function LeaderDashboard() {
                 Giám sát ngân sách theo lĩnh vực
               </h3>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={BUDGET_BY_DEPARTMENT} layout="vertical">
+                <BarChart data={dashboardData.budgetByDepartment} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
                   <XAxis type="number" stroke="#9ca3af" />
                   <YAxis dataKey="name" type="category" stroke="#9ca3af" width={80} />
@@ -917,7 +938,7 @@ export function LeaderDashboard() {
                 Tỷ lệ giải ngân theo lĩnh vực
               </h3>
               <div className="space-y-4">
-                {BUDGET_BY_DEPARTMENT.map((item) => (
+                {dashboardData.budgetByDepartment.map((item) => (
                   <div key={item.name} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-foreground">{item.name}</span>
@@ -945,7 +966,7 @@ export function LeaderDashboard() {
         {/* Tab: Cảnh báo */}
         <TabsContent value="alerts" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {SYSTEM_ALERTS.map((alert) => (
+            {dashboardData.systemAlerts.map((alert) => (
               <Card
                 key={alert.id}
                 className={`p-4 border ${
@@ -1048,7 +1069,7 @@ export function LeaderDashboard() {
               {/* Danh sách điểm nóng */}
               <div className="space-y-3">
                 <h4 className="font-medium text-foreground">Danh sách điểm nóng</h4>
-                {HOTSPOT_DATA.map((spot) => (
+                {dashboardData.hotspots.map((spot) => (
                   <div
                     key={spot.id}
                     className={`p-4 rounded-lg border ${

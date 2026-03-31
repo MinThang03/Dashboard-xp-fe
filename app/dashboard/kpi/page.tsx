@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Target, Download } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -18,26 +18,71 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const kpiData = [
-  { month: 'T1', target: 85, actual: 82, completed: 240 },
-  { month: 'T2', target: 85, actual: 85, completed: 280 },
-  { month: 'T3', target: 85, actual: 88, completed: 320 },
-  { month: 'T4', target: 85, actual: 87, completed: 310 },
-  { month: 'T5', target: 85, actual: 90, completed: 350 },
-  { month: 'T6', target: 85, actual: 88, completed: 380 },
-];
-
-const departmentKPI = [
-  { name: 'Tư pháp', target: 90, actual: 88, status: 'warning' },
-  { name: 'Địa chính', target: 85, actual: 82, status: 'danger' },
-  { name: 'An ninh', target: 80, actual: 85, status: 'success' },
-  { name: 'Lao động', target: 85, actual: 87, status: 'success' },
-  { name: 'Tài chính', target: 90, actual: 89, status: 'warning' },
-];
+import { FALLBACK_LEADER_DATA, fetchLeaderDashboardData } from '@/lib/leader-live-data';
 
 export default function KPIPage() {
+  const [kpiData, setKpiData] = useState(() =>
+    FALLBACK_LEADER_DATA.kpiMonthlyData.map((row) => {
+      const actual = row.totalCases ? Math.round((row.completedOnTime / row.totalCases) * 100) : 0;
+      return {
+        month: row.month,
+        target: actual,
+        actual,
+        completed: row.completedOnTime,
+      };
+    }),
+  );
+  const [departmentKpi, setDepartmentKpi] = useState(() =>
+    FALLBACK_LEADER_DATA.fieldStatistics.map((field) => {
+      const actual = field.completionRate;
+      return {
+        name: field.name.split(' - ')[0],
+        target: actual,
+        actual,
+        status: actual >= 90 ? 'success' : actual >= 80 ? 'warning' : 'danger',
+      };
+    }),
+  );
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('6months');
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    fetchLeaderDashboardData()
+      .then((data) => {
+        if (!active) return;
+        setKpiData(
+          data.kpiMonthlyData.map((row) => {
+            const actual = row.totalCases ? Math.round((row.completedOnTime / row.totalCases) * 100) : 0;
+            return {
+              month: row.month,
+              target: actual,
+              actual,
+              completed: row.completedOnTime,
+            };
+          }),
+        );
+        setDepartmentKpi(
+          data.fieldStatistics.map((field) => {
+            const actual = field.completionRate;
+            return {
+              name: field.name.split(' - ')[0],
+              target: actual,
+              actual,
+              status: actual >= 90 ? 'success' : actual >= 80 ? 'warning' : 'danger',
+            };
+          }),
+        );
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -62,7 +107,7 @@ export default function KPIPage() {
             <option value="6months">6 tháng</option>
             <option value="1year">1 năm</option>
           </select>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" disabled={isLoading}>
             <Download className="w-4 h-4" />
             Xuất báo cáo
           </Button>
@@ -165,7 +210,7 @@ export default function KPIPage() {
           KPI theo bộ phận
         </h3>
         <div className="space-y-3">
-          {departmentKPI.map((dept, i) => {
+          {departmentKpi.map((dept, i) => {
             const statusColor =
               dept.status === 'success'
                 ? 'bg-status-success/20'

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Upload,
   CheckCircle2,
@@ -31,8 +31,37 @@ import {
   Heart,
   ThumbsUp,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
+import { hoSoTthcApi, phanAnhApi } from '@/lib/api';
 
-const mySubmissions = [
+type SubmissionStatus = 'pending' | 'in-progress' | 'completed' | 'rejected';
+
+type Submission = {
+  id: string;
+  title: string;
+  submitDate: string;
+  status: SubmissionStatus;
+  completedDate?: string;
+  expectedDate?: string;
+  submittedBy?: string;
+  rating?: number;
+  progress?: number;
+  trackingSteps: Array<{ step: string; date: string; completed: boolean }>;
+};
+
+type ServiceItem = {
+  id: number;
+  name: string;
+  processing: string;
+  fee: string;
+  department: string;
+  icon: any;
+  color: string;
+  popular: boolean;
+};
+
+const FALLBACK_SUBMISSIONS: Submission[] = [
   {
     id: 'HS-2024-001',
     title: 'Cấp giấy chứng thực',
@@ -77,7 +106,7 @@ const mySubmissions = [
   },
 ];
 
-const services = [
+const FALLBACK_SERVICES: ServiceItem[] = [
   {
     id: 1,
     name: 'Cấp giấy chứng thực',
@@ -120,6 +149,73 @@ const services = [
   },
 ];
 
+const STATUS_PRIORITY: Record<SubmissionStatus, number> = {
+  completed: 3,
+  'in-progress': 2,
+  pending: 1,
+  rejected: 0,
+};
+
+const SERVICE_COLORS = [
+  'from-primary to-primary',
+  'from-status-success to-status-success',
+  'from-status-warning to-status-warning',
+  'from-accent to-accent',
+];
+
+function formatDate(value: unknown): string {
+  if (!value) return '';
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function normalizeAscii(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function mapStatus(status: string): SubmissionStatus {
+  const normalized = normalizeAscii(status);
+  if (normalized.includes('hoan thanh')) return 'completed';
+  if (normalized.includes('tu choi')) return 'rejected';
+  if (normalized.includes('dang xu ly') || normalized.includes('cho bo sung')) return 'in-progress';
+  if (normalized.includes('da tiep nhan') || normalized.includes('moi')) return 'pending';
+  return 'pending';
+}
+
+function estimateProgress(status: SubmissionStatus): number | undefined {
+  if (status === 'pending') return 25;
+  if (status === 'in-progress') return 65;
+  if (status === 'rejected') return 100;
+  return undefined;
+}
+
+function buildTrackingSteps(
+  status: SubmissionStatus,
+  submitDate: string,
+  expectedDate: string,
+  completedDate: string,
+): Submission['trackingSteps'] {
+  const isCompleted = status === 'completed';
+  const isRejected = status === 'rejected';
+  const hasProcessing = status === 'in-progress' || isCompleted || isRejected;
+  const hasReceived = status !== 'pending';
+
+  return [
+    { step: 'Nộp hồ sơ', date: submitDate || '-', completed: Boolean(submitDate) },
+    { step: 'Tiếp nhận', date: submitDate || '-', completed: hasReceived },
+    { step: 'Xử lý', date: hasProcessing ? expectedDate || '-' : '-', completed: hasProcessing },
+    {
+      step: isRejected ? 'Từ chối' : 'Hoàn thành',
+      date: isCompleted || isRejected ? completedDate || expectedDate || '-' : '-',
+      completed: isCompleted || isRejected,
+    },
+  ];
+}
+
 const statusConfig = {
   pending: {
     label: 'Chờ xử lý',
@@ -136,15 +232,154 @@ const statusConfig = {
     color: 'bg-green-100 text-green-700',
     icon: CheckCircle2,
   },
+  rejected: {
+    label: 'Từ chối',
+    color: 'bg-red-100 text-red-700',
+    icon: AlertCircle,
+  },
 };
 
 export function CitizenDashboardPremium() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'submissions' | 'services' | 'feedback'>('submissions');
-  const [selectedSubmission, setSelectedSubmission] = useState<typeof mySubmissions[0] | null>(null);
-  const [selectedService, setSelectedService] = useState<typeof services[0] | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackPhone, setFeedbackPhone] = useState('');
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [searchService, setSearchService] = useState('');
+  const [submissions, setSubmissions] = useState<Submission[]>(FALLBACK_SUBMISSIONS);
+  const [services, setServices] = useState<ServiceItem[]>(FALLBACK_SERVICES);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
+  useEffect(() => {
+    setFeedbackPhone('');
+    setFeedbackEmail(user?.email || '');
+  }, [user?.email]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [hoSoRes, loaiRes] = await Promise.all([
+          hoSoTthcApi.getList({ page: 1, limit: 200 }),
+          hoSoTthcApi.getLoaiThuTuc(),
+        ]);
+
+        if (!active) return;
+
+        const loaiList = loaiRes?.success && Array.isArray(loaiRes.data) ? loaiRes.data : [];
+        const hoSoRows = hoSoRes?.success && Array.isArray(hoSoRes.data) ? hoSoRes.data : [];
+
+        if (loaiList.length) {
+          const mappedServices = loaiList.map((item: any, index: number) => ({
+            id: item.MaLoaiThuTuc || index + 1,
+            name: String(item.TenThuTuc || `Thu tuc #${index + 1}`),
+            processing: item.ThoiGianXuLy ? `${item.ThoiGianXuLy} ngày` : 'Đang cập nhật',
+            fee: item.PhiDichVu ? `${Number(item.PhiDichVu).toLocaleString('vi-VN')} đ` : 'Miễn phí',
+            department: String(item.LinhVuc || 'Tổng hợp'),
+            icon: FileText,
+            color: SERVICE_COLORS[index % SERVICE_COLORS.length],
+            popular: index < 2,
+          }));
+          setServices(mappedServices);
+        }
+
+        if (hoSoRows.length) {
+          const mapped = hoSoRows.map((row: any) => {
+            const status = mapStatus(String(row.TrangThai || ''));
+            const submitDate = formatDate(row.NgayNop || row.NgayTao) || '-';
+            const expectedDate = formatDate(row.NgayHenTra) || '';
+            const completedDate = formatDate(row.NgayHoanThanh) || '';
+            const title = String(row.TenThuTuc || row.LinhVuc || 'Thủ tục hành chính');
+            const submittedBy = String(row.NguoiNop || '').trim();
+            const fallbackId = `HS-${new Date().getFullYear()}-${String(Math.random()).slice(2, 6)}`;
+            const trackingSteps = buildTrackingSteps(status, submitDate, expectedDate, completedDate);
+
+            return {
+              id: String(row.MaHoSo || row.SoHoSo || fallbackId),
+              title,
+              submitDate,
+              status,
+              completedDate: completedDate || undefined,
+              expectedDate: expectedDate || undefined,
+              submittedBy: submittedBy || undefined,
+              progress: estimateProgress(status),
+              trackingSteps,
+              rating: status === 'completed' ? 5 : undefined,
+            } as Submission;
+          });
+
+          const normalizedUser = normalizeAscii(user?.name || user?.username || '');
+          const filtered = normalizedUser
+            ? mapped.filter((item) => normalizeAscii(item.submittedBy || '').includes(normalizedUser))
+            : mapped;
+
+          const sorted = (filtered.length ? filtered : mapped)
+            .sort((a, b) => STATUS_PRIORITY[b.status] - STATUS_PRIORITY[a.status]);
+          setSubmissions(sorted.length ? sorted : FALLBACK_SUBMISSIONS);
+        }
+      } catch {
+        if (active) {
+          setSubmissions(FALLBACK_SUBMISSIONS);
+          setServices(FALLBACK_SERVICES);
+        }
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+
+    loadDashboardData();
+    return () => {
+      active = false;
+    };
+  }, [user?.name, user?.username]);
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackComment.trim()) {
+      setFeedbackMessage('Vui lòng nhập nội dung phản ánh.');
+      return;
+    }
+
+    const rating = feedbackRating || 3;
+    const priority = rating <= 1 ? 'Khẩn cấp' : rating <= 2 ? 'Cao' : 'Thường';
+    const title = feedbackComment.split('\n')[0].slice(0, 120) || 'Phản ánh công dân';
+    const userId = Number(user?.id);
+
+    setIsSendingFeedback(true);
+    setFeedbackMessage(null);
+
+    try {
+      const response = await phanAnhApi.create({
+        TieuDe: title,
+        NoiDung: feedbackComment,
+        MucDoUuTien: priority,
+        TenNguoiPhanAnh: user?.name || user?.username || 'Công dân',
+        SoDienThoai: feedbackPhone || undefined,
+        DiaChi: undefined,
+        TenLinhVuc: 'Dịch vụ công',
+        MaCongDan: Number.isFinite(userId) ? userId : null,
+      });
+
+      if (!response?.success) {
+        throw new Error(response?.message || 'Gui phan anh that bai');
+      }
+
+      setFeedbackRating(0);
+      setFeedbackComment('');
+      setFeedbackMessage('Gửi phản ánh thành công.');
+    } catch (error) {
+      setFeedbackMessage(error instanceof Error ? error.message : 'Gửi phản ánh thất bại');
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
 
   const filteredServices = services.filter(s =>
     s.name.toLowerCase().includes(searchService.toLowerCase())
@@ -166,7 +401,10 @@ export function CitizenDashboardPremium() {
               </div>
               <p className="text-white/90 text-lg">Nộp hồ sơ, theo dõi và phản ánh ý kiến</p>
             </div>
-            <Button className="w-full bg-white text-green-600 hover:bg-white/90 sm:w-auto">
+            <Button
+              className="w-full bg-white text-green-600 hover:bg-white/90 sm:w-auto"
+              onClick={() => router.push('/dashboard/submit')}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Nộp hồ sơ mới
             </Button>
@@ -185,7 +423,7 @@ export function CitizenDashboardPremium() {
               </div>
               <Badge className="bg-blue-500/10 text-blue-700 border-0">Tổng số</Badge>
             </div>
-            <p className="text-4xl font-bold mb-2">3</p>
+            <p className="text-4xl font-bold mb-2">{submissions.length}</p>
             <p className="text-sm text-muted-foreground">Hồ sơ đã nộp</p>
           </div>
         </Card>
@@ -199,7 +437,9 @@ export function CitizenDashboardPremium() {
               </div>
               <Badge className="bg-orange-500/10 text-orange-700 border-0">Đang xử lý</Badge>
             </div>
-            <p className="text-4xl font-bold mb-2">2</p>
+            <p className="text-4xl font-bold mb-2">
+              {submissions.filter((s) => s.status === 'in-progress').length}
+            </p>
             <p className="text-sm text-muted-foreground">Hồ sơ đang xử lý</p>
           </div>
         </Card>
@@ -213,7 +453,9 @@ export function CitizenDashboardPremium() {
               </div>
               <Badge className="bg-green-500/10 text-green-700 border-0">Hoàn thành</Badge>
             </div>
-            <p className="text-4xl font-bold mb-2">1</p>
+            <p className="text-4xl font-bold mb-2">
+              {submissions.filter((s) => s.status === 'completed').length}
+            </p>
             <p className="text-sm text-muted-foreground">Hồ sơ hoàn thành</p>
           </div>
         </Card>
@@ -249,7 +491,7 @@ export function CitizenDashboardPremium() {
       {/* Tab Content */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
-          {mySubmissions.map((submission) => {
+          {submissions.map((submission) => {
             const config = statusConfig[submission.status as keyof typeof statusConfig];
             const StatusIcon = config.icon;
 
@@ -306,7 +548,7 @@ export function CitizenDashboardPremium() {
                     </div>
                   </div>
 
-                  {submission.status !== 'completed' && submission.progress && (
+                  {(submission.status === 'pending' || submission.status === 'in-progress') && submission.progress && (
                     <div className="lg:w-48 flex flex-col justify-center">
                       <div className="relative w-32 h-32 mx-auto">
                         <svg className="transform -rotate-90 w-32 h-32">
@@ -354,6 +596,17 @@ export function CitizenDashboardPremium() {
                             />
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  )}
+                  {submission.status === 'rejected' && (
+                    <div className="lg:w-48 flex flex-col justify-center items-center">
+                      <div className="p-4 bg-red-50 rounded-xl text-center">
+                        <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-red-700">Hồ sơ bị từ chối</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Liên hệ bộ phận tiếp nhận để biết thêm chi tiết.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -416,7 +669,13 @@ export function CitizenDashboardPremium() {
                             <span className="font-semibold text-green-600">{service.fee}</span>
                           </div>
                         </div>
-                        <Button className="w-full mt-4">
+                        <Button
+                          className="w-full mt-4"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            router.push('/dashboard/submit');
+                          }}
+                        >
                           Nộp hồ sơ
                         </Button>
                       </div>
@@ -482,17 +741,37 @@ export function CitizenDashboardPremium() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-semibold">Số điện thoại</label>
-                <Input type="tel" placeholder="0912 345 678" className="bg-slate-50" />
+                <Input
+                  type="tel"
+                  placeholder="0912 345 678"
+                  className="bg-slate-50"
+                  value={feedbackPhone}
+                  onChange={(e) => setFeedbackPhone(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-semibold">Email</label>
-                <Input type="email" placeholder="email@example.com" className="bg-slate-50" />
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  className="bg-slate-50"
+                  value={feedbackEmail}
+                  onChange={(e) => setFeedbackEmail(e.target.value)}
+                />
               </div>
             </div>
 
-            <Button className="w-full h-12 bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary/90">
+            {feedbackMessage && (
+              <div className="text-sm text-center text-muted-foreground">{feedbackMessage}</div>
+            )}
+
+            <Button
+              className="w-full h-12 bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary/90"
+              onClick={handleSubmitFeedback}
+              disabled={isSendingFeedback || isLoading}
+            >
               <Send className="w-4 h-4 mr-2" />
-              Gửi phản ánh
+              {isSendingFeedback ? 'Đang gửi...' : 'Gửi phản ánh'}
             </Button>
           </div>
         </Card>

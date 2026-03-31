@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,24 +36,177 @@ import {
   MapPin,
   Calendar,
 } from 'lucide-react';
-import { FIELD_STATISTICS, Alert } from '@/lib/leader-data';
+import { fetchLeaderDashboardData, FALLBACK_LEADER_DATA, type LeaderDashboardData } from '@/lib/leader-live-data';
+import { Alert, FieldStats } from '@/lib/leader-data';
 import {
   ALERT_PERIOD_LABELS,
   ALERT_RISK_LABELS,
   type AlertPeriod,
   type AlertRiskLevel,
   filterOperationalAlerts,
-  getOperationalAlerts,
 } from '@/lib/frontend-dss';
 
+const FIELD_CODE_BY_NAME: Record<string, string> = {
+  tu_phap: 'TU_PHAP',
+  hanh_chinh: 'TU_PHAP',
+  y_te: 'Y_TE_GD',
+  giao_duc: 'Y_TE_GD',
+  kinh_te: 'KINH_TE',
+  thuong_mai: 'KINH_TE',
+  an_ninh: 'AN_NINH',
+  quoc_phong: 'AN_NINH',
+  xay_dung: 'XAY_DUNG',
+  ha_tang: 'XAY_DUNG',
+  lao_dong: 'LAO_DONG',
+  tbxh: 'LAO_DONG',
+  tai_chinh: 'TAI_CHINH',
+  dia_chinh: 'DIA_CHINH',
+  moi_truong: 'MOI_TRUONG',
+  van_hoa: 'VAN_HOA',
+  du_lich: 'VAN_HOA',
+};
+
+function normalizeAscii(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function mapFieldCodeFromModule(value?: string): string {
+  if (!value) return 'TU_PHAP';
+  const normalized = normalizeAscii(value).replace(/\s+/g, '_');
+
+  if (normalized.includes('tu_phap') || normalized.includes('hanh_chinh')) return 'TU_PHAP';
+  if (normalized.includes('y_te') || normalized.includes('giao_duc') || normalized.includes('tram_y_te')) return 'Y_TE_GD';
+  if (normalized.includes('kinh_te') || normalized.includes('thuong_mai') || normalized.includes('ho_kinh_doanh')) return 'KINH_TE';
+  if (normalized.includes('an_ninh') || normalized.includes('quoc_phong') || normalized.includes('trat_tu')) return 'AN_NINH';
+  if (normalized.includes('xay_dung') || normalized.includes('ha_tang') || normalized.includes('quy_hoach')) return 'XAY_DUNG';
+  if (normalized.includes('lao_dong') || normalized.includes('tbxh') || normalized.includes('ho_ngheo')) return 'LAO_DONG';
+  if (normalized.includes('tai_chinh') || normalized.includes('ngan_sach')) return 'TAI_CHINH';
+  if (normalized.includes('dia_chinh') || normalized.includes('dat_dai') || normalized.includes('so_do')) return 'DIA_CHINH';
+  if (normalized.includes('moi_truong') || normalized.includes('o_nhiem') || normalized.includes('rac_thai')) return 'MOI_TRUONG';
+  if (normalized.includes('van_hoa') || normalized.includes('du_lich') || normalized.includes('di_tich')) return 'VAN_HOA';
+
+  return FIELD_CODE_BY_NAME[normalized] || 'TU_PHAP';
+}
+
+function mapAlertType(value: string): Alert['type'] {
+  if (value === 'danger') return 'critical';
+  if (value === 'warning') return 'warning';
+  return 'info';
+}
+
+function buildFieldNameMap(fields: FieldStats[]): Map<string, string> {
+  return new Map(fields.map((field) => [field.code, field.name]));
+}
+
+function buildAlertsFromData(data: LeaderDashboardData, fieldByCode: Map<string, string>): Alert[] {
+  const today = new Date().toISOString().slice(0, 10);
+  const systemAlerts = data.systemAlerts.map((item) => {
+    const fieldCode = mapFieldCodeFromModule(item.module);
+    const fieldName = fieldByCode.get(fieldCode) || item.module;
+    const createdDate = item.timestamp ? item.timestamp.slice(0, 10) : today;
+    const countSuffix = item.count ? ` (${item.count} trường hợp)` : '';
+
+    return {
+      id: item.id,
+      type: mapAlertType(item.type),
+      fieldCode,
+      fieldName,
+      title: item.title,
+      description: `${item.description}${countSuffix}`,
+      department: item.module,
+      createdDate,
+      status: item.priority === 'high' ? 'new' : 'processing',
+      priority: item.priority === 'high' ? 'high' : item.priority === 'medium' ? 'medium' : 'low',
+    } as Alert;
+  });
+
+  const hotspotAlerts = data.hotspots.map((hotspot, index) => {
+    const fieldCode = mapFieldCodeFromModule(hotspot.module);
+    const fieldName = fieldByCode.get(fieldCode) || hotspot.module || 'An ninh';
+    const severity = hotspot.severity || 'low';
+    const type = severity === 'high' ? 'critical' : severity === 'medium' ? 'warning' : 'info';
+    const priority = severity === 'high' ? 'high' : severity === 'medium' ? 'medium' : 'low';
+    const hotspotId = Number(hotspot.id);
+    const id = Number.isFinite(hotspotId) ? hotspotId + 10000 : 10000 + index;
+    const description = hotspot.description
+      ? hotspot.description
+      : `Ghi nhận ${hotspot.reportCount} phản ánh tại ${hotspot.location || 'địa bàn'}.`;
+
+    return {
+      id,
+      type,
+      fieldCode,
+      fieldName,
+      title: `Điểm nóng: ${hotspot.name}`,
+      description,
+      department: hotspot.location || hotspot.module || fieldName,
+      createdDate: today,
+      status: 'new',
+      priority,
+    } as Alert;
+  });
+
+  const merged = [...hotspotAlerts, ...systemAlerts];
+  const priorityWeight = { high: 3, medium: 2, low: 1 } as const;
+  return merged.sort((a, b) => priorityWeight[b.priority] - priorityWeight[a.priority]);
+}
+
+const FALLBACK_FIELD_MAP = buildFieldNameMap(FALLBACK_LEADER_DATA.fieldStatistics);
+const FALLBACK_ALERTS = buildAlertsFromData(FALLBACK_LEADER_DATA, FALLBACK_FIELD_MAP);
+
 export function AlertsManagementPage() {
-  const [alerts, setAlerts] = useState<Alert[]>(() => getOperationalAlerts());
+  const [alerts, setAlerts] = useState<Alert[]>(() => FALLBACK_ALERTS);
+  const [fields, setFields] = useState<FieldStats[]>(FALLBACK_LEADER_DATA.fieldStatistics);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [filterPeriod, setFilterPeriod] = useState<AlertPeriod>('30d');
   const [filterRisk, setFilterRisk] = useState<AlertRiskLevel | 'all'>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterField, setFilterField] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  useEffect(() => {
+    let active = true;
+
+    const loadAlerts = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchLeaderDashboardData();
+        if (!active) return;
+        const nextFieldMap = buildFieldNameMap(data.fieldStatistics);
+        setFields(data.fieldStatistics);
+        setAlerts(buildAlertsFromData(data, nextFieldMap));
+      } catch {
+        if (!active) return;
+        setFields(FALLBACK_LEADER_DATA.fieldStatistics);
+        setAlerts(FALLBACK_ALERTS);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+
+    loadAlerts();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchLeaderDashboardData(true);
+      const nextFieldMap = buildFieldNameMap(data.fieldStatistics);
+      setFields(data.fieldStatistics);
+      setAlerts(buildAlertsFromData(data, nextFieldMap));
+    } catch {
+      setFields(FALLBACK_LEADER_DATA.fieldStatistics);
+      setAlerts(FALLBACK_ALERTS);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Statistics
   const stats = {
@@ -159,7 +312,7 @@ export function AlertsManagementPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:flex-nowrap">
-          <Button variant="outline" size="sm" onClick={() => setAlerts(getOperationalAlerts())}>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Làm mới
           </Button>
@@ -286,7 +439,7 @@ export function AlertsManagementPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả lĩnh vực</SelectItem>
-            {FIELD_STATISTICS.map((field) => (
+            {fields.map((field) => (
               <SelectItem key={field.id} value={field.code}>
                 {field.name}
               </SelectItem>

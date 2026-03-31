@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,16 +32,339 @@ import {
   AlertCircle,
   DollarSign,
 } from 'lucide-react';
-import { APPROVAL_CASES, ApprovalCase } from '@/lib/leader-data';
+import { baoCaoApi, hoSoTthcApi, nganSachApi, vanBanApi } from '@/lib/api';
+import { APPROVAL_CASES, ApprovalCase, FIELD_STATISTICS } from '@/lib/leader-data';
+
+type ApprovalSource = 'hoSoTthc' | 'vanBan' | 'baoCao' | 'nganSach' | 'mock';
+
+type ApprovalCaseItem = ApprovalCase & {
+  source: ApprovalSource;
+  sourceId: number | string;
+};
+
+const FIELD_CODE_BY_MA_LINH_VUC: Record<number, string> = {
+  1: 'TU_PHAP',
+  2: 'Y_TE_GD',
+  3: 'KINH_TE',
+  4: 'AN_NINH',
+  5: 'XAY_DUNG',
+  6: 'LAO_DONG',
+  7: 'TAI_CHINH',
+  8: 'DIA_CHINH',
+  9: 'MOI_TRUONG',
+  10: 'VAN_HOA',
+};
+
+const FALLBACK_CASES: ApprovalCaseItem[] = APPROVAL_CASES.map((item) => ({
+  ...item,
+  source: 'mock',
+  sourceId: item.id,
+}));
+
+function normalizeAscii(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function mapFieldCodeFromText(value?: string | null): string | null {
+  if (!value) return null;
+  const normalized = normalizeAscii(value);
+
+  if (normalized.includes('tu phap') || normalized.includes('ho tich') || normalized.includes('chung thuc')) {
+    return 'TU_PHAP';
+  }
+  if (normalized.includes('y te') || normalized.includes('giao duc') || normalized.includes('tram y te')) {
+    return 'Y_TE_GD';
+  }
+  if (normalized.includes('kinh te') || normalized.includes('thuong mai') || normalized.includes('ho kinh doanh')) {
+    return 'KINH_TE';
+  }
+  if (normalized.includes('an ninh') || normalized.includes('quoc phong') || normalized.includes('trat tu')) {
+    return 'AN_NINH';
+  }
+  if (normalized.includes('xay dung') || normalized.includes('ha tang') || normalized.includes('quy hoach')) {
+    return 'XAY_DUNG';
+  }
+  if (normalized.includes('lao dong') || normalized.includes('tbxh') || normalized.includes('ho ngheo')) {
+    return 'LAO_DONG';
+  }
+  if (normalized.includes('tai chinh') || normalized.includes('ngan sach')) {
+    return 'TAI_CHINH';
+  }
+  if (normalized.includes('dia chinh') || normalized.includes('dat dai') || normalized.includes('so do')) {
+    return 'DIA_CHINH';
+  }
+  if (normalized.includes('moi truong') || normalized.includes('o nhiem') || normalized.includes('rac thai')) {
+    return 'MOI_TRUONG';
+  }
+  if (normalized.includes('van hoa') || normalized.includes('du lich') || normalized.includes('di tich')) {
+    return 'VAN_HOA';
+  }
+
+  return null;
+}
+
+function unwrapList(result: any): any[] {
+  if (!result) return [];
+  if (typeof result.success === 'boolean') {
+    if (!result.success) return [];
+    return Array.isArray(result.data) ? result.data : [];
+  }
+  if (Array.isArray(result.data)) return result.data;
+  return Array.isArray(result) ? result : [];
+}
+
+function toNumber(value: unknown): number | null {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function toText(value: unknown, fallback: string): string {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+}
+
+function toDateString(value: unknown): string {
+  if (!value) return '';
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function pickDate(...values: unknown[]): string {
+  for (const value of values) {
+    const date = toDateString(value);
+    if (date) return date;
+  }
+  return '';
+}
+
+function mapApprovalStatus(value?: string | null): ApprovalCase['status'] {
+  const normalized = normalizeAscii(String(value || '')).trim();
+  if (!normalized) return 'pending';
+  if (normalized.includes('tu choi') || normalized.includes('khong duyet')) return 'rejected';
+  if (normalized.includes('da duyet') || normalized.includes('hoan thanh') || normalized.includes('da xu ly')) {
+    return 'approved';
+  }
+  if (normalized.includes('dang') || normalized.includes('xu ly') || normalized.includes('tham dinh')) {
+    return 'reviewing';
+  }
+  if (normalized.includes('cho') || normalized.includes('tiep nhan') || normalized.includes('moi')) {
+    return 'pending';
+  }
+  return 'pending';
+}
+
+function daysUntil(dateStr: string): number | null {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  const start = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.ceil((end - start) / (24 * 3600 * 1000));
+}
+
+function derivePriority(dueDate: string, status: ApprovalCase['status']): ApprovalCase['priority'] {
+  if (status === 'approved' || status === 'rejected') return 'low';
+  const days = daysUntil(dueDate);
+  if (days === null) return 'medium';
+  if (days < 0) return 'critical';
+  if (days <= 3) return 'high';
+  if (days <= 7) return 'medium';
+  return 'low';
+}
 
 export function ApprovalsManagementPage() {
-  const [cases, setCases] = useState(APPROVAL_CASES);
-  const [selectedCase, setSelectedCase] = useState<ApprovalCase | null>(null);
+  const [cases, setCases] = useState<ApprovalCaseItem[]>(FALLBACK_CASES);
+  const [selectedCase, setSelectedCase] = useState<ApprovalCaseItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  const fieldByCode = useMemo(() => {
+    return new Map(FIELD_STATISTICS.map((field) => [field.code, field.name]));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCases = async () => {
+      try {
+        const [hoSoRes, vanBanRes, baoCaoRes, nganSachRes] = await Promise.all([
+          hoSoTthcApi.getList({ page: 1, limit: 500 }),
+          vanBanApi.getList({ page: 1, limit: 500 }),
+          baoCaoApi.getList({ page: 1, limit: 500 }),
+          nganSachApi.getList({ page: 1, limit: 500, loaiBanGhi: 'BAO_CAO_TAI_CHINH' }),
+        ]);
+
+        if (!active) return;
+
+        const hoSoRows = unwrapList(hoSoRes);
+        const vanBanRows = unwrapList(vanBanRes);
+        const baoCaoRows = unwrapList(baoCaoRes);
+        const nganSachRows = unwrapList(nganSachRes);
+
+        const hoSoCases = hoSoRows.map((row: any, index: number) => {
+          const fieldCode =
+            FIELD_CODE_BY_MA_LINH_VUC[toNumber(row.MaLinhVuc) ?? 0] ||
+            mapFieldCodeFromText(row.LinhVuc || row.TenThuTuc || row.TenHoSo) ||
+            'TU_PHAP';
+          const fieldName = fieldByCode.get(fieldCode) || 'Tong hop';
+          const status = mapApprovalStatus(row.TrangThai);
+          const submittedDate = pickDate(row.NgayNop, row.NgayTao, row.createdAt) || '-';
+          const dueDate = pickDate(row.NgayHenTra, row.HanXuLy) || '-';
+          const baseId = 100000;
+          const id = baseId + (toNumber(row.MaHoSo) ?? index);
+
+          return {
+            id,
+            caseNumber: toText(row.MaHoSo || row.SoHoSo || row.SoBienNhan, `HS-${index + 1}`),
+            title: toText(row.TenHoSo || row.TenThuTuc || row.TenThuTucHanhChinh, 'Ho so TTHC'),
+            fieldCode,
+            fieldName,
+            department: toText(row.DonViTiepNhan || row.PhongBan || row.DonViXuLy, fieldName),
+            submittedBy: toText(
+              row.NguoiNop || row.HoTenNguoiNop || row.NguoiNopText || row.NguoiLapText,
+              'Cong dan',
+            ),
+            submittedDate,
+            dueDate,
+            priority: derivePriority(dueDate, status),
+            type: toText(row.LinhVuc || row.TenThuTuc, 'Ho so TTHC'),
+            status,
+            documents: [],
+            source: 'hoSoTthc',
+            sourceId: row.MaHoSo || row.SoHoSo || id,
+          } as ApprovalCaseItem;
+        });
+
+        const vanBanCases = vanBanRows.map((row: any, index: number) => {
+          const fieldCode =
+            FIELD_CODE_BY_MA_LINH_VUC[toNumber(row.MaLinhVuc) ?? 0] ||
+            mapFieldCodeFromText(row.LoaiVanBan || row.LinhVuc || row.TenVanBan) ||
+            'TU_PHAP';
+          const fieldName = fieldByCode.get(fieldCode) || 'Tong hop';
+          const status = mapApprovalStatus(row.TrangThai);
+          const submittedDate = pickDate(row.NgayBanHanh, row.NgayTao) || '-';
+          const dueDate = pickDate(row.NgayCoHieuLuc, row.NgayHetHieuLuc) || '-';
+          const baseId = 200000;
+          const id = baseId + (toNumber(row.MaVanBan) ?? index);
+          const fileName = toText(row.FileDinhKem, 'tai-lieu-dinh-kem.pdf');
+          const documents = row.FileDinhKem ? [{ name: fileName, size: '1.0 MB' }] : [];
+
+          return {
+            id,
+            caseNumber: toText(row.SoVanBan || row.SoKyHieu || row.MaVanBan, `VB-${index + 1}`),
+            title: toText(row.TenVanBan || row.TrichYeu || row.SoVanBan, 'Van ban'),
+            fieldCode,
+            fieldName,
+            department: toText(row.CoQuanBanHanh || row.PhongBan, fieldName),
+            submittedBy: toText(row.NguoiSoan || row.NguoiTao || row.CoQuanBanHanh, 'Van thu'),
+            submittedDate,
+            dueDate,
+            priority: derivePriority(dueDate, status),
+            type: toText(row.LoaiVanBan || row.LinhVuc, 'Van ban'),
+            status,
+            documents,
+            source: 'vanBan',
+            sourceId: row.MaVanBan || id,
+          } as ApprovalCaseItem;
+        });
+
+        const baoCaoCases = baoCaoRows.map((row: any, index: number) => {
+          const fieldCode =
+            FIELD_CODE_BY_MA_LINH_VUC[toNumber(row.MaLinhVuc) ?? 0] ||
+            mapFieldCodeFromText(row.LinhVuc || row.TieuDe) ||
+            'TU_PHAP';
+          const fieldName = fieldByCode.get(fieldCode) || 'Tong hop';
+          const status = mapApprovalStatus(row.TrangThai);
+          const submittedDate = pickDate(row.NgayLap, row.NgayTao, row.NgayNop) || '-';
+          const dueDate = pickDate(row.NgayNop, row.NgayLap) || '-';
+          const baseId = 300000;
+          const id = baseId + (toNumber(row.MaBaoCao) ?? index);
+          const amount = toNumber(row.TongKinhPhi || row.TongDuToan || row.KinhPhi);
+
+          return {
+            id,
+            caseNumber: toText(row.MaBaoCao, `BC-${index + 1}`),
+            title: toText(row.TieuDe || row.TenBaoCao, 'Bao cao'),
+            fieldCode,
+            fieldName,
+            department: toText(row.PhongBan || row.DonViLap, fieldName),
+            submittedBy: toText(row.NguoiLapText || row.NguoiLap || row.NguoiTao, 'He thong'),
+            submittedDate,
+            dueDate,
+            priority: derivePriority(dueDate, status),
+            type: toText(row.LoaiBaoCao, 'Bao cao'),
+            status,
+            documents: [],
+            amount: amount ?? undefined,
+            source: 'baoCao',
+            sourceId: row.MaBaoCao || id,
+          } as ApprovalCaseItem;
+        });
+
+        const nganSachCases = nganSachRows.map((row: any, index: number) => {
+          const fieldCode =
+            FIELD_CODE_BY_MA_LINH_VUC[toNumber(row.MaLinhVuc) ?? 0] ||
+            mapFieldCodeFromText(row.LinhVuc || row.TenKhoanMuc) ||
+            'TAI_CHINH';
+          const fieldName = fieldByCode.get(fieldCode) || 'Tong hop';
+          const status = mapApprovalStatus(row.TrangThai);
+          const submittedDate = pickDate(row.NgayCapNhat, row.NgayTao) || '-';
+          const dueDate = pickDate(row.NgayCapNhat, row.NgayTao) || '-';
+          const baseId = 400000;
+          const id = baseId + (toNumber(row.MaNganSach) ?? index);
+          const amount = toNumber(row.TongDuToan || row.SoTien || row.DaGiaiNgan);
+
+          return {
+            id,
+            caseNumber: toText(row.MaNganSach, `TC-${index + 1}`),
+            title: toText(row.TenKhoanMuc || row.MoTa, 'Bao cao tai chinh'),
+            fieldCode,
+            fieldName,
+            department: toText(row.PhongBan || row.DonVi, fieldName),
+            submittedBy: toText(row.NguoiTao || row.NguoiLap, 'Ke toan'),
+            submittedDate,
+            dueDate,
+            priority: derivePriority(dueDate, status),
+            type: toText(row.LoaiBanGhi || row.LoaiBaoCao, 'Bao cao tai chinh'),
+            status,
+            documents: [],
+            amount: amount ?? undefined,
+            source: 'nganSach',
+            sourceId: row.MaNganSach || id,
+          } as ApprovalCaseItem;
+        });
+
+        const mapped = [...hoSoCases, ...vanBanCases, ...baoCaoCases, ...nganSachCases];
+        setCases(mapped.length ? mapped : FALLBACK_CASES);
+      } catch {
+        if (active) setCases(FALLBACK_CASES);
+      }
+    };
+
+    loadCases();
+    return () => {
+      active = false;
+    };
+  }, [fieldByCode]);
+
+  useEffect(() => {
+    if (!selectedCase) return;
+    const updated = cases.find(
+      (item) => item.id === selectedCase.id && item.source === selectedCase.source,
+    );
+    if (updated) {
+      setSelectedCase(updated);
+    } else {
+      setSelectedCase(null);
+    }
+  }, [cases, selectedCase?.id, selectedCase?.source]);
 
   // Filter cases
   const filteredCases = cases.filter((c) => {
@@ -69,18 +392,57 @@ export function ApprovalsManagementPage() {
     setShowApprovalDialog(true);
   };
 
-  const confirmApproval = () => {
-    if (selectedCase && approvalAction) {
-      const updatedCases = cases.map((c) =>
-        c.id === selectedCase.id
-          ? { ...c, status: approvalAction === 'approve' ? 'approved' : 'rejected' }
-          : c
-      );
-      setCases(updatedCases as any);
-      setShowApprovalDialog(false);
-      setSelectedCase(null);
-      setApprovalAction(null);
+  const updateApprovalStatus = async (
+    target: ApprovalCaseItem,
+    action: 'approve' | 'reject',
+  ) => {
+    if (target.source === 'mock') return;
+
+    const isApprove = action === 'approve';
+
+    try {
+      if (target.source === 'hoSoTthc') {
+        const id = String(target.sourceId || '');
+        if (!id) return;
+        await hoSoTthcApi.update(id, { TrangThai: isApprove ? 'Hoàn thành' : 'Từ chối' });
+      }
+
+      if (target.source === 'vanBan') {
+        const id = toNumber(target.sourceId);
+        if (!id) return;
+        await vanBanApi.update(id, { TrangThai: isApprove ? 'Đã xử lý' : 'Từ chối' });
+      }
+
+      if (target.source === 'baoCao') {
+        const id = toNumber(target.sourceId);
+        if (!id) return;
+        await baoCaoApi.update(id, { TrangThai: isApprove ? 'Đã duyệt' : 'Từ chối' });
+      }
+
+      if (target.source === 'nganSach') {
+        const id = toNumber(target.sourceId);
+        if (!id) return;
+        await nganSachApi.update(id, { TrangThai: isApprove ? 'Đã duyệt' : 'Từ chối' });
+      }
+    } catch (error) {
+      console.warn('Khong the cap nhat trang thai phe duyet', error);
     }
+  };
+
+  const confirmApproval = async () => {
+    if (!selectedCase || !approvalAction) return;
+
+    const nextStatus = approvalAction === 'approve' ? 'approved' : 'rejected';
+    const target = selectedCase;
+
+    setCases((prev) =>
+      prev.map((item) => (item.id === target.id ? { ...item, status: nextStatus } : item)),
+    );
+    setShowApprovalDialog(false);
+    setSelectedCase(null);
+    setApprovalAction(null);
+
+    await updateApprovalStatus(target, approvalAction);
   };
 
   const getPriorityColor = (priority: string) => {

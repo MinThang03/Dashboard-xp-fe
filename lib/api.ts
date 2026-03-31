@@ -240,6 +240,8 @@ export const vanBanApi = {
     return apiCall(`/van-ban?${query}`);
   },
 
+  getStats: () => apiCall('/van-ban/stats'),
+
   getById: (maVanBan: number) => {
     return apiCall(`/van-ban/${maVanBan}`);
   },
@@ -271,6 +273,11 @@ export const vanBanApi = {
       method: 'DELETE',
     });
   },
+};
+
+// ============== USERS ==============
+export const usersApi = {
+  getList: () => apiCall('/users'),
 };
 
 // ============== QUYẾT ĐỊNH ==============
@@ -327,12 +334,20 @@ export const phanAnhApi = {
   },
 
   create: (data: {
-    MaLinhVuc: number;
-    MaCongDan: number;
+    MaLinhVuc?: number | null;
+    MaCongDan?: number | null;
     TieuDe: string;
     NoiDung: string;
     MucDoUuTien?: string;
     ToaDo?: string;
+    TenNguoiPhanAnh?: string;
+    SoDienThoai?: string;
+    DiaChi?: string;
+    TenLinhVuc?: string;
+    TrangThai?: string;
+    TenCanBoXuLy?: string;
+    KetQuaXuLy?: string;
+    DiemDanhGia?: number | null;
   }) => {
     return apiCall('/phan-anh', {
       method: 'POST',
@@ -344,6 +359,18 @@ export const phanAnhApi = {
     TrangThai?: string;
     NgayPhanHoi?: string;
     GhiChu?: string;
+    MucDoUuTien?: string;
+    TenCanBoXuLy?: string;
+    KetQuaXuLy?: string;
+    TenLinhVuc?: string;
+    TenNguoiPhanAnh?: string;
+    SoDienThoai?: string;
+    DiaChi?: string;
+    MaLinhVuc?: number | null;
+    MaCongDan?: number | null;
+    NoiDung?: string;
+    TieuDe?: string;
+    DiemDanhGia?: number | null;
   }) => {
     return apiCall(`/phan-anh/${maPhanAnh}`, {
       method: 'PUT',
@@ -1063,6 +1090,7 @@ export const api = {
   auth: authApi,
   hoSo: hoSoApi,
   vanBan: vanBanApi,
+  users: usersApi,
   quyetDinh: quyetDinhApi,
   phanAnh: phanAnhApi,
   taiLieu: taiLieuApi,

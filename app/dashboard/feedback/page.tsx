@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,9 +39,11 @@ import {
   Download,
   Filter,
 } from 'lucide-react';
+import { phanAnhApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 // Mock data
-const mockFeedbacks = [
+const FALLBACK_FEEDBACKS = [
   {
     MaFeedback: 1,
     LoaiFeedback: 'Sự cố',
@@ -89,8 +91,54 @@ const mockFeedbacks = [
   },
 ];
 
+const normalizeAscii = (value: string) => {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+};
+
+const mapFromApi = (item: any) => {
+  return {
+    MaFeedback: item.MaPhanAnh ?? item.MaFeedback ?? item.id,
+    LoaiFeedback: item.TenLinhVuc || item.LoaiFeedback || 'Khác',
+    TieuDe: item.TieuDe || item.TenBaoCao || 'Phản hồi',
+    MoTa: item.NoiDung || item.MoTa || '',
+    DiaChi: item.DiaChi || '',
+    NguoiGui: item.TenNguoiPhanAnh || item.NguoiGui || '',
+    SoDienThoai: item.SoDienThoai || '',
+    NgayGui: String(item.NgayTao || item.NgayGui || '').slice(0, 10),
+    TrangThai: item.TrangThai || 'Mới',
+    MucDoUuTien: item.MucDoUuTien || 'Thường',
+    NguoiXuLy: item.TenCanBoXuLy || item.NguoiXuLy || '',
+    KetQuaXuLy: item.KetQuaXuLy || '',
+    GhiChu: item.GhiChu || '',
+    MaCongDan: item.MaCongDan ?? null,
+    MaLinhVuc: item.MaLinhVuc ?? null,
+  };
+};
+
+const mapToPayload = (item: any, userId: number | null) => {
+  return {
+    MaLinhVuc: item.MaLinhVuc ?? null,
+    MaCongDan: Number.isFinite(userId) ? userId : null,
+    TieuDe: item.TieuDe || 'Phản hồi từ công dân',
+    NoiDung: item.MoTa || '',
+    MucDoUuTien: item.MucDoUuTien || 'Thường',
+    TenNguoiPhanAnh: item.NguoiGui || '',
+    SoDienThoai: item.SoDienThoai || '',
+    DiaChi: item.DiaChi || '',
+    TenLinhVuc: item.LoaiFeedback || '',
+    TrangThai: item.TrangThai || 'Mới',
+    TenCanBoXuLy: item.NguoiXuLy || '',
+    KetQuaXuLy: item.KetQuaXuLy || '',
+    GhiChu: item.GhiChu || '',
+  };
+};
+
 export default function FeedbackPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -98,7 +146,25 @@ export default function FeedbackPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
-  const [feedbacks, setFeedbacks] = useState(mockFeedbacks);
+  const [feedbacks, setFeedbacks] = useState(FALLBACK_FEEDBACKS);
+
+  const loadData = async () => {
+    const res = await phanAnhApi.getList({ page: 1, limit: 200 } as any);
+    if (res?.success && Array.isArray((res as any).data)) {
+      const mapped = (res as any).data.map(mapFromApi);
+      const normalizedUser = normalizeAscii(user?.name || user?.username || '');
+      const filtered = normalizedUser
+        ? mapped.filter((item: any) => normalizeAscii(item.NguoiGui || '').includes(normalizedUser))
+        : mapped;
+      setFeedbacks(filtered.length ? filtered : mapped);
+      return;
+    }
+    setFeedbacks(FALLBACK_FEEDBACKS);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user?.name, user?.username]);
 
   // Tính toán thống kê
   const stats = {
@@ -127,7 +193,7 @@ export default function FeedbackPage() {
       TieuDe: '',
       MoTa: '',
       DiaChi: '',
-      NguoiGui: '',
+      NguoiGui: user?.name || user?.username || '',
       SoDienThoai: '',
       NgayGui: new Date().toISOString().split('T')[0],
       TrangThai: 'Mới',
@@ -145,21 +211,24 @@ export default function FeedbackPage() {
     setIsEditOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving:', formData);
-    // TODO: API call to save
+  const handleSave = async () => {
+    const userId = Number(user?.id);
+    const payload = mapToPayload(formData, Number.isFinite(userId) ? userId : null);
+
     if (isAddOpen) {
-      setFeedbacks([...feedbacks, { ...formData, MaFeedback: feedbacks.length + 1 }]);
-    } else {
-      setFeedbacks(feedbacks.map(f => f.MaFeedback === selectedItem.MaFeedback ? formData : f));
+      await phanAnhApi.create(payload as any);
+    } else if (selectedItem?.MaFeedback) {
+      await phanAnhApi.update(selectedItem.MaFeedback, payload as any);
     }
+
+    await loadData();
     setIsAddOpen(false);
     setIsEditOpen(false);
   };
 
   const handleDelete = (item: any) => {
     if (confirm(`Bạn có chắc chắn muốn xóa feedback "${item.TieuDe}"?`)) {
-      setFeedbacks(feedbacks.filter(f => f.MaFeedback !== item.MaFeedback));
+      phanAnhApi.delete(item.MaFeedback).then(() => loadData());
     }
   };
 
@@ -215,6 +284,8 @@ export default function FeedbackPage() {
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
+      case 'Khẩn cấp':
+        return <Badge className="bg-red-600 text-white">{priority}</Badge>;
       case 'Cao':
         return <Badge className="bg-red-500 text-white">{priority}</Badge>;
       case 'Thường':
@@ -508,6 +579,7 @@ export default function FeedbackPage() {
                     <SelectValue placeholder="Chọn mức độ" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Khẩn cấp">Khẩn cấp</SelectItem>
                     <SelectItem value="Cao">Cao</SelectItem>
                     <SelectItem value="Thường">Thường</SelectItem>
                   </SelectContent>
@@ -649,6 +721,7 @@ export default function FeedbackPage() {
                     <SelectValue placeholder="Chọn mức độ" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Khẩn cấp">Khẩn cấp</SelectItem>
                     <SelectItem value="Cao">Cao</SelectItem>
                     <SelectItem value="Thường">Thường</SelectItem>
                   </SelectContent>

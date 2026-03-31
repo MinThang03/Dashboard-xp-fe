@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,11 +33,55 @@ import {
   Filter,
   RefreshCw,
 } from 'lucide-react';
-import { FIELD_STATISTICS, FieldStats } from '@/lib/leader-data';
+import { fetchLeaderDashboardData, FALLBACK_LEADER_DATA } from '@/lib/leader-live-data';
+import { FieldStats } from '@/lib/leader-data';
 
 export function FieldMonitoringPage() {
+  const [fields, setFields] = useState<FieldStats[]>(FALLBACK_LEADER_DATA.fieldStatistics);
   const [selectedField, setSelectedField] = useState<FieldStats | null>(null);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadFields = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchLeaderDashboardData();
+        if (active) setFields(data.fieldStatistics);
+      } catch {
+        if (active) setFields(FALLBACK_LEADER_DATA.fieldStatistics);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+
+    loadFields();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedField) return;
+    const updated = fields.find((field) => field.code === selectedField.code);
+    if (updated) {
+      setSelectedField(updated);
+    }
+  }, [fields, selectedField?.code]);
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchLeaderDashboardData(true);
+      setFields(data.fieldStatistics);
+    } catch {
+      setFields(FALLBACK_LEADER_DATA.fieldStatistics);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-5 lg:space-y-6 lg:px-6">
@@ -54,7 +98,7 @@ export function FieldMonitoringPage() {
             <Filter className="w-4 h-4 mr-2" />
             Lọc
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Làm mới
           </Button>
@@ -84,7 +128,7 @@ export function FieldMonitoringPage() {
 
       {/* Overview Grid - 10 Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {FIELD_STATISTICS.map((field) => {
+        {fields.map((field) => {
           const Icon = field.icon;
           return (
             <Card

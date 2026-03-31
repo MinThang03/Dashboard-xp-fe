@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,13 +28,112 @@ import {
   Send,
 } from 'lucide-react';
 import { REPORTS, FIELD_STATISTICS, Report } from '@/lib/leader-data';
+import { baoCaoApi } from '@/lib/api';
 
 export function ReportsPage() {
   const [reports, setReports] = useState(REPORTS);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterField, setFilterField] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const fieldByCode = useMemo(() => {
+    const map = new Map<string, { name: string }>();
+    FIELD_STATISTICS.forEach((field) => map.set(field.code, { name: field.name }));
+    return map;
+  }, []);
+
+  const normalizeAscii = (value: string) => {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  };
+
+  const mapLoaiBaoCaoToType = (value?: string | null): Report['type'] => {
+    const normalized = normalizeAscii(String(value || '')).trim();
+    if (normalized.includes('ngay') || normalized.includes('daily')) return 'daily';
+    if (normalized.includes('tuan') || normalized.includes('weekly')) return 'weekly';
+    if (normalized.includes('quy') || normalized.includes('quarter')) return 'quarterly';
+    if (normalized.includes('nam') || normalized.includes('year')) return 'yearly';
+    return 'monthly';
+  };
+
+  const mapTrangThai = (value?: string | null): Report['status'] => {
+    const normalized = normalizeAscii(String(value || '')).trim();
+    if (normalized.includes('nhap') || normalized.includes('draft')) return 'draft';
+    if (normalized.includes('nop') || normalized.includes('submitted')) return 'submitted';
+    if (normalized.includes('duyet') || normalized.includes('approved')) return 'approved';
+    if (normalized.includes('cong bo') || normalized.includes('published')) return 'published';
+    return 'draft';
+  };
+
+  const mapMaLinhVucToCode = (value?: number | null): string => {
+    switch (value) {
+      case 1:
+        return 'TU_PHAP';
+      case 2:
+        return 'Y_TE_GD';
+      case 3:
+        return 'KINH_TE';
+      case 4:
+        return 'AN_NINH';
+      case 5:
+        return 'XAY_DUNG';
+      case 6:
+        return 'LAO_DONG';
+      case 7:
+        return 'TAI_CHINH';
+      case 8:
+        return 'DIA_CHINH';
+      case 9:
+        return 'MOI_TRUONG';
+      case 10:
+        return 'VAN_HOA';
+      default:
+        return 'ALL';
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    baoCaoApi
+      .getList({ page: 1, limit: 5000 })
+      .then((res) => {
+        if (!active) return;
+        if (!res.success || !Array.isArray(res.data)) {
+          return;
+        }
+        const mapped = res.data.map((item: any) => {
+          const fieldCode = mapMaLinhVucToCode(item.MaLinhVuc);
+          const fieldName = fieldByCode.get(fieldCode)?.name || 'Tong hop';
+          const createdDate = String(item.NgayLap || item.NgayTao || '').slice(0, 10);
+          return {
+            id: item.MaBaoCao,
+            title: item.TieuDe || 'Bao cao',
+            type: mapLoaiBaoCaoToType(item.LoaiBaoCao),
+            fieldCode,
+            fieldName,
+            department: fieldName,
+            createdBy: item.NguoiLapText || 'He thong',
+            createdDate,
+            period: item.ThangNam || createdDate,
+            status: mapTrangThai(item.TrangThai),
+            summary: item.NoiDung || '',
+            fileSize: item.FileDinhKem ? '1.0 MB' : '-',
+          } as Report;
+        });
+        setReports(mapped);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [fieldByCode]);
 
   // Statistics
   const stats = {
@@ -120,11 +219,11 @@ export function ReportsPage() {
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 xl:w-auto xl:flex-nowrap">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" disabled={isLoading}>
             <Filter className="w-4 h-4 mr-2" />
             Lọc nâng cao
           </Button>
-          <Button size="sm">
+          <Button size="sm" disabled={isLoading}>
             <Download className="w-4 h-4 mr-2" />
             Xuất danh sách
           </Button>
