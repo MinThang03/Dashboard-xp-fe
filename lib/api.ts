@@ -472,7 +472,7 @@ export const tramYTeApi = {
 };
 
 export const nhanVienYTeApi = {
-  getList: (params?: { page?: number; limit?: number }) => {
+  getList: (params?: { page?: number; limit?: number; maTram?: number }) => {
     const query = new URLSearchParams(params as any).toString();
     return apiCall(`/nhan-vien-y-te?${query}`);
   },

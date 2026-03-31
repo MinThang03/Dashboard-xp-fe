@@ -22,8 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockNhanVienYTe, formatDate, formatDateTime } from '@/lib/mock-data';
-import { tramYTeApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/mock-data';
+import { nhanVienYTeApi, tramYTeApi } from '@/lib/api';
 import {
   Stethoscope,
   Users,
@@ -47,9 +47,11 @@ export default function TramYTePage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [nhanVienList, setNhanVienList] = useState<any[]>([]);
+  const [viewNhanVienList, setViewNhanVienList] = useState<any[]>([]);
   const [tramList, setTramList] = useState<any[]>([]);
   const [isNhanVienDialogOpen, setIsNhanVienDialogOpen] = useState(false);
   const [editingNhanVienIndex, setEditingNhanVienIndex] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [nhanVienForm, setNhanVienForm] = useState({
     HoTen: '',
     ChucDanh: '',
@@ -58,12 +60,32 @@ export default function TramYTePage() {
     TrangThaiLamViec: 'Đang làm việc',
   });
 
+  const toSearchable = (value: any) => String(value ?? '').toLowerCase();
+  const parseNumericId = (value: any) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+  const getNhanVienKey = (item: any, index: number) => {
+    const id = parseNumericId(item?.MaNhanVien);
+    if (id !== null) {
+      return id;
+    }
+    return `nv-${item?.HoTen || 'unknown'}-${item?.SoDienThoai || 'na'}-${index}`;
+  };
+  const getTramKey = (item: any, index: number) => {
+    const id = parseNumericId(item?.MaTram);
+    if (id !== null) {
+      return id;
+    }
+    return `tram-${item?.TenTram || 'unknown'}-${item?.DiaChi || 'na'}-${index}`;
+  };
+
   const filteredData = tramList.filter((item) => {
-    const search = searchQuery.toLowerCase();
+    const search = toSearchable(searchQuery);
     return (
-      item.TenTram.toLowerCase().includes(search) ||
-      item.DiaChi.toLowerCase().includes(search) ||
-      item.SoDienThoai.includes(search)
+      toSearchable(item?.TenTram).includes(search) ||
+      toSearchable(item?.DiaChi).includes(search) ||
+      toSearchable(item?.SoDienThoai).includes(search)
     );
   });
 
@@ -78,16 +100,37 @@ export default function TramYTePage() {
     loadData();
   }, []);
 
-  const handleView = (item: any) => {
-    setSelectedItem(item);
-    setIsViewOpen(true);
+  const fetchNhanVienByTram = async (maTram: number) => {
+    const response = await nhanVienYTeApi.getList({ page: 1, limit: 500, maTram });
+    if (!response.success || !Array.isArray(response.data)) {
+      return [];
+    }
+    return response.data.filter((item: any) => Number(item?.MaTram) === Number(maTram));
   };
 
-  const handleEdit = (item: any) => {
+  const handleView = async (item: any) => {
+    setSelectedItem(item);
+    setViewNhanVienList([]);
+    setIsViewOpen(true);
+
+    const maTram = parseNumericId(item?.MaTram);
+    if (maTram !== null) {
+      const members = await fetchNhanVienByTram(maTram);
+      setViewNhanVienList(members);
+    }
+  };
+
+  const handleEdit = async (item: any) => {
     setSelectedItem(item);
     setFormData({ ...item });
-    setNhanVienList(getNhanVien(item.MaTram));
+    setNhanVienList([]);
     setIsEditOpen(true);
+
+    const maTram = parseNumericId(item?.MaTram);
+    if (maTram !== null) {
+      const members = await fetchNhanVienByTram(maTram);
+      setNhanVienList(members);
+    }
   };
 
   const handleAdd = () => {
@@ -136,44 +179,130 @@ export default function TramYTePage() {
 
   const handleSaveNhanVien = () => {
     if (!nhanVienForm.HoTen.trim()) return;
+
     if (editingNhanVienIndex === null) {
       setNhanVienList((prev) => [
         ...prev,
         {
           ...nhanVienForm,
-          MaNhanVien: Date.now(),
-          MaTram: selectedItem?.MaTram || 0,
+          MaNhanVien: `temp-${Date.now()}`,
+          MaTram: parseNumericId(selectedItem?.MaTram) || 0,
         },
       ]);
     } else {
       setNhanVienList((prev) =>
-        prev.map((nv, idx) => (idx === editingNhanVienIndex ? { ...nv, ...nhanVienForm } : nv))
+        prev.map((nv, idx) => {
+          if (idx !== editingNhanVienIndex) {
+            return nv;
+          }
+          return {
+            ...nv,
+            ...nhanVienForm,
+          };
+        })
       );
     }
+
     setIsNhanVienDialogOpen(false);
   };
 
+  const syncNhanVienForTram = async (maTram: number) => {
+    const latestResponse = await nhanVienYTeApi.getList({ page: 1, limit: 500, maTram });
+    const latestFromServer = latestResponse.success && Array.isArray(latestResponse.data)
+      ? latestResponse.data.filter((item: any) => Number(item?.MaTram) === maTram)
+      : [];
+
+    const localById = new Map<number, any>();
+    nhanVienList.forEach((item) => {
+      const id = parseNumericId(item?.MaNhanVien);
+      if (id !== null) {
+        localById.set(id, item);
+      }
+    });
+
+    for (const serverItem of latestFromServer) {
+      const serverId = parseNumericId(serverItem?.MaNhanVien);
+      if (serverId !== null && !localById.has(serverId)) {
+        await nhanVienYTeApi.delete(serverId);
+      }
+    }
+
+    for (const member of nhanVienList) {
+      const payload = {
+        HoTen: member.HoTen,
+        ChucDanh: member.ChucDanh || null,
+        ChuyenMon: member.ChuyenMon || null,
+        SoDienThoai: member.SoDienThoai || null,
+        TrangThaiLamViec: member.TrangThaiLamViec || 'Đang làm việc',
+        MaTram: maTram,
+        GhiChu: member.GhiChu || null,
+      };
+
+      const memberId = parseNumericId(member?.MaNhanVien);
+      if (memberId !== null) {
+        await nhanVienYTeApi.update(memberId, payload);
+      } else {
+        await nhanVienYTeApi.create(payload);
+      }
+    }
+
+    const refreshedMembers = await fetchNhanVienByTram(maTram);
+    setNhanVienList(refreshedMembers);
+    if (selectedItem && Number(selectedItem.MaTram) === maTram) {
+      setViewNhanVienList(refreshedMembers);
+    }
+  };
+
   const handleSave = async () => {
+    if (!String(formData.TenTram || '').trim()) {
+      alert('Vui lòng nhập tên trạm y tế.');
+      return;
+    }
+
+    setIsSaving(true);
+
     const payload = {
       TenTram: formData.TenTram,
       DiaChi: formData.DiaChi,
       SoDienThoai: formData.SoDienThoai,
-      SoNhanVien: nhanVienList.length || Number(formData.SoNhanVien || 0),
+      SoNhanVien: nhanVienList.length,
       SoLuotKhamThang: Number(formData.SoLuotKhamThang || 0),
       TrangThai: formData.TrangThai === 1 || formData.TrangThai === true,
       GhiChu: formData.GhiChu || null,
       NgayTao: formData.NgayTao || new Date().toISOString(),
     };
 
-    if (selectedItem?.MaTram) {
-      await tramYTeApi.update(selectedItem.MaTram, payload);
-    } else {
-      await tramYTeApi.create(payload);
-    }
+    try {
+      let maTram = parseNumericId(selectedItem?.MaTram);
 
-    await loadData();
-    setIsEditOpen(false);
-    setIsAddOpen(false);
+      if (maTram !== null) {
+        const updateResponse = await tramYTeApi.update(maTram, payload);
+        if (!updateResponse.success) {
+          throw new Error(updateResponse.message || 'Không thể cập nhật trạm y tế');
+        }
+      } else {
+        const createResponse = await tramYTeApi.create(payload);
+        if (!createResponse.success) {
+          throw new Error(createResponse.message || 'Không thể tạo mới trạm y tế');
+        }
+        maTram = parseNumericId((createResponse as any).data?.MaTram);
+      }
+
+      if (maTram !== null) {
+        await syncNhanVienForTram(maTram);
+      }
+
+      await loadData();
+      setIsEditOpen(false);
+      setIsAddOpen(false);
+      setSelectedItem(null);
+      setViewNhanVienList([]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Có lỗi xảy ra khi lưu dữ liệu';
+      alert(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async (item: any) => {
@@ -181,10 +310,6 @@ export default function TramYTePage() {
       await tramYTeApi.delete(item.MaTram);
       await loadData();
     }
-  };
-
-  const getNhanVien = (maTram: number) => {
-    return mockNhanVienYTe.filter((nv) => nv.MaTram === maTram);
   };
 
   const totalNhanVien = tramList.reduce((sum, tram) => sum + Number(tram.SoNhanVien || 0), 0);
@@ -297,8 +422,8 @@ export default function TramYTePage() {
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((item) => (
-                <tr key={item.MaTram} className="border-b hover:bg-slate-50 transition-colors">
+              {filteredData.map((item, index) => (
+                <tr key={getTramKey(item, index)} className="border-b hover:bg-slate-50 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-red-500" />
@@ -325,12 +450,12 @@ export default function TramYTePage() {
                   </td>
                   <td className="p-4">
                     <Badge variant="outline" className="font-medium">
-                      {item.SoLuotKhamThang.toLocaleString()} lượt
+                      {Number(item.SoLuotKhamThang || 0).toLocaleString()} lượt
                     </Badge>
                   </td>
                   <td className="p-4">
-                    <Badge className={item.TrangThai === 1 ? 'bg-status-success/10 text-status-success border-0' : 'bg-status-danger/10 text-status-danger border-0'}>
-                      {item.TrangThai === 1 ? 'Hoạt động' : 'Không hoạt động'}
+                    <Badge className={item.TrangThai === 1 || item.TrangThai === true ? 'bg-status-success/10 text-status-success border-0' : 'bg-status-danger/10 text-status-danger border-0'}>
+                      {item.TrangThai === 1 || item.TrangThai === true ? 'Hoạt động' : 'Không hoạt động'}
                     </Badge>
                   </td>
                   <td className="p-4">
@@ -339,7 +464,7 @@ export default function TramYTePage() {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
-                        onClick={() => handleView(item)}
+                        onClick={() => void handleView(item)}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -347,7 +472,7 @@ export default function TramYTePage() {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
-                        onClick={() => handleEdit(item)}
+                        onClick={() => void handleEdit(item)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -402,7 +527,7 @@ export default function TramYTePage() {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Lượt khám/tháng</Label>
-                    <p className="font-medium">{selectedItem.SoLuotKhamThang.toLocaleString()} lượt</p>
+                    <p className="font-medium">{Number(selectedItem.SoLuotKhamThang || 0).toLocaleString()} lượt</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Trạng thái</Label>
@@ -427,11 +552,11 @@ export default function TramYTePage() {
               <div>
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  Danh sách nhân viên ({getNhanVien(selectedItem.MaTram).length})
+                  Danh sách nhân viên ({viewNhanVienList.length})
                 </h3>
                 <div className="space-y-3">
-                  {getNhanVien(selectedItem.MaTram).map((nv) => (
-                    <div key={nv.MaNhanVien} className="border rounded-lg p-4 hover:bg-slate-50">
+                  {viewNhanVienList.map((nv, index) => (
+                    <div key={getNhanVienKey(nv, index)} className="border rounded-lg p-4 hover:bg-slate-50">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label className="text-xs text-muted-foreground">Họ tên</Label>
@@ -456,7 +581,7 @@ export default function TramYTePage() {
                       </div>
                     </div>
                   ))}
-                  {getNhanVien(selectedItem.MaTram).length === 0 && (
+                  {viewNhanVienList.length === 0 && (
                     <p className="text-muted-foreground text-center py-4">Chưa có nhân viên</p>
                   )}
                 </div>
@@ -469,7 +594,7 @@ export default function TramYTePage() {
             </Button>
             <Button onClick={() => {
               setIsViewOpen(false);
-              handleEdit(selectedItem);
+              void handleEdit(selectedItem);
             }}>
               <Edit className="w-4 h-4 mr-2" />
               Chỉnh sửa
@@ -585,7 +710,7 @@ export default function TramYTePage() {
               </div>
               <div className="space-y-3">
                 {nhanVienList.map((nv, index) => (
-                  <div key={nv.MaNhanVien || index} className="border rounded-lg p-4 hover:bg-slate-50">
+                  <div key={getNhanVienKey(nv, index)} className="border rounded-lg p-4 hover:bg-slate-50">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs text-muted-foreground">Họ tên</Label>
@@ -632,8 +757,8 @@ export default function TramYTePage() {
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleSave}>
-              Lưu thay đổi
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -735,7 +860,7 @@ export default function TramYTePage() {
               ) : (
                 <div className="space-y-2">
                   {nhanVienList.map((nv, index) => (
-                    <div key={nv.MaNhanVien || index} className="flex items-center justify-between rounded border p-3">
+                    <div key={getNhanVienKey(nv, index)} className="flex items-center justify-between rounded border p-3">
                       <div>
                         <p className="font-medium">{nv.HoTen}</p>
                         <p className="text-sm text-muted-foreground">{nv.ChucDanh} - {nv.ChuyenMon}</p>
@@ -758,9 +883,9 @@ export default function TramYTePage() {
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={isSaving}>
               <Plus className="w-4 h-4 mr-2" />
-              Thêm mới
+              {isSaving ? 'Đang lưu...' : 'Thêm mới'}
             </Button>
           </DialogFooter>
         </DialogContent>
