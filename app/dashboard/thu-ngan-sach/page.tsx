@@ -576,8 +576,8 @@ export default function ThuNganSachPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.MaThu}>
+              {filteredData.map((item, index) => (
+                <TableRow key={item.MaNganSach ?? (item.MaThu || `row-${index}`)}>
                   <TableCell className="font-medium text-green-600">{item.MaThu}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{item.LoaiThu}</Badge>
