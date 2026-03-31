@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -192,6 +192,76 @@ interface HoSoTTHC {
   SoBienNhan: string;
 }
 
+const PROCEDURE_GROUPS: Record<string, string[]> = {
+  'Hộ tịch': [
+    'Đăng ký khai sinh',
+    'Đăng ký khai tử',
+    'Đăng ký kết hôn',
+    'Đăng ký nhận cha, mẹ, con',
+    'Thay đổi/cải chính hộ tịch',
+    'Xác nhận tình trạng hôn nhân',
+    'Cấp bản sao trích lục hộ tịch',
+  ],
+  'Cư trú': [
+    'Đăng ký thường trú',
+    'Đăng ký tạm trú',
+    'Khai báo tạm vắng',
+    'Xác nhận thông tin cư trú',
+  ],
+  'Chứng thực': [
+    'Chứng thực bản sao từ bản chính',
+    'Chứng thực chữ ký',
+    'Chứng thực hợp đồng/giao dịch',
+  ],
+  'Đất đai': [
+    'Xác nhận nguồn gốc đất',
+    'Xác nhận hiện trạng sử dụng đất',
+    'Xác nhận tranh chấp đất',
+    'Hồ sơ cấp sổ đỏ',
+  ],
+  'Chính sách - xã hội': [
+    'Xác nhận hộ nghèo/cận nghèo',
+    'Trợ cấp xã hội',
+    'Chính sách người có công',
+    'Bảo trợ xã hội',
+  ],
+  'Hành chính khác': [
+    'Xác nhận cư trú',
+    'Xác nhận lý lịch',
+    'Xác nhận độc thân',
+    'Giấy xác nhận dân sự',
+  ],
+  'Kinh tế - doanh nghiệp': [
+    'Đăng ký hộ kinh doanh cá thể',
+    'Xác nhận ngành nghề',
+    'Tạm ngừng kinh doanh',
+  ],
+};
+
+const PROCEDURE_CATEGORIES = Object.keys(PROCEDURE_GROUPS);
+
+const normalizeKey = (value: unknown) => String(value || '').trim().toLowerCase();
+
+const inferProcedureCategory = (linhVuc: unknown, tenThuTuc: unknown) => {
+  const lv = normalizeKey(linhVuc);
+  const tt = normalizeKey(tenThuTuc);
+
+  for (const category of PROCEDURE_CATEGORIES) {
+    const found = PROCEDURE_GROUPS[category]?.some((name) => normalizeKey(name) === tt);
+    if (found) {
+      return category;
+    }
+  }
+
+  if (lv.includes('hộ tịch')) return 'Hộ tịch';
+  if (lv.includes('cư trú') || lv.includes('hộ khẩu') || lv.includes('tạm trú') || lv.includes('tạm vắng')) return 'Cư trú';
+  if (lv.includes('chứng thực') || lv.includes('tư pháp')) return 'Chứng thực';
+  if (lv.includes('đất') || lv.includes('địa chính') || lv.includes('quy hoạch')) return 'Đất đai';
+  if (lv.includes('xã hội') || lv.includes('chính sách') || lv.includes('bảo trợ') || lv.includes('người có công')) return 'Chính sách - xã hội';
+  if (lv.includes('kinh tế') || lv.includes('kinh doanh') || lv.includes('doanh nghiệp')) return 'Kinh tế - doanh nghiệp';
+  return 'Hành chính khác';
+};
+
 export default function HoSoTTHCPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -252,9 +322,35 @@ export default function HoSoTTHCPage() {
     return normalized.slice(0, maxLength);
   };
 
-  const mapFromApi = (item: any): HoSoTTHC => {
-    const loaiThuTuc = loaiThuTucList.find((l) => l.MaLoaiThuTuc === item.MaLoaiThuTuc);
+  const procedureOptionsByCategory = useMemo(() => {
+    const merged: Record<string, string[]> = {};
+
+    for (const category of PROCEDURE_CATEGORIES) {
+      merged[category] = [...(PROCEDURE_GROUPS[category] || [])];
+    }
+
+    for (const loai of loaiThuTucList) {
+      const category = inferProcedureCategory(loai?.LinhVuc, loai?.TenThuTuc);
+      const tenThuTuc = String(loai?.TenThuTuc || '').trim();
+      if (!tenThuTuc) {
+        continue;
+      }
+      if (!merged[category]) {
+        merged[category] = [];
+      }
+      if (!merged[category].includes(tenThuTuc)) {
+        merged[category].push(tenThuTuc);
+      }
+    }
+
+    return merged;
+  }, [loaiThuTucList]);
+
+  const mapFromApi = (item: any, loaiList: any[]): HoSoTTHC => {
+    const loaiThuTuc = loaiList.find((l) => l.MaLoaiThuTuc === item.MaLoaiThuTuc);
     const tenThuTuc = item.TenThuTuc || loaiThuTuc?.TenThuTuc || `Thủ tục #${item.MaLoaiThuTuc}`;
+    const category = inferProcedureCategory(item.LinhVuc || loaiThuTuc?.LinhVuc, tenThuTuc);
+
     return {
       MaHoSo: item.MaHoSo,
       MaLoaiThuTuc: item.MaLoaiThuTuc,
@@ -265,8 +361,8 @@ export default function HoSoTTHCPage() {
       SoDienThoai: item.SoDienThoai || '',
       Email: item.Email || '',
       DiaChiLienHe: item.DiaChiLienHe || '',
-      LoaiThuTuc: tenThuTuc,
-      LinhVuc: item.LinhVuc || 'Tư pháp',
+      LoaiThuTuc: category,
+      LinhVuc: category,
       MaTrangThai: mapStatusToCode(item.TrangThai || ''),
       TrangThai: item.TrangThai || 'Đã tiếp nhận',
       NgayTiepNhan: item.NgayNop || '',
@@ -296,35 +392,7 @@ export default function HoSoTTHCPage() {
     }
 
     if (hoSoRes.success && Array.isArray(hoSoRes.data)) {
-      const mapped = hoSoRes.data.map((item: any) => {
-        const loaiThuTuc = loaiData.find((l: any) => l.MaLoaiThuTuc === item.MaLoaiThuTuc);
-        const tenThuTuc = item.TenThuTuc || loaiThuTuc?.TenThuTuc || `Thủ tục #${item.MaLoaiThuTuc}`;
-        return {
-          MaHoSo: item.MaHoSo,
-          MaLoaiThuTuc: item.MaLoaiThuTuc,
-          TenThuTuc: tenThuTuc,
-          MaCongDan: 0,
-          TenCongDan: item.NguoiNop || '',
-          CCCD: item.CCCD || '',
-          SoDienThoai: item.SoDienThoai || '',
-          Email: item.Email || '',
-          DiaChiLienHe: item.DiaChiLienHe || '',
-          LoaiThuTuc: tenThuTuc,
-          LinhVuc: item.LinhVuc || 'Tư pháp',
-          MaTrangThai: mapStatusToCode(item.TrangThai || ''),
-          TrangThai: item.TrangThai || 'Đã tiếp nhận',
-          NgayTiepNhan: item.NgayNop || '',
-          HanXuLy: item.NgayHenTra || '',
-          NgayHenTra: item.NgayHenTra || '',
-          NgayHoanThanh: item.NgayHoanThanh || null,
-          CanBoTiepNhan: '',
-          CanBoXuLy: item.CanBoXuLy ? String(item.CanBoXuLy) : '',
-          KetQuaXuLy: item.KetQua || '',
-          PhiLePhi: Number(item.PhiLePhi || 0),
-          GhiChu: item.GhiChu || '',
-          SoBienNhan: item.SoHoSo || item.MaHoSo,
-        } as HoSoTTHC;
-      });
+      const mapped = hoSoRes.data.map((item: any) => mapFromApi(item, loaiData));
       setHoSoList(mapped);
       setFilteredData(mapped);
     }
@@ -377,6 +445,7 @@ export default function HoSoTTHCPage() {
 
   const handleEdit = (hoSo: HoSoTTHC) => {
     setSelectedHoSo(hoSo);
+    const selectedCategory = inferProcedureCategory(hoSo.LinhVuc || hoSo.LoaiThuTuc, hoSo.TenThuTuc);
     setFormData({
       MaHoSo: hoSo.MaHoSo,
       MaLoaiThuTuc: hoSo.MaLoaiThuTuc ? String(hoSo.MaLoaiThuTuc) : '',
@@ -386,8 +455,8 @@ export default function HoSoTTHCPage() {
       SoDienThoai: hoSo.SoDienThoai,
       Email: hoSo.Email,
       DiaChiLienHe: hoSo.DiaChiLienHe,
-      LoaiThuTuc: hoSo.LoaiThuTuc,
-      LinhVuc: hoSo.LinhVuc,
+      LoaiThuTuc: selectedCategory,
+      LinhVuc: selectedCategory,
       MaTrangThai: hoSo.MaTrangThai,
       HanXuLy: hoSo.HanXuLy.split(' ')[0],
       CanBoXuLy: hoSo.CanBoXuLy,
@@ -400,17 +469,19 @@ export default function HoSoTTHCPage() {
   const handleAdd = () => {
     setSelectedHoSo(null);
     const newMaHoSo = `TTHC-${new Date().getFullYear()}-${String(hoSoList.length + 1).padStart(4, '0')}`;
+    const defaultCategory = 'Hộ tịch';
+    const defaultProcedure = procedureOptionsByCategory[defaultCategory]?.[0] || '';
     setFormData({
       MaHoSo: newMaHoSo,
       MaLoaiThuTuc: loaiThuTucList?.[0]?.MaLoaiThuTuc ? String(loaiThuTucList[0].MaLoaiThuTuc) : '',
-      TenThuTuc: '',
+      TenThuTuc: defaultProcedure,
       TenCongDan: '',
       CCCD: '',
       SoDienThoai: '',
       Email: '',
       DiaChiLienHe: '',
-      LoaiThuTuc: '',
-      LinhVuc: 'Tư pháp',
+      LoaiThuTuc: defaultCategory,
+      LinhVuc: defaultCategory,
       MaTrangThai: 'DA_TIEP_NHAN',
       HanXuLy: '',
       CanBoXuLy: '',
@@ -421,7 +492,8 @@ export default function HoSoTTHCPage() {
   };
 
   const handleSave = async () => {
-    const tenThuTuc = cleanText(formData.TenThuTuc || formData.LoaiThuTuc, 200);
+    const tenThuTuc = cleanText(formData.TenThuTuc, 200);
+    const procedureCategory = cleanText(formData.LoaiThuTuc || formData.LinhVuc, 100) || 'Hành chính khác';
     const tenCongDan = cleanText(formData.TenCongDan, 150);
     const cccd = cleanText(formData.CCCD, 20);
     const soDienThoai = cleanText(formData.SoDienThoai, 20);
@@ -455,8 +527,20 @@ export default function HoSoTTHCPage() {
     }
 
     const selectedLoai = loaiThuTucList.find((l) => String(l.MaLoaiThuTuc) === String(formData.MaLoaiThuTuc));
-    const matchedLoai = loaiThuTucList.find((l) => l.TenThuTuc === formData.LoaiThuTuc || l.TenThuTuc === formData.TenThuTuc);
-    const maLoaiThuTuc = selectedLoai?.MaLoaiThuTuc || matchedLoai?.MaLoaiThuTuc || loaiThuTucList?.[0]?.MaLoaiThuTuc || 1;
+    const matchedLoai = loaiThuTucList.find(
+      (l) =>
+        normalizeKey(l.TenThuTuc) === normalizeKey(tenThuTuc) &&
+        inferProcedureCategory(l.LinhVuc, l.TenThuTuc) === procedureCategory,
+    );
+    const matchedByCategory = loaiThuTucList.find(
+      (l) => inferProcedureCategory(l.LinhVuc, l.TenThuTuc) === procedureCategory,
+    );
+    const maLoaiThuTuc =
+      selectedLoai?.MaLoaiThuTuc ||
+      matchedLoai?.MaLoaiThuTuc ||
+      matchedByCategory?.MaLoaiThuTuc ||
+      loaiThuTucList?.[0]?.MaLoaiThuTuc ||
+      1;
 
     const payload = {
       MaHoSo: formData.MaHoSo,
@@ -468,7 +552,7 @@ export default function HoSoTTHCPage() {
       SoDienThoai: soDienThoai || null,
       Email: email || null,
       DiaChiLienHe: diaChiLienHe || null,
-      LinhVuc: linhVuc || null,
+      LinhVuc: procedureCategory || linhVuc || null,
       NgayNop: new Date().toISOString().split('T')[0],
       NgayHenTra: formData.HanXuLy ? String(formData.HanXuLy).split('T')[0] : null,
       TrangThai: mapCodeToStatus(formData.MaTrangThai),
@@ -613,8 +697,8 @@ export default function HoSoTTHCPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả loại</SelectItem>
-                  {loaiThuTucList.map((loai: any) => (
-                    <SelectItem key={loai.MaLoaiThuTuc} value={loai.TenThuTuc}>{loai.TenThuTuc}</SelectItem>
+                  {PROCEDURE_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -835,21 +919,36 @@ export default function HoSoTTHCPage() {
           <div className="grid grid-cols-2 gap-2 py-2">
             <div>
               <Label>Tên thủ tục *</Label>
-              <Input value={formData.TenThuTuc} onChange={(e) => setFormData({...formData, TenThuTuc: e.target.value})} />
+              <Select
+                value={formData.TenThuTuc}
+                onValueChange={(v) => setFormData({ ...formData, TenThuTuc: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn thủ tục" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(procedureOptionsByCategory[formData.LoaiThuTuc] || []).map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Loại thủ tục *</Label>
               <Select
-                value={formData.MaLoaiThuTuc}
+                value={formData.LoaiThuTuc}
                 onValueChange={(v) => {
-                  const selected = loaiThuTucList.find((l: any) => String(l.MaLoaiThuTuc) === v);
+                  const options = procedureOptionsByCategory[v] || [];
+                  const nextTenThuTuc = options.includes(formData.TenThuTuc)
+                    ? formData.TenThuTuc
+                    : options[0] || '';
                   setFormData({
                     ...formData,
-                    MaLoaiThuTuc: v,
-                    LoaiThuTuc: selected?.TenThuTuc || '',
-                    TenThuTuc: selected?.TenThuTuc || formData.TenThuTuc,
-                    LinhVuc: selected?.LinhVuc || formData.LinhVuc,
-                    PhiLePhi: Number(selected?.PhiDichVu ?? formData.PhiLePhi),
+                    LoaiThuTuc: v,
+                    LinhVuc: v,
+                    TenThuTuc: nextTenThuTuc,
                   });
                 }}
               >
@@ -857,9 +956,9 @@ export default function HoSoTTHCPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {loaiThuTucList.map((loai: any) => (
-                    <SelectItem key={loai.MaLoaiThuTuc} value={String(loai.MaLoaiThuTuc)}>
-                      {loai.TenThuTuc}
+                  {PROCEDURE_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -941,29 +1040,26 @@ export default function HoSoTTHCPage() {
                   <SelectValue placeholder="Chọn thủ tục" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Đăng ký khai sinh">Đăng ký khai sinh</SelectItem>
-                  <SelectItem value="Đăng ký kết hôn">Đăng ký kết hôn</SelectItem>
-                  <SelectItem value="Đăng ký khai tử">Đăng ký khai tử</SelectItem>
-                  <SelectItem value="Cấp bản sao trích lục hộ tịch">Cấp bản sao trích lục hộ tịch</SelectItem>
-                  <SelectItem value="Xác nhận tình trạng hôn nhân">Xác nhận tình trạng hôn nhân</SelectItem>
-                  <SelectItem value="Chứng thực bản sao từ bản chính">Chứng thực bản sao từ bản chính</SelectItem>
-                  <SelectItem value="Chứng thực chữ ký">Chứng thực chữ ký</SelectItem>
+                  {(procedureOptionsByCategory[formData.LoaiThuTuc] || []).map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Loại thủ tục *</Label>
               <Select
-                value={formData.MaLoaiThuTuc}
+                value={formData.LoaiThuTuc}
                 onValueChange={(v) => {
-                  const selected = loaiThuTucList.find((l: any) => String(l.MaLoaiThuTuc) === v);
+                  const options = procedureOptionsByCategory[v] || [];
+                  const nextTenThuTuc = options.includes(formData.TenThuTuc)
+                    ? formData.TenThuTuc
+                    : options[0] || '';
                   setFormData({
                     ...formData,
-                    MaLoaiThuTuc: v,
-                    LoaiThuTuc: selected?.TenThuTuc || '',
-                    TenThuTuc: selected?.TenThuTuc || formData.TenThuTuc,
-                    LinhVuc: selected?.LinhVuc || formData.LinhVuc,
-                    PhiLePhi: Number(selected?.PhiDichVu ?? formData.PhiLePhi),
+                    LoaiThuTuc: v,
+                    LinhVuc: v,
+                    TenThuTuc: nextTenThuTuc,
                   });
                 }}
               >
@@ -971,9 +1067,9 @@ export default function HoSoTTHCPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {loaiThuTucList.map((loai: any) => (
-                    <SelectItem key={loai.MaLoaiThuTuc} value={String(loai.MaLoaiThuTuc)}>
-                      {loai.TenThuTuc}
+                  {PROCEDURE_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
                     </SelectItem>
                   ))}
                 </SelectContent>
