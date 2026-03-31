@@ -42,6 +42,7 @@ export default function BaoCaoHCPage() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     TenBaoCao: '',
     LoaiBaoCao: 'Báo cáo tháng',
@@ -53,8 +54,14 @@ export default function BaoCaoHCPage() {
     SoLieuThongKe: {},
   });
 
+  const toSearchable = (value: any) => String(value ?? '').toLowerCase();
+  const parseId = (value: any) => {
+    const id = Number(value);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  };
+
   const loadData = async () => {
-    const result = await baoCaoApi.getList({ page: 1, limit: 500, search: searchQuery || undefined });
+    const result = await baoCaoApi.getList({ page: 1, limit: 500 });
     if (result.success && Array.isArray(result.data)) {
       setReports(result.data);
       setLoadError('');
@@ -79,8 +86,8 @@ export default function BaoCaoHCPage() {
 
   // Lọc dữ liệu theo tìm kiếm
   const filteredData = reports.filter(bc =>
-    (bc.TieuDe || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (bc.ThangNam || '').toLowerCase().includes(searchQuery.toLowerCase())
+    toSearchable(bc.TieuDe).includes(toSearchable(searchQuery)) ||
+    toSearchable(bc.ThangNam).includes(toSearchable(searchQuery))
   );
 
   const handleView = (report: any) => {
@@ -140,6 +147,8 @@ export default function BaoCaoHCPage() {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+
       const tieuDe = String(formData.TenBaoCao || '').trim();
       const thangNam = String(formData.KyBaoCao || '').trim();
       const nguoiLap = String(formData.NguoiLap || '').trim();
@@ -177,8 +186,9 @@ export default function BaoCaoHCPage() {
         GhiChu: ghiChu || null,
       };
 
-      const result = selectedReport?.MaBaoCao
-        ? await baoCaoApi.update(selectedReport.MaBaoCao, payload)
+      const selectedId = parseId(selectedReport?.MaBaoCao);
+      const result = selectedId !== null
+        ? await baoCaoApi.update(selectedId, payload)
         : await baoCaoApi.create(payload);
 
       if (!result?.success) {
@@ -186,6 +196,7 @@ export default function BaoCaoHCPage() {
       }
 
       await loadData();
+      setSearchQuery('');
       setIsAddOpen(false);
       setSelectedReport(null);
       setFormData({
@@ -200,15 +211,23 @@ export default function BaoCaoHCPage() {
       });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Lưu báo cáo hành chính thất bại');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async (report: any) => {
+    const reportId = parseId(report?.MaBaoCao);
+    if (reportId === null) {
+      alert('Mã báo cáo không hợp lệ, không thể xóa');
+      return;
+    }
+
     if (!window.confirm(`Bạn có chắc chắn muốn xóa báo cáo ${report.TieuDe || report.TenBaoCao}?`)) {
       return;
     }
     try {
-      const result = await baoCaoApi.delete(report.MaBaoCao);
+      const result = await baoCaoApi.delete(reportId);
       if (!result?.success) {
         throw new Error(result?.message || 'Không thể xóa báo cáo hành chính');
       }
@@ -377,8 +396,8 @@ export default function BaoCaoHCPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((bc) => (
-                <tr key={bc.MaBaoCao} className="border-b hover:bg-slate-50 transition-colors">
+              {filteredData.map((bc, index) => (
+                <tr key={parseId(bc.MaBaoCao) ?? `bao-cao-${index}`} className="border-b hover:bg-slate-50 transition-colors">
                   <td className="p-4">
                     <span className="font-semibold text-primary">BC-{String(bc.MaBaoCao).padStart(3, '0')}</span>
                   </td>
@@ -572,9 +591,10 @@ export default function BaoCaoHCPage() {
             <Button
               className="bg-primary hover:bg-primary/90"
               onClick={handleSave}
+              disabled={isSaving}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {selectedReport ? 'Lưu thay đổi' : 'Tạo báo cáo'}
+              {isSaving ? 'Đang lưu...' : selectedReport ? 'Lưu thay đổi' : 'Tạo báo cáo'}
             </Button>
           </div>
         </DialogContent>
