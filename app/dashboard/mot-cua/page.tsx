@@ -1,17 +1,36 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Briefcase, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react';
+import { hoSoTthcApi } from '@/lib/api';
 
 export default function MotCuaPage() {
-  const stats = {
-    choXuLy: 15,
-    dangXuLy: 32,
-    hoanThanh: 248,
-    quaHan: 3,
-  };
+  const [stats, setStats] = useState({
+    choXuLy: 0,
+    dangXuLy: 0,
+    hoanThanh: 0,
+    quaHan: 0,
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const result = await hoSoTthcApi.getStats();
+      if (!result.success || !result.data) {
+        return;
+      }
+
+      const pending = Number(result.data.daTiepNhan || 0) + Number(result.data.choBoSung || 0);
+      setStats({
+        choXuLy: pending,
+        dangXuLy: Number(result.data.dangXuLy || 0),
+        hoanThanh: Number(result.data.hoanThanh || 0),
+        quaHan: Number(result.data.quaHan || 0),
+      });
+    };
+
+    loadStats();
+  }, []);
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">

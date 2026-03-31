@@ -89,6 +89,30 @@ export default function HoKhauPage() {
     return 'Thường trú';
   };
 
+  const normalizeMembersWithChuHo = (members: ThanhVienHoKhau[]) => {
+    const chuHoName = String(formData.chuHo || '').trim();
+    const chuHoCccd = String(formData.cccd || '').trim();
+    const chuHoNgaySinh = String(formData.ngaySinh || '').trim();
+    const chuHoGioiTinh = String(formData.gioiTinh || 'Nam').trim();
+    const chuHoPhone = String(formData.soDienThoai || '').trim();
+
+    const existingChuHo = members.find((tv) => String(tv.quanHe || '').trim() === 'Chủ hộ');
+    const ownerMember: ThanhVienHoKhau = {
+      id: existingChuHo?.id,
+      hoTen: chuHoName,
+      cccd: chuHoCccd,
+      ngaySinh: chuHoNgaySinh,
+      gioiTinh: chuHoGioiTinh,
+      quanHe: 'Chủ hộ',
+      soDienThoai: chuHoPhone,
+    };
+
+    const others = members.filter((tv) => String(tv.quanHe || '').trim() !== 'Chủ hộ');
+    const normalizedOthers = others.filter((tv) => String(tv.hoTen || '').trim());
+
+    return [ownerMember, ...normalizedOthers];
+  };
+
   const loadHoKhau = async () => {
     const result = await hoKhauApi.getList({ page: 1, limit: 500 });
     if (result.success && Array.isArray(result.data)) {
@@ -191,6 +215,7 @@ export default function HoKhauPage() {
 
       const generatedMaHoKhau = `HK${Date.now().toString().slice(-10)}`;
       const maHoKhau = formData.id || formData.MaHoKhau || generatedMaHoKhau;
+      const normalizedMembers = normalizeMembersWithChuHo(thanhVienList);
       const payload = {
         MaHoKhau: maHoKhau,
         SoHoKhau: formData.soHoKhau,
@@ -200,7 +225,7 @@ export default function HoKhauPage() {
         GioiTinhChuHo: formData.gioiTinh || null,
         SoDienThoaiChuHo: formData.soDienThoai || null,
         DiaChiThuongTru: formData.diaChi,
-        SoThanhVien: thanhVienList.length || Number(formData.soThanhVien || 1),
+        SoThanhVien: normalizedMembers.length,
         LoaiHoKhau: mapLoaiToDb(formData.loai || 'thuong-tru'),
         NgayDangKy: formData.ngayDangKy,
         GhiChu: formData.ghiChu || '',
@@ -214,16 +239,27 @@ export default function HoKhauPage() {
         throw new Error(result?.message || 'Không thể lưu hộ khẩu');
       }
 
-      for (const tv of thanhVienList) {
-        if (!tv.id) {
-          const addMemberRes = await hoKhauApi.addMember(maHoKhau, {
-            HoTen: tv.hoTen,
-            CCCD: tv.cccd,
-            NgaySinh: tv.ngaySinh || null,
-            GioiTinh: tv.gioiTinh,
-            QuanHeChuHo: tv.quanHe,
-            SoDienThoai: tv.soDienThoai || null,
-          });
+      for (const tv of normalizedMembers) {
+        if (!String(tv.hoTen || '').trim()) {
+          continue;
+        }
+
+        const memberPayload = {
+          HoTen: tv.hoTen,
+          CCCD: tv.cccd || null,
+          NgaySinh: tv.ngaySinh || null,
+          GioiTinh: tv.gioiTinh || null,
+          QuanHeChuHo: tv.quanHe || null,
+          SoDienThoai: tv.soDienThoai || null,
+        };
+
+        if (tv.id) {
+          const updateMemberRes = await hoKhauApi.updateMember(tv.id, memberPayload);
+          if (!updateMemberRes?.success) {
+            throw new Error(updateMemberRes?.message || 'Không thể cập nhật thành viên hộ khẩu');
+          }
+        } else {
+          const addMemberRes = await hoKhauApi.addMember(maHoKhau, memberPayload);
           if (!addMemberRes?.success) {
             throw new Error(addMemberRes?.message || 'Không thể thêm thành viên hộ khẩu');
           }

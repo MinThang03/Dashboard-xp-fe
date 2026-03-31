@@ -199,6 +199,7 @@ export default function HoSoTTHCPage() {
   const [hoSoList, setHoSoList] = useState<HoSoTTHC[]>([]);
   const [filteredData, setFilteredData] = useState<HoSoTTHC[]>([]);
   const [loaiThuTucList, setLoaiThuTucList] = useState<any[]>([]);
+  const [statsSummary, setStatsSummary] = useState<any>(null);
   
   // Dialog states
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -282,13 +283,17 @@ export default function HoSoTTHCPage() {
   };
 
   const loadData = async () => {
-    const [hoSoRes, loaiRes] = await Promise.all([
+    const [hoSoRes, loaiRes, statsRes] = await Promise.all([
       hoSoTthcApi.getList({ page: 1, limit: 500 }),
       hoSoTthcApi.getLoaiThuTuc(),
+      hoSoTthcApi.getStats(),
     ]);
 
     const loaiData = loaiRes.success && Array.isArray(loaiRes.data) ? loaiRes.data : [];
     setLoaiThuTucList(loaiData);
+    if (statsRes.success && statsRes.data) {
+      setStatsSummary(statsRes.data);
+    }
 
     if (hoSoRes.success && Array.isArray(hoSoRes.data)) {
       const mapped = hoSoRes.data.map((item: any) => {
@@ -347,12 +352,21 @@ export default function HoSoTTHCPage() {
   }, [searchQuery, statusFilter, categoryFilter, hoSoList]);
 
   // Stats
+  const overdueFromList = hoSoList.filter((h) => {
+    if (!h.HanXuLy) return false;
+    const due = new Date(h.HanXuLy);
+    if (Number.isNaN(due.getTime())) return false;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return due < now && h.MaTrangThai !== 'HOAN_THANH' && h.MaTrangThai !== 'TU_CHOI';
+  }).length;
+
   const stats = {
-    total: hoSoList.length,
-    pending: hoSoList.filter((h) => h.MaTrangThai === 'DA_TIEP_NHAN' || h.MaTrangThai === 'CHO_BO_SUNG').length,
-    processing: hoSoList.filter((h) => h.MaTrangThai === 'DANG_XU_LY').length,
-    completed: hoSoList.filter((h) => h.MaTrangThai === 'HOAN_THANH').length,
-    overdue: hoSoList.filter((h) => h.MaTrangThai === 'TU_CHOI').length,
+    total: Number(statsSummary?.total ?? hoSoList.length),
+    pending: Number(statsSummary?.daTiepNhan ?? 0) + Number(statsSummary?.choBoSung ?? 0),
+    processing: Number(statsSummary?.dangXuLy ?? hoSoList.filter((h) => h.MaTrangThai === 'DANG_XU_LY').length),
+    completed: Number(statsSummary?.hoanThanh ?? hoSoList.filter((h) => h.MaTrangThai === 'HOAN_THANH').length),
+    overdue: Number(statsSummary?.quaHan ?? overdueFromList),
   };
 
   // Handlers

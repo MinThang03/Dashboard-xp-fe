@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
 import { hoTichApi } from '@/lib/api';
 import {
@@ -22,29 +29,75 @@ import {
   Search,
   Plus,
   Download,
-  User,
-  Calendar,
   Eye,
   Edit,
   Trash2,
-  Users,
-  Home,
+  User,
 } from 'lucide-react';
 
+type HoTichRecord = {
+  id: number;
+  so_ho_tich: string;
+  ho_ten_ca_nhan: string;
+  ngay_sinh: string;
+  gioi_tinh: string;
+  so_cccd: string;
+  dia_chi_thuong_tru: string;
+  loai_su_kien_ho_tich: string;
+  ngay_dang_ky: string;
+  noi_dang_ky: string;
+  ghi_chu: string;
+  trang_thai: boolean;
+  created_at?: string;
+};
+
+const DEFAULT_FORM: Omit<HoTichRecord, 'id'> = {
+  so_ho_tich: '',
+  ho_ten_ca_nhan: '',
+  ngay_sinh: '',
+  gioi_tinh: 'Nam',
+  so_cccd: '',
+  dia_chi_thuong_tru: '',
+  loai_su_kien_ho_tich: 'Khai sinh',
+  ngay_dang_ky: new Date().toISOString().split('T')[0],
+  noi_dang_ky: '',
+  ghi_chu: '',
+  trang_thai: true,
+};
 
 export default function HoTichPage() {
-  const [hoTichList, setHoTichList] = useState<any[]>([]);
+  const [records, setRecords] = useState<HoTichRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<HoTichRecord | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [formData, setFormData] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<Omit<HoTichRecord, 'id'>>(DEFAULT_FORM);
+
+  const toSearchable = (value: unknown) => String(value ?? '').toLowerCase();
+  const toIsoDate = (value: unknown) => String(value ?? '').split('T')[0];
+
+  const mapFromApi = (item: any): HoTichRecord => ({
+    id: Number(item.id),
+    so_ho_tich: String(item.so_ho_tich ?? ''),
+    ho_ten_ca_nhan: String(item.ho_ten_ca_nhan ?? item.ten_chu_ho ?? ''),
+    ngay_sinh: toIsoDate(item.ngay_sinh ?? item.ngay_sinh_chu_ho),
+    gioi_tinh: String(item.gioi_tinh ?? item.gioi_tinh_chu_ho ?? 'Nam'),
+    so_cccd: String(item.so_cccd ?? ''),
+    dia_chi_thuong_tru: String(item.dia_chi_thuong_tru ?? item.dia_chi_ho_tich ?? ''),
+    loai_su_kien_ho_tich: String(item.loai_su_kien_ho_tich ?? 'Khai sinh'),
+    ngay_dang_ky: toIsoDate(item.ngay_dang_ky ?? item.ngay_lap_ho_tich),
+    noi_dang_ky: String(item.noi_dang_ky ?? ''),
+    ghi_chu: String(item.ghi_chu ?? ''),
+    trang_thai: item.trang_thai === true || item.trang_thai === 1,
+    created_at: item.created_at,
+  });
 
   const loadData = async () => {
     const result = await hoTichApi.getList({ page: 1, limit: 500 });
     if (result.success && Array.isArray(result.data)) {
-      setHoTichList(result.data);
+      setRecords(result.data.map(mapFromApi));
     }
   };
 
@@ -52,81 +105,96 @@ export default function HoTichPage() {
     loadData();
   }, []);
 
-  const filteredData = hoTichList.filter((item) => {
-    const search = searchQuery.toLowerCase();
-    return (
-      item.so_ho_tich.toLowerCase().includes(search) ||
-      item.ten_chu_ho.toLowerCase().includes(search) ||
-      item.dia_chi_ho_tich.toLowerCase().includes(search)
-    );
-  });
+  const filteredData = useMemo(
+    () =>
+      records.filter((item) => {
+        const search = toSearchable(searchQuery);
+        return (
+          toSearchable(item.so_ho_tich).includes(search) ||
+          toSearchable(item.ho_ten_ca_nhan).includes(search) ||
+          toSearchable(item.so_cccd).includes(search) ||
+          toSearchable(item.dia_chi_thuong_tru).includes(search)
+        );
+      }),
+    [records, searchQuery],
+  );
 
-  const handleView = (item: any) => {
+  const stats = useMemo(() => {
+    const active = records.filter((r) => r.trang_thai).length;
+    const khaiSinh = records.filter((r) => r.loai_su_kien_ho_tich === 'Khai sinh').length;
+    const ketHon = records.filter((r) => r.loai_su_kien_ho_tich === 'Kết hôn').length;
+    return {
+      total: records.length,
+      active,
+      khaiSinh,
+      ketHon,
+    };
+  }, [records]);
+
+  const handleView = (item: HoTichRecord) => {
     setSelectedItem(item);
     setIsViewOpen(true);
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: HoTichRecord) => {
     setSelectedItem(item);
-    const thanhVien = getThanhVien(item.id);
     setFormData({
-      ...item,
-      thanh_vien: thanhVien.length
-        ? thanhVien
-        : [
-            {
-              ho_ten: '',
-              so_cccd: '',
-              ngay_sinh: '',
-              gioi_tinh: 'Nam',
-              quan_he_voi_chu_ho: '',
-            },
-          ],
-      so_thanh_vien_ho_tich: thanhVien.length || item.so_thanh_vien_ho_tich || 1,
+      so_ho_tich: item.so_ho_tich,
+      ho_ten_ca_nhan: item.ho_ten_ca_nhan,
+      ngay_sinh: item.ngay_sinh,
+      gioi_tinh: item.gioi_tinh,
+      so_cccd: item.so_cccd,
+      dia_chi_thuong_tru: item.dia_chi_thuong_tru,
+      loai_su_kien_ho_tich: item.loai_su_kien_ho_tich,
+      ngay_dang_ky: item.ngay_dang_ky,
+      noi_dang_ky: item.noi_dang_ky,
+      ghi_chu: item.ghi_chu,
+      trang_thai: item.trang_thai,
     });
     setIsEditOpen(true);
   };
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({
-      so_ho_tich: '',
-      ten_chu_ho: '',
-      ngay_sinh_chu_ho: '',
-      gioi_tinh_chu_ho: 'Nam',
-      dia_chi_ho_tich: '',
-      so_thanh_vien_ho_tich: 1,
-      ngay_lap_ho_tich: new Date().toISOString().split('T')[0],
-      ghi_chu: '',
-      trang_thai: 1,
-      thanh_vien: [
-        {
-          ho_ten: '',
-          so_cccd: '',
-          ngay_sinh: '',
-          gioi_tinh: 'Nam',
-          quan_he_voi_chu_ho: '',
-        },
-      ],
-    });
+    setFormData({ ...DEFAULT_FORM });
     setIsAddOpen(true);
   };
 
   const handleSave = async () => {
-    try {
-      const payload = {
-        so_ho_tich: formData.so_ho_tich,
-        ten_chu_ho: formData.ten_chu_ho,
-        ngay_sinh_chu_ho: formData.ngay_sinh_chu_ho || null,
-        gioi_tinh_chu_ho: formData.gioi_tinh_chu_ho || null,
-        dia_chi_ho_tich: formData.dia_chi_ho_tich,
-        so_thanh_vien_ho_tich: formData.thanh_vien?.length || formData.so_thanh_vien_ho_tich || 0,
-        ngay_lap_ho_tich: formData.ngay_lap_ho_tich || null,
-        ghi_chu: formData.ghi_chu || '',
-        trang_thai: Boolean(formData.trang_thai),
-      };
+    const soHoTich = String(formData.so_ho_tich || '').trim();
+    const hoTen = String(formData.ho_ten_ca_nhan || '').trim();
+    const diaChi = String(formData.dia_chi_thuong_tru || '').trim();
 
-      const result = selectedItem?.id
+    if (!soHoTich) {
+      alert('Vui lòng nhập số hộ tịch');
+      return;
+    }
+    if (!hoTen) {
+      alert('Vui lòng nhập họ tên cá nhân');
+      return;
+    }
+    if (!diaChi) {
+      alert('Vui lòng nhập địa chỉ thường trú');
+      return;
+    }
+
+    const payload = {
+      so_ho_tich: soHoTich,
+      ho_ten_ca_nhan: hoTen,
+      ngay_sinh: formData.ngay_sinh || null,
+      gioi_tinh: formData.gioi_tinh || null,
+      so_cccd: String(formData.so_cccd || '').trim() || null,
+      dia_chi_thuong_tru: diaChi,
+      loai_su_kien_ho_tich: formData.loai_su_kien_ho_tich || null,
+      ngay_dang_ky: formData.ngay_dang_ky || null,
+      noi_dang_ky: String(formData.noi_dang_ky || '').trim() || null,
+      ghi_chu: String(formData.ghi_chu || '').trim() || null,
+      trang_thai: Boolean(formData.trang_thai),
+    };
+
+    try {
+      setIsSaving(true);
+      const result = selectedItem
         ? await hoTichApi.update(selectedItem.id, payload)
         : await hoTichApi.create(payload);
 
@@ -137,70 +205,33 @@ export default function HoTichPage() {
       await loadData();
       setIsEditOpen(false);
       setIsAddOpen(false);
+      setSelectedItem(null);
+      setFormData({ ...DEFAULT_FORM });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Lưu hồ sơ hộ tịch thất bại');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDelete = async (item: any) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa hộ tịch ${item.so_ho_tich}?`)) {
-      try {
-        const result = await hoTichApi.delete(item.id);
-        if (!result?.success) {
-          throw new Error(result?.message || 'Không thể xóa hồ sơ hộ tịch');
-        }
-        await loadData();
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Xóa hồ sơ hộ tịch thất bại');
+  const handleDelete = async (item: HoTichRecord) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa hồ sơ hộ tịch ${item.so_ho_tich}?`)) {
+      return;
+    }
+
+    try {
+      const result = await hoTichApi.delete(item.id);
+      if (!result?.success) {
+        throw new Error(result?.message || 'Không thể xóa hồ sơ hộ tịch');
       }
+      await loadData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Xóa hồ sơ hộ tịch thất bại');
     }
   };
-
-  const getThanhVien = (idHoTich: number) => {
-    if (selectedItem?.id === idHoTich && Array.isArray(formData.thanh_vien)) {
-      return formData.thanh_vien;
-    }
-    return [];
-  };
-
-  const handleMemberChange = (index: number, field: string, value: string) => {
-    const updated = [...(formData.thanh_vien || [])];
-    updated[index] = { ...updated[index], [field]: value };
-    setFormData({
-      ...formData,
-      thanh_vien: updated,
-      so_thanh_vien_ho_tich: updated.length,
-    });
-  };
-
-  const addMemberRow = () => {
-    const next = [
-      ...(formData.thanh_vien || []),
-      { ho_ten: '', so_cccd: '', ngay_sinh: '', gioi_tinh: 'Nam', quan_he_voi_chu_ho: '' },
-    ];
-    setFormData({
-      ...formData,
-      thanh_vien: next,
-      so_thanh_vien_ho_tich: next.length,
-    });
-  };
-
-  const removeMemberRow = (index: number) => {
-    const current = formData.thanh_vien || [];
-    const next = current.filter((_: any, i: number) => i !== index);
-    setFormData({
-      ...formData,
-      thanh_vien: next.length ? next : [
-        { ho_ten: '', so_cccd: '', ngay_sinh: '', gioi_tinh: 'Nam', quan_he_voi_chu_ho: '' },
-      ],
-      so_thanh_vien_ho_tich: next.length || 1,
-    });
-  };
-
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
-      {/* Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-primary to-secondary p-4 sm:p-5 xl:p-6 text-white">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="relative z-10">
@@ -210,77 +241,44 @@ export default function HoTichPage() {
                 <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
                   <FileText className="w-6 h-6" />
                 </div>
-                <h1 className="text-3xl font-bold">Quản lý Hộ tịch</h1>
+                <h1 className="text-3xl font-bold">Quản lý Hộ tịch cá nhân</h1>
               </div>
-              <p className="text-white/90">Quản lý sổ hộ tịch và thành viên hộ gia đình</p>
+              <p className="text-white/90">Hồ sơ hộ tịch theo từng cá nhân</p>
             </div>
             <Button onClick={handleAdd} className="bg-white text-blue-600 hover:bg-white/90">
               <Plus className="w-4 h-4 mr-2" />
-              Thêm hộ tịch mới
+              Thêm hồ sơ
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-            </div>
-            <Badge className="bg-blue-500/10 text-blue-700 border-0">Tổng</Badge>
-          </div>
-          <p className="text-3xl font-bold">{hoTichList.length}</p>
-          <p className="text-sm text-muted-foreground">Tổng số hộ</p>
+          <p className="text-3xl font-bold">{stats.total}</p>
+          <p className="text-sm text-muted-foreground">Tổng hồ sơ</p>
         </Card>
-
         <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <Users className="w-6 h-6 text-green-600" />
-            </div>
-            <Badge className="bg-green-500/10 text-green-700 border-0">Thành viên</Badge>
-          </div>
-          <p className="text-3xl font-bold">{hoTichList.reduce((sum, h) => sum + (Number(h.so_thanh_vien_ho_tich || 0)), 0)}</p>
-          <p className="text-sm text-muted-foreground">Tổng thành viên</p>
+          <p className="text-3xl font-bold">{stats.active}</p>
+          <p className="text-sm text-muted-foreground">Đang hoạt động</p>
         </Card>
-
         <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-purple-500/10 rounded-xl">
-              <Home className="w-6 h-6 text-purple-600" />
-            </div>
-            <Badge className="bg-purple-500/10 text-purple-700 border-0">Hoạt động</Badge>
-          </div>
-          <p className="text-3xl font-bold">{hoTichList.filter(h => h.trang_thai === true || h.trang_thai === 1).length}</p>
-          <p className="text-sm text-muted-foreground">Hộ đang hoạt động</p>
+          <p className="text-3xl font-bold">{stats.khaiSinh}</p>
+          <p className="text-sm text-muted-foreground">Khai sinh</p>
         </Card>
-
         <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-500/10 rounded-xl">
-              <Calendar className="w-6 h-6 text-amber-600" />
-            </div>
-            <Badge className="bg-amber-500/10 text-amber-700 border-0">Mới</Badge>
-          </div>
-          <p className="text-3xl font-bold">
-            {hoTichList.filter(h => 
-              new Date(h.created_at).getMonth() === new Date().getMonth()
-            ).length}
-          </p>
-          <p className="text-sm text-muted-foreground">Hộ tháng này</p>
+          <p className="text-3xl font-bold">{stats.ketHon}</p>
+          <p className="text-sm text-muted-foreground">Kết hôn</p>
         </Card>
       </div>
 
-      {/* Search & Filter */}
       <Card className="p-4 border-0 shadow-lg">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Tìm theo số hộ tịch, tên chủ hộ, địa chỉ..."
+              placeholder="Tìm theo số hộ tịch, họ tên, CCCD, địa chỉ..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-11 bg-slate-50"
@@ -293,80 +291,49 @@ export default function HoTichPage() {
         </div>
       </Card>
 
-      {/* Table */}
       <Card className="border-0 shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 border-b">
               <tr>
                 <th className="text-left p-4 font-semibold">Số hộ tịch</th>
-                <th className="text-left p-4 font-semibold">Tên chủ hộ</th>
-                <th className="text-left p-4 font-semibold">Ngày sinh</th>
-                <th className="text-left p-4 font-semibold">Giới tính</th>
+                <th className="text-left p-4 font-semibold">Họ tên cá nhân</th>
+                <th className="text-left p-4 font-semibold">CCCD</th>
+                <th className="text-left p-4 font-semibold">Sự kiện hộ tịch</th>
+                <th className="text-left p-4 font-semibold">Ngày đăng ký</th>
                 <th className="text-left p-4 font-semibold">Địa chỉ</th>
-                <th className="text-left p-4 font-semibold">Số thành viên</th>
-                <th className="text-left p-4 font-semibold">Ngày lập</th>
                 <th className="text-left p-4 font-semibold">Trạng thái</th>
                 <th className="text-right p-4 font-semibold">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((item) => (
-                <tr key={item.id} className="border-b hover:bg-slate-50 transition-colors">
-                  <td className="p-4">
-                    <span className="font-semibold text-primary">{item.so_ho_tich}</span>
-                  </td>
+              {filteredData.map((item, index) => (
+                <tr key={item.id || index} className="border-b hover:bg-slate-50 transition-colors">
+                  <td className="p-4 font-semibold text-primary">{item.so_ho_tich}</td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-muted-foreground" />
-                      <span>{item.ten_chu_ho}</span>
+                      {item.ho_ten_ca_nhan}
                     </div>
                   </td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {formatDate(item.ngay_sinh_chu_ho)}
-                  </td>
+                  <td className="p-4">{item.so_cccd || '-'}</td>
+                  <td className="p-4">{item.loai_su_kien_ho_tich || '-'}</td>
+                  <td className="p-4">{formatDate(item.ngay_dang_ky)}</td>
+                  <td className="p-4 max-w-xs truncate">{item.dia_chi_thuong_tru}</td>
                   <td className="p-4">
-                    <Badge variant="outline">{item.gioi_tinh_chu_ho}</Badge>
-                  </td>
-                  <td className="p-4 text-sm max-w-xs truncate">{item.dia_chi_ho_tich}</td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{item.so_thanh_vien_ho_tich}</span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {formatDate(item.ngay_lap_ho_tich)}
-                  </td>
-                  <td className="p-4">
-                    <Badge className={item.trang_thai === 1 ? 'bg-green-500/10 text-green-700 border-0' : 'bg-red-500/10 text-red-700 border-0'}>
-                      {item.trang_thai === 1 ? 'Hoạt động' : 'Không hoạt động'}
+                    <Badge className={item.trang_thai ? 'bg-green-500/10 text-green-700 border-0' : 'bg-red-500/10 text-red-700 border-0'}>
+                      {item.trang_thai ? 'Hoạt động' : 'Không hoạt động'}
                     </Badge>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleView(item)}
-                      >
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleView(item)}>
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleEdit(item)}
-                      >
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEdit(item)}>
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                        onClick={() => handleDelete(item)}
-                      >
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600" onClick={() => handleDelete(item)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -378,497 +345,200 @@ export default function HoTichPage() {
         </div>
       </Card>
 
-      {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Chi tiết hộ tịch</DialogTitle>
-            <DialogDescription>Thông tin chi tiết về hộ tịch</DialogDescription>
+            <DialogTitle>Chi tiết hồ sơ hộ tịch</DialogTitle>
+            <DialogDescription>{selectedItem?.so_ho_tich}</DialogDescription>
           </DialogHeader>
           {selectedItem && (
-            <div className="space-y-6">
-              {/* Thông tin chủ hộ */}
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Home className="w-5 h-5" />
-                  Thông tin chủ hộ
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Số hộ tịch</Label>
-                    <p className="font-medium">{selectedItem.so_ho_tich}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Tên chủ hộ</Label>
-                    <p className="font-medium">{selectedItem.ten_chu_ho}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Ngày sinh</Label>
-                    <p className="font-medium">{formatDate(selectedItem.ngay_sinh_chu_ho)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Giới tính</Label>
-                    <p className="font-medium">{selectedItem.gioi_tinh_chu_ho}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-muted-foreground">Địa chỉ hộ tịch</Label>
-                    <p className="font-medium">{selectedItem.dia_chi_ho_tich}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Số thành viên</Label>
-                    <p className="font-medium">{selectedItem.so_thanh_vien_ho_tich}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Ngày lập hộ tịch</Label>
-                    <p className="font-medium">{formatDate(selectedItem.ngay_lap_ho_tich)}</p>
-                  </div>
-                  {selectedItem.ghi_chu && (
-                    <div className="col-span-2">
-                      <Label className="text-muted-foreground">Ghi chú</Label>
-                      <p className="font-medium">{selectedItem.ghi_chu}</p>
-                    </div>
-                  )}
-                  <div>
-                    <Label className="text-muted-foreground">Trạng thái</Label>
-                    <Badge className={selectedItem.trang_thai === 1 ? 'bg-green-500/10 text-green-700' : 'bg-red-500/10 text-red-700'}>
-                      {selectedItem.trang_thai === 1 ? 'Hoạt động' : 'Không hoạt động'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Ngày tạo</Label>
-                    <p className="font-medium text-sm">{formatDateTime(selectedItem.created_at)}</p>
-                  </div>
+            <div className="grid grid-cols-2 gap-4 py-2">
+              <div>
+                <Label className="text-muted-foreground">Họ tên cá nhân</Label>
+                <p className="font-medium">{selectedItem.ho_ten_ca_nhan}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">CCCD</Label>
+                <p className="font-medium">{selectedItem.so_cccd || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Ngày sinh</Label>
+                <p className="font-medium">{formatDate(selectedItem.ngay_sinh)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Giới tính</Label>
+                <p className="font-medium">{selectedItem.gioi_tinh || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Sự kiện hộ tịch</Label>
+                <p className="font-medium">{selectedItem.loai_su_kien_ho_tich || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Ngày đăng ký</Label>
+                <p className="font-medium">{formatDate(selectedItem.ngay_dang_ky)}</p>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-muted-foreground">Địa chỉ thường trú</Label>
+                <p className="font-medium">{selectedItem.dia_chi_thuong_tru}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Nơi đăng ký</Label>
+                <p className="font-medium">{selectedItem.noi_dang_ky || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Trạng thái</Label>
+                <div>
+                  <Badge className={selectedItem.trang_thai ? 'bg-green-500/10 text-green-700 border-0' : 'bg-red-500/10 text-red-700 border-0'}>
+                    {selectedItem.trang_thai ? 'Hoạt động' : 'Không hoạt động'}
+                  </Badge>
                 </div>
               </div>
-
-              {/* Danh sách thành viên */}
-              <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Danh sách thành viên ({getThanhVien(selectedItem.id).length})
-                </h3>
-                <div className="space-y-3">
-                  {getThanhVien(selectedItem.id).map((tv: any) => (
-                    <div key={tv.id} className="border rounded-lg p-4 hover:bg-slate-50">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Họ tên</Label>
-                          <p className="font-medium">{tv.ho_ten}</p>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Số CCCD</Label>
-                          <p className="font-medium">{tv.so_cccd}</p>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Ngày sinh</Label>
-                          <p>{formatDate(tv.ngay_sinh)}</p>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Giới tính</Label>
-                          <p>{tv.gioi_tinh}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <Label className="text-xs text-muted-foreground">Quan hệ với chủ hộ</Label>
-                          <Badge variant="outline">{tv.quan_he_voi_chu_ho}</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {selectedItem.ghi_chu && (
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Ghi chú</Label>
+                  <p className="font-medium">{selectedItem.ghi_chu}</p>
                 </div>
+              )}
+              <div>
+                <Label className="text-muted-foreground">Ngày tạo</Label>
+                <p className="font-medium">{formatDateTime(selectedItem.created_at)}</p>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewOpen(false)}>
-              Đóng
-            </Button>
-            <Button onClick={() => {
-              setIsViewOpen(false);
-              handleEdit(selectedItem);
-            }}>
-              <Edit className="w-4 h-4 mr-2" />
-              Chỉnh sửa
-            </Button>
+            <Button variant="outline" onClick={() => setIsViewOpen(false)}>Đóng</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog open={isEditOpen || isAddOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditOpen(false);
+          setIsAddOpen(false);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa hộ tịch</DialogTitle>
-            <DialogDescription>Cập nhật thông tin hộ tịch</DialogDescription>
+            <DialogTitle>{selectedItem ? 'Chỉnh sửa hồ sơ hộ tịch' : 'Thêm hồ sơ hộ tịch'}</DialogTitle>
+            <DialogDescription>
+              Hộ tịch là hồ sơ của một cá nhân, không có chủ hộ hoặc danh sách thành viên.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="so_ho_tich">Số hộ tịch <span className="text-red-500">*</span></Label>
-                <Input
-                  id="so_ho_tich"
-                  value={formData.so_ho_tich || ''}
-                  onChange={(e) => setFormData({ ...formData, so_ho_tich: e.target.value })}
-                  placeholder="Nhập số hộ tịch"
-                />
-              </div>
-              <div>
-                <Label htmlFor="ten_chu_ho">Tên chủ hộ <span className="text-red-500">*</span></Label>
-                <Input
-                  id="ten_chu_ho"
-                  value={formData.ten_chu_ho || ''}
-                  onChange={(e) => setFormData({ ...formData, ten_chu_ho: e.target.value })}
-                  placeholder="Nhập tên chủ hộ"
-                />
-              </div>
-              <div>
-                <Label htmlFor="ngay_sinh_chu_ho">Ngày sinh chủ hộ</Label>
-                <Input
-                  id="ngay_sinh_chu_ho"
-                  type="date"
-                  value={formData.ngay_sinh_chu_ho || ''}
-                  onChange={(e) => setFormData({ ...formData, ngay_sinh_chu_ho: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="gioi_tinh_chu_ho">Giới tính</Label>
-                <select
-                  id="gioi_tinh_chu_ho"
-                  value={formData.gioi_tinh_chu_ho || 'Nam'}
-                  onChange={(e) => setFormData({ ...formData, gioi_tinh_chu_ho: e.target.value })}
-                  className="w-full h-10 px-3 border border-input rounded-md"
-                >
-                  <option value="Nam">Nam</option>
-                  <option value="Nữ">Nữ</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="dia_chi_ho_tich">Địa chỉ hộ tịch <span className="text-red-500">*</span></Label>
-                <Input
-                  id="dia_chi_ho_tich"
-                  value={formData.dia_chi_ho_tich || ''}
-                  onChange={(e) => setFormData({ ...formData, dia_chi_ho_tich: e.target.value })}
-                  placeholder="Nhập địa chỉ đầy đủ"
-                />
-              </div>
-              <div>
-                <Label htmlFor="so_thanh_vien_ho_tich">Số thành viên</Label>
-                <Input
-                  id="so_thanh_vien_ho_tich"
-                  type="number"
-                  min="1"
-                  value={formData.so_thanh_vien_ho_tich || 1}
-                  onChange={(e) => setFormData({ ...formData, so_thanh_vien_ho_tich: parseInt(e.target.value) })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ngay_lap_ho_tich">Ngày lập hộ tịch</Label>
-                <Input
-                  id="ngay_lap_ho_tich"
-                  type="date"
-                  value={formData.ngay_lap_ho_tich || ''}
-                  onChange={(e) => setFormData({ ...formData, ngay_lap_ho_tich: e.target.value })}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="ghi_chu">Ghi chú</Label>
-                <Textarea
-                  id="ghi_chu"
-                  value={formData.ghi_chu || ''}
-                  onChange={(e) => setFormData({ ...formData, ghi_chu: e.target.value })}
-                  placeholder="Nhập ghi chú (nếu có)"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="trang_thai">Trạng thái</Label>
-                <select
-                  id="trang_thai"
-                  value={formData.trang_thai || 1}
-                  onChange={(e) => setFormData({ ...formData, trang_thai: parseInt(e.target.value) })}
-                  className="w-full h-10 px-3 border border-input rounded-md"
-                >
-                  <option value={1}>Hoạt động</option>
-                  <option value={0}>Không hoạt động</option>
-                </select>
-              </div>
+
+          <div className="grid grid-cols-2 gap-4 py-2">
+            <div>
+              <Label>Số hộ tịch *</Label>
+              <Input
+                value={formData.so_ho_tich}
+                onChange={(e) => setFormData({ ...formData, so_ho_tich: e.target.value })}
+              />
             </div>
-            <div className="bg-slate-50 border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="font-semibold">Thành viên hộ tịch</p>
-                    <p className="text-sm text-muted-foreground">Nhập đầy đủ thông tin từng thành viên</p>
-                  </div>
-                  <Badge variant="outline">{formData.thanh_vien?.length || 0} người</Badge>
-                </div>
-                <Button size="sm" variant="outline" onClick={addMemberRow}>
-                  <Plus className="w-4 h-4 mr-1" /> Thêm thành viên
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {(formData.thanh_vien || []).map((tv: any, index: number) => (
-                  <div key={index} className="rounded-lg border bg-white p-3 space-y-3 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        Thành viên {index + 1}
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600"
-                        onClick={() => removeMemberRow(index)}
-                        disabled={(formData.thanh_vien || []).length <= 1}
-                        title="Xóa thành viên"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-sm">Họ tên</Label>
-                        <Input
-                          value={tv?.ho_ten || ''}
-                          onChange={(e) => handleMemberChange(index, 'ho_ten', e.target.value)}
-                          placeholder="VD: Nguyễn Văn A"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Số CCCD</Label>
-                        <Input
-                          value={tv?.so_cccd || ''}
-                          onChange={(e) => handleMemberChange(index, 'so_cccd', e.target.value)}
-                          placeholder="Nhập số căn cước"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Ngày sinh</Label>
-                        <Input
-                          type="date"
-                          value={tv?.ngay_sinh || ''}
-                          onChange={(e) => handleMemberChange(index, 'ngay_sinh', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Giới tính</Label>
-                        <select
-                          value={tv?.gioi_tinh || 'Nam'}
-                          onChange={(e) => handleMemberChange(index, 'gioi_tinh', e.target.value)}
-                          className="w-full h-10 px-3 border border-input rounded-md"
-                        >
-                          <option value="Nam">Nam</option>
-                          <option value="Nữ">Nữ</option>
-                          <option value="Khác">Khác</option>
-                        </select>
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-sm">Quan hệ với chủ hộ</Label>
-                        <Input
-                          value={tv?.quan_he_voi_chu_ho || ''}
-                          onChange={(e) => handleMemberChange(index, 'quan_he_voi_chu_ho', e.target.value)}
-                          placeholder="VD: Vợ/chồng, Con, Ông/bà"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div>
+              <Label>Họ tên cá nhân *</Label>
+              <Input
+                value={formData.ho_ten_ca_nhan}
+                onChange={(e) => setFormData({ ...formData, ho_ten_ca_nhan: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Ngày sinh</Label>
+              <Input
+                type="date"
+                value={formData.ngay_sinh}
+                onChange={(e) => setFormData({ ...formData, ngay_sinh: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Giới tính</Label>
+              <Select value={formData.gioi_tinh} onValueChange={(value) => setFormData({ ...formData, gioi_tinh: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Nam">Nam</SelectItem>
+                  <SelectItem value="Nữ">Nữ</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>CCCD</Label>
+              <Input
+                value={formData.so_cccd}
+                onChange={(e) => setFormData({ ...formData, so_cccd: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Sự kiện hộ tịch</Label>
+              <Select
+                value={formData.loai_su_kien_ho_tich}
+                onValueChange={(value) => setFormData({ ...formData, loai_su_kien_ho_tich: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Khai sinh">Khai sinh</SelectItem>
+                  <SelectItem value="Kết hôn">Kết hôn</SelectItem>
+                  <SelectItem value="Khai tử">Khai tử</SelectItem>
+                  <SelectItem value="Nhận con nuôi">Nhận con nuôi</SelectItem>
+                  <SelectItem value="Thay đổi hộ tịch">Thay đổi hộ tịch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
+              <Label>Địa chỉ thường trú *</Label>
+              <Input
+                value={formData.dia_chi_thuong_tru}
+                onChange={(e) => setFormData({ ...formData, dia_chi_thuong_tru: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Ngày đăng ký</Label>
+              <Input
+                type="date"
+                value={formData.ngay_dang_ky}
+                onChange={(e) => setFormData({ ...formData, ngay_dang_ky: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Nơi đăng ký</Label>
+              <Input
+                value={formData.noi_dang_ky}
+                onChange={(e) => setFormData({ ...formData, noi_dang_ky: e.target.value })}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Ghi chú</Label>
+              <Textarea
+                rows={3}
+                value={formData.ghi_chu}
+                onChange={(e) => setFormData({ ...formData, ghi_chu: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Trạng thái</Label>
+              <Select
+                value={formData.trang_thai ? '1' : '0'}
+                onValueChange={(value) => setFormData({ ...formData, trang_thai: value === '1' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Hoạt động</SelectItem>
+                  <SelectItem value="0">Không hoạt động</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <Button variant="outline" onClick={() => { setIsEditOpen(false); setIsAddOpen(false); }}>
               Hủy
             </Button>
-            <Button onClick={handleSave}>
-              Lưu thay đổi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Thêm hộ tịch mới</DialogTitle>
-            <DialogDescription>Nhập thông tin hộ tịch mới</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="add_so_ho_tich">Số hộ tịch <span className="text-red-500">*</span></Label>
-                <Input
-                  id="add_so_ho_tich"
-                  value={formData.so_ho_tich || ''}
-                  onChange={(e) => setFormData({ ...formData, so_ho_tich: e.target.value })}
-                  placeholder="VD: HT-2024-001"
-                />
-              </div>
-              <div>
-                <Label htmlFor="add_ten_chu_ho">Tên chủ hộ <span className="text-red-500">*</span></Label>
-                <Input
-                  id="add_ten_chu_ho"
-                  value={formData.ten_chu_ho || ''}
-                  onChange={(e) => setFormData({ ...formData, ten_chu_ho: e.target.value })}
-                  placeholder="Nhập tên chủ hộ"
-                />
-              </div>
-              <div>
-                <Label htmlFor="add_ngay_sinh_chu_ho">Ngày sinh chủ hộ</Label>
-                <Input
-                  id="add_ngay_sinh_chu_ho"
-                  type="date"
-                  value={formData.ngay_sinh_chu_ho || ''}
-                  onChange={(e) => setFormData({ ...formData, ngay_sinh_chu_ho: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="add_gioi_tinh_chu_ho">Giới tính</Label>
-                <select
-                  id="add_gioi_tinh_chu_ho"
-                  value={formData.gioi_tinh_chu_ho || 'Nam'}
-                  onChange={(e) => setFormData({ ...formData, gioi_tinh_chu_ho: e.target.value })}
-                  className="w-full h-10 px-3 border border-input rounded-md"
-                >
-                  <option value="Nam">Nam</option>
-                  <option value="Nữ">Nữ</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="add_dia_chi_ho_tich">Địa chỉ hộ tịch <span className="text-red-500">*</span></Label>
-                <Input
-                  id="add_dia_chi_ho_tich"
-                  value={formData.dia_chi_ho_tich || ''}
-                  onChange={(e) => setFormData({ ...formData, dia_chi_ho_tich: e.target.value })}
-                  placeholder="Nhập địa chỉ đầy đủ"
-                />
-              </div>
-              <div>
-                <Label htmlFor="add_so_thanh_vien_ho_tich">Số thành viên</Label>
-                <Input
-                  id="add_so_thanh_vien_ho_tich"
-                  type="number"
-                  min="1"
-                  value={formData.so_thanh_vien_ho_tich || 1}
-                  onChange={(e) => setFormData({ ...formData, so_thanh_vien_ho_tich: parseInt(e.target.value) })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="add_ngay_lap_ho_tich">Ngày lập hộ tịch</Label>
-                <Input
-                  id="add_ngay_lap_ho_tich"
-                  type="date"
-                  value={formData.ngay_lap_ho_tich || ''}
-                  onChange={(e) => setFormData({ ...formData, ngay_lap_ho_tich: e.target.value })}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="add_ghi_chu">Ghi chú</Label>
-                <Textarea
-                  id="add_ghi_chu"
-                  value={formData.ghi_chu || ''}
-                  onChange={(e) => setFormData({ ...formData, ghi_chu: e.target.value })}
-                  placeholder="Nhập ghi chú (nếu có)"
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div className="bg-slate-50 border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="font-semibold">Thành viên hộ tịch</p>
-                    <p className="text-sm text-muted-foreground">Điền thông tin từng thành viên trong hộ</p>
-                  </div>
-                  <Badge variant="outline">{formData.thanh_vien?.length || 0} người</Badge>
-                </div>
-                <Button size="sm" variant="outline" onClick={addMemberRow}>
-                  <Plus className="w-4 h-4 mr-1" /> Thêm thành viên
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {(formData.thanh_vien || []).map((tv: any, index: number) => (
-                  <div key={index} className="rounded-lg border bg-white p-3 space-y-3 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        Thành viên {index + 1}
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600"
-                        onClick={() => removeMemberRow(index)}
-                        disabled={(formData.thanh_vien || []).length <= 1}
-                        title="Xóa thành viên"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-sm">Họ tên</Label>
-                        <Input
-                          value={tv?.ho_ten || ''}
-                          onChange={(e) => handleMemberChange(index, 'ho_ten', e.target.value)}
-                          placeholder="VD: Nguyễn Văn A"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Số CCCD</Label>
-                        <Input
-                          value={tv?.so_cccd || ''}
-                          onChange={(e) => handleMemberChange(index, 'so_cccd', e.target.value)}
-                          placeholder="Nhập số căn cước"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Ngày sinh</Label>
-                        <Input
-                          type="date"
-                          value={tv?.ngay_sinh || ''}
-                          onChange={(e) => handleMemberChange(index, 'ngay_sinh', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Giới tính</Label>
-                        <select
-                          value={tv?.gioi_tinh || 'Nam'}
-                          onChange={(e) => handleMemberChange(index, 'gioi_tinh', e.target.value)}
-                          className="w-full h-10 px-3 border border-input rounded-md"
-                        >
-                          <option value="Nam">Nam</option>
-                          <option value="Nữ">Nữ</option>
-                          <option value="Khác">Khác</option>
-                        </select>
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-sm">Quan hệ với chủ hộ</Label>
-                        <Input
-                          value={tv?.quan_he_voi_chu_ho || ''}
-                          onChange={(e) => handleMemberChange(index, 'quan_he_voi_chu_ho', e.target.value)}
-                          placeholder="VD: Vợ/chồng, Con, Ông/bà"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddOpen(false)}>
-              Hủy
-            </Button>
-            <Button onClick={handleSave}>
-              <Plus className="w-4 h-4 mr-2" />
-              Thêm mới
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Đang lưu...' : selectedItem ? 'Lưu thay đổi' : 'Thêm mới'}
             </Button>
           </DialogFooter>
         </DialogContent>

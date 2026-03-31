@@ -431,6 +431,7 @@ export const hoKhauApi = {
   delete: (id: string) => apiCall(`/ho-khau/${id}`, { method: 'DELETE' }),
   getMembers: (id: string) => apiCall(`/ho-khau/${id}/thanh-vien`),
   addMember: (id: string, data: any) => apiCall(`/ho-khau/${id}/thanh-vien`, { method: 'POST', body: JSON.stringify(data) }),
+  updateMember: (memberId: number, data: any) => apiCall(`/ho-khau/thanh-vien/${memberId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteMember: (memberId: number) => apiCall(`/ho-khau/thanh-vien/${memberId}`, { method: 'DELETE' }),
 };
 
