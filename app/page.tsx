@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isFrontendAuthOnlyEnabled, useAuth, type UserRole } from '@/lib/auth-context';
+import { useAuth, type UserRole } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { login } = useAuth();
-  const frontendAuthOnly = isFrontendAuthOnlyEnabled();
   const router = useRouter();
 
   useEffect(() => {
@@ -80,9 +79,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <p className="text-slate-600 text-lg leading-relaxed">
-                {frontendAuthOnly
-                  ? 'Chế độ test giao diện: đăng nhập chỉ dùng frontend, tạm thời không gọi backend và không cần OTP.'
-                  : 'Hệ thống quản lý UBND xã/phường với đăng nhập an toàn, đăng ký tài khoản và xác thực OTP email.'}
+                {'Hệ thống quản lý UBND xã/phường với đăng nhập an toàn, đăng ký tài khoản và xác thực OTP email.'}
               </p>
             </div>
           </div>
@@ -100,20 +97,12 @@ export default function LoginPage() {
                   </div>
                   <h2 className="text-3xl font-bold text-white mb-2">Chào mừng trở lại</h2>
                   <p className="text-white/80">
-                    {frontendAuthOnly
-                      ? 'Frontend-only login mode cho kiểm thử giao diện'
-                      : 'Bảo mật đa lớp với mật khẩu mã hóa và OTP email'}
+                    {'Bảo mật đa lớp với mật khẩu mã hóa và OTP email'}
                   </p>
                 </div>
               </div>
 
               <div className="p-8 -mt-8 relative">
-                {frontendAuthOnly && (
-                  <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    Chế độ frontend-only đang bật. Tắt biến môi trường NEXT_PUBLIC_FRONTEND_AUTH_ONLY để quay lại đăng nhập backend.
-                  </div>
-                )}
-
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {DEMO_ACCOUNTS.map((acc) => {
                     const Icon = acc.icon;
@@ -167,9 +156,7 @@ export default function LoginPage() {
 
                 <div className="mt-6 pt-6 border-t border-slate-200 text-center">
                   <p className="text-xs text-slate-500">
-                    {frontendAuthOnly
-                      ? 'Đang test UI: đăng nhập mô phỏng ở frontend, bỏ qua backend và OTP.'
-                      : 'Mật khẩu được mã hóa bcrypt, tài khoản mới phải qua OTP email mới kích hoạt.'}
+                    {'Mật khẩu được mã hóa bcrypt, tài khoản mới phải qua OTP email mới kích hoạt.'}
                   </p>
                 </div>
               </div>

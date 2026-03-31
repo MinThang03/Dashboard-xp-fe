@@ -30,7 +30,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_CACHE_KEY = 'dashboardxp_user';
-const FRONTEND_AUTH_ONLY = process.env.NEXT_PUBLIC_FRONTEND_AUTH_ONLY === 'true';
+const FRONTEND_AUTH_ONLY = false;
 
 const FRONTEND_USER_PRESETS: Record<UserRole, Omit<User, 'avatar' | 'role'>> = {
   admin: {
