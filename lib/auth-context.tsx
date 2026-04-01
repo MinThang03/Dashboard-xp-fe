@@ -63,24 +63,57 @@ const FRONTEND_USER_PRESETS: Record<UserRole, Omit<User, 'avatar' | 'role'>> = {
   },
 };
 
-function mapRole(roleId: number): UserRole {
+function mapRole(roleId: number | null | undefined): UserRole {
   if (roleId === 1) return 'admin';
   if (roleId === 2) return 'leader';
   if (roleId === 3) return 'officer';
   return 'citizen';
 }
 
+function resolveRoleId(user: AuthUserPayload): number | null {
+  const rawRole =
+    user.roleId ??
+    user.role ??
+    (user as Record<string, unknown>).MaVaiTro ??
+    (user as Record<string, unknown>).role_id;
+
+  if (rawRole === null || rawRole === undefined) {
+    return null;
+  }
+
+  const parsed = Number(rawRole);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolveUserId(user: AuthUserPayload): string {
+  const rawId =
+    user.id ??
+    user.userId ??
+    (user as Record<string, unknown>).MaNguoiDung ??
+    (user as Record<string, unknown>).user_id;
+
+  if (rawId === null || rawId === undefined) {
+    return '0';
+  }
+
+  const parsed = Number(rawId);
+  return Number.isFinite(parsed) ? String(parsed) : String(rawId);
+}
+
 function toAppUser(user: AuthUserPayload): User {
+  const resolvedRoleId = resolveRoleId(user);
+  const fullName = user.fullName?.trim() || user.username || 'Nguoi dung';
+
   // Generate avatar from first letters of name
-  const names = user.fullName.trim().split(/\s+/);
+  const names = fullName.trim().split(/\s+/);
   const avatar = names.map(n => n[0]).join('').toUpperCase().slice(0, 2) || '👤';
   
   return {
-    id: String(user.id),
+    id: resolveUserId(user),
     username: user.username,
-    name: user.fullName,
+    name: fullName,
     email: user.email,
-    role: mapRole(user.roleId),
+    role: mapRole(resolvedRoleId),
     avatar,
   };
 }

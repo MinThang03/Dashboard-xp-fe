@@ -10,12 +10,14 @@ export interface ApiResponse<T> {
 }
 
 export interface AuthUserPayload {
-  id: number;
+  id?: number;
+  userId?: number;
   username: string;
   fullName: string;
   email?: string;
-  roleId: number;
-  isActive: boolean;
+  roleId?: number;
+  role?: number;
+  isActive?: boolean;
 }
 
 export interface LoginResponse {
