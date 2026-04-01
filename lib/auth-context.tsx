@@ -13,6 +13,12 @@ export interface User {
   role: UserRole;
   department?: string;
   avatar?: string;
+  phone?: string;
+  citizenId?: string;
+  birthDate?: string | Date | null;
+  startDate?: string | Date | null;
+  address?: string;
+  title?: string;
 }
 
 interface AuthContextType {
@@ -108,13 +114,22 @@ function toAppUser(user: AuthUserPayload): User {
   const names = fullName.trim().split(/\s+/);
   const avatar = names.map(n => n[0]).join('').toUpperCase().slice(0, 2) || '👤';
   
+  const resolvedAvatar = user.avatar && String(user.avatar).trim() ? String(user.avatar) : avatar;
+
   return {
     id: resolveUserId(user),
     username: user.username,
     name: fullName,
     email: user.email,
     role: mapRole(resolvedRoleId),
-    avatar,
+    phone: user.phone ?? undefined,
+    avatar: resolvedAvatar,
+    department: user.department ?? undefined,
+    citizenId: user.citizenId ?? undefined,
+    birthDate: user.birthDate ?? null,
+    startDate: user.startDate ?? null,
+    address: user.address ?? undefined,
+    title: user.title ?? undefined,
   };
 }
 

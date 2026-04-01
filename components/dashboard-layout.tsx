@@ -1,8 +1,9 @@
+
 'use client';
 
-import React from "react"
-
+import React, { useEffect, useState } from "react"
 import { useAuth, type UserRole, type User } from '@/lib/auth-context';
+import { messagesApi, notificationsApi, userApi } from '@/lib/api';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -31,7 +32,6 @@ import {
 import { OFFICER_MODULES } from '@/lib/officer-modules';
 import { Button } from '@/components/ui/button';
 import { AIAssistant } from '@/components/ai-assistant';
-import { useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import {
@@ -60,6 +60,50 @@ interface MenuItem {
   roles: UserRole[];
   submenu?: MenuItem[];
 }
+
+interface NotificationItem {
+  id: number;
+  type: 'feedback' | 'report' | 'approval' | 'alert';
+  title: string;
+  createdAt?: string;
+  unread: boolean;
+  content?: string | null;
+  detail?: Record<string, any>;
+}
+
+interface MessageItem {
+  id: number;
+  from: string;
+  title: string;
+  preview?: string | null;
+  createdAt?: string;
+  unread: boolean;
+  body?: string | null;
+}
+
+interface ProfileFormState {
+  name: string;
+  email: string;
+  phone: string;
+  citizenId: string;
+  birthDate: string;
+  startDate: string;
+  address: string;
+  department: string;
+  title: string;
+}
+
+const emptyProfileForm: ProfileFormState = {
+  name: '',
+  email: '',
+  phone: '',
+  citizenId: '',
+  birthDate: '',
+  startDate: '',
+  address: '',
+  department: '',
+  title: '',
+};
 
 const navigationItems: MenuItem[] = [
   {
@@ -179,81 +223,77 @@ const navigationItems: MenuItem[] = [
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<typeof notifications[0] | null>(null);
-
-  const notifications = [
-    {
-      id: 1,
-      type: 'feedback',
-      title: 'Phản ánh mới: Ô nhiễm môi trường Khu A',
-      time: '5 phút trước',
-      unread: true,
-      detail: {
-        id: 'PA-MT-A-01',
-        area: 'Khu A, Thôn 1',
-        category: 'Môi trường',
-        channel: 'Cổng dịch vụ công',
-        description: 'Người dân phản ánh mùi hôi thối, xả thải trực tiếp ra suối gần khu dân cư, ảnh hưởng sức khỏe.',
-        department: 'Tài nguyên & Môi trường',
-        handler: 'Nguyễn Văn Hùng',
-        status: 'Đang xử lý',
-      },
-    },
-    {
-      id: 2,
-      type: 'report',
-      title: 'Cán bộ Nguyễn Văn A đã nộp báo cáo tài chính quý I',
-      time: '1 giờ trước',
-      unread: true,
-      detail: {
-        documentTitle: 'Báo cáo tài chính quý I',
-        submittedBy: 'Nguyễn Văn A',
-        department: 'Tài chính - Kế toán',
-        submittedDate: '2024-01-17',
-        fileName: 'bao-cao-tai-chinh-Q1.pdf',
-        fileSize: '2.4 MB',
-      },
-    },
-    {
-      id: 3,
-      type: 'approval',
-      title: 'Có 3 tài liệu chờ phê duyệt',
-      time: '2 giờ trước',
-      unread: false,
-      detail: {
-        count: 3,
-        urgent: 1,
-        items: [
-          { title: 'Báo cáo tài chính quý I', priority: 'critical' },
-          { title: 'Kế hoạch phát triển năm 2024', priority: 'high' },
-          { title: 'Quy hoạch xây dựng khu A', priority: 'high' },
-        ],
-      },
-    },
-    {
-      id: 4,
-      type: 'alert',
-      title: 'Cảnh báo: Hồ sơ sắp quá hạn',
-      time: '3 giờ trước',
-      unread: false,
-      detail: {
-        count: 3,
-        deadline: '2024-01-20',
-        items: [
-          { id: 'HS-DC-001', name: 'Cấp phép xây dựng nhà ở riêng lẻ', daysLeft: 1 },
-        ],
-      },
-    },
-  ];
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null);
+  const [profileForm, setProfileForm] = useState<ProfileFormState>(emptyProfileForm);
+  const [profileError, setProfileError] = useState('');
 
   const unreadCount = notifications.filter((n) => n.unread).length;
+  const unreadMessageCount = messages.filter((m) => m.unread).length;
+
+  const formatDateInput = (value?: string | Date | null) => {
+    if (!value) return '';
+    const parsed = typeof value === 'string' ? new Date(value) : value;
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toISOString().slice(0, 10);
+  };
+
+  const buildBaseProfile = (sourceUser: User): ProfileFormState => ({
+    name: sourceUser.name || '',
+    email: sourceUser.email || '',
+    phone: sourceUser.phone || '',
+    citizenId: sourceUser.citizenId || '',
+    birthDate: formatDateInput(sourceUser.birthDate),
+    startDate: formatDateInput(sourceUser.startDate),
+    address: sourceUser.address || '',
+    department: sourceUser.department || '',
+    title: sourceUser.title || '',
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    setProfileForm(buildBaseProfile(user));
+  }, [user]);
+
+  useEffect(() => {
+    if (!isProfileOpen || !user) return;
+    setProfileError('');
+    setProfileForm(buildBaseProfile(user));
+  }, [isProfileOpen, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const loadNotifications = async () => {
+      const response = await notificationsApi.list();
+      if (response?.success && Array.isArray(response.data)) {
+        setNotifications(response.data as NotificationItem[]);
+      } else {
+        setNotifications([]);
+      }
+    };
+
+    const loadMessages = async () => {
+      const response = await messagesApi.list();
+      if (response?.success && Array.isArray(response.data)) {
+        setMessages(response.data as MessageItem[]);
+      } else {
+        setMessages([]);
+      }
+    };
+
+    loadNotifications();
+    loadMessages();
+  }, [user]);
 
   if (!user) {
     return null;
@@ -266,6 +306,141 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     logout();
     router.push('/');
+  };
+
+  const buildAvatarFromName = (name: string) => {
+    const initials = name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+    return initials || 'U';
+  };
+
+  const formatRelativeTime = (value?: string) => {
+    if (!value) {
+      return '';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    const diffMs = Date.now() - parsed.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+
+    if (diffMinutes < 1) return 'Vừa xong';
+    if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+
+    return parsed.toLocaleDateString('vi-VN');
+  };
+
+  const markNotificationRead = async (id: number) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, unread: false } : item))
+    );
+
+    await notificationsApi.markRead(id);
+  };
+
+  const markAllNotificationsRead = async () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    await notificationsApi.markAllRead();
+  };
+
+  const clearNotifications = async () => {
+    setNotifications([]);
+    await notificationsApi.clearAll();
+  };
+
+  const handleOpenNotification = async (notif: NotificationItem) => {
+    await markNotificationRead(notif.id);
+    setSelectedNotification(notif);
+  };
+
+  const markMessageRead = async (id: number) => {
+    setMessages((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, unread: false } : item))
+    );
+
+    await messagesApi.markRead(id);
+  };
+
+  const markAllMessagesRead = async () => {
+    setMessages((prev) => prev.map((item) => ({ ...item, unread: false })));
+    await messagesApi.markAllRead();
+  };
+
+  const handleOpenMessage = async (message: MessageItem) => {
+    await markMessageRead(message.id);
+    setSelectedMessage(message);
+  };
+
+  const handleProfileSave = async () => {
+    if (!user) return;
+
+    const trimmedName = profileForm.name.trim();
+    if (!trimmedName) {
+      setProfileError('Vui lòng nhập họ và tên.');
+      return;
+    }
+
+    const trimmedEmail = profileForm.email.trim();
+    const trimmedPhone = profileForm.phone.trim();
+    if (trimmedPhone && trimmedPhone.length < 10) {
+      setProfileError('Số điện thoại phải có ít nhất 10 ký tự.');
+      return;
+    }
+
+    try {
+      const response = await userApi.updateMe({
+        fullName: trimmedName,
+        email: trimmedEmail ? trimmedEmail : null,
+        phone: trimmedPhone || null,
+        department: profileForm.department.trim() || null,
+        citizenId: profileForm.citizenId.trim() || null,
+        birthDate: profileForm.birthDate || null,
+        startDate: profileForm.startDate || null,
+        address: profileForm.address.trim() || null,
+        title: profileForm.title.trim() || null,
+      });
+
+      if (!response?.success || !response.data) {
+        throw new Error(response?.message || response?.error || 'Không thể cập nhật thông tin');
+      }
+
+      const updated = response.data;
+      const avatar = updated.avatar || buildAvatarFromName(updated.fullName);
+      const nextUser: User = {
+        ...user,
+        name: updated.fullName,
+        email: updated.email ?? undefined,
+        department: updated.department ?? undefined,
+        phone: updated.phone ?? undefined,
+        citizenId: updated.citizenId ?? undefined,
+        birthDate: updated.birthDate ?? null,
+        startDate: updated.startDate ?? null,
+        address: updated.address ?? undefined,
+        title: updated.title ?? undefined,
+        avatar,
+      };
+
+      setUser(nextUser);
+      setIsProfileOpen(false);
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Không thể cập nhật thông tin');
+    }
   };
 
   const toggleModule = (moduleId: string) => {
@@ -516,13 +691,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 && (
+                    <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                      Chưa có thông báo mới.
+                    </div>
+                  )}
                   {notifications.map((notif) => (
                     <DropdownMenuItem
                       key={notif.id}
                       className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${
                         notif.unread ? 'bg-muted/50' : ''
                       }`}
-                      onClick={() => setSelectedNotification(notif)}
+                      onClick={() => handleOpenNotification(notif)}
                     >
                       <div className="flex items-start justify-between w-full">
                         <p className="text-sm font-medium text-foreground flex-1">
@@ -532,20 +712,88 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                           <span className="w-2 h-2 bg-primary rounded-full ml-2 mt-1" />
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{notif.time}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatRelativeTime(notif.createdAt)}
+                      </p>
                     </DropdownMenuItem>
                   ))}
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="justify-center text-sm text-primary">
-                  Xem tất cả thông báo
+                <DropdownMenuItem
+                  onClick={markAllNotificationsRead}
+                  className="justify-center text-sm text-primary"
+                >
+                  Đánh dấu đã đọc tất cả
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={clearNotifications}
+                  className="justify-center text-sm text-muted-foreground"
+                >
+                  Xóa toàn bộ thông báo
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-              <MessageSquare className="w-5 h-5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0">
+                  <MessageSquare className="w-5 h-5" />
+                  {unreadMessageCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-status-danger rounded-full" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Tin nhắn</span>
+                  {unreadMessageCount > 0 && (
+                    <Badge className="bg-status-danger text-white text-xs">
+                      {unreadMessageCount} mới
+                    </Badge>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="max-h-96 overflow-y-auto">
+                  {messages.length === 0 && (
+                    <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                      Chưa có tin nhắn mới.
+                    </div>
+                  )}
+                  {messages.map((message) => (
+                    <DropdownMenuItem
+                      key={message.id}
+                      className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${
+                        message.unread ? 'bg-muted/50' : ''
+                      }`}
+                      onClick={() => handleOpenMessage(message)}
+                    >
+                      <div className="flex items-start justify-between w-full">
+                        <p className="text-sm font-medium text-foreground flex-1">
+                          {message.title}
+                        </p>
+                        {message.unread && (
+                          <span className="w-2 h-2 bg-primary rounded-full ml-2 mt-1" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{message.from}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {message.preview || message.body || ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatRelativeTime(message.createdAt)}
+                      </p>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={markAllMessagesRead}
+                  className="justify-center text-sm text-primary"
+                >
+                  Đánh dấu đã đọc tất cả
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User Profile Dropdown */}
             <DropdownMenu>
@@ -606,6 +854,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 text-sm">
+            {profileError && (
+              <div className="rounded-md border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-xs text-status-danger">
+                {profileError}
+              </div>
+            )}
             <div className="flex items-center gap-4 pb-4 border-b">
               <Avatar className="h-20 w-20">
                 <AvatarFallback className="text-3xl bg-primary/10 text-primary">
@@ -640,7 +893,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <p className="text-xs font-medium text-muted-foreground mb-1">Họ và tên</p>
                 <input
                   type="text"
-                  defaultValue={user.name}
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -648,7 +902,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <p className="text-xs font-medium text-muted-foreground mb-1">Email</p>
                 <input
                   type="email"
-                  defaultValue={user.email || ''}
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
                   className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -658,6 +913,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <input
                     type="tel"
                     placeholder="0123456789"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
                     className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -666,6 +923,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <input
                     type="text"
                     placeholder="Nhập số CMND/CCCD"
+                    value={profileForm.citizenId}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, citizenId: e.target.value }))}
                     className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -675,6 +934,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-xs font-medium text-muted-foreground mb-1">Ngày tháng năm sinh</p>
                   <input
                     type="date"
+                    value={profileForm.birthDate}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, birthDate: e.target.value }))}
                     className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -682,6 +943,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-xs font-medium text-muted-foreground mb-1">Thời gian bắt đầu làm việc</p>
                   <input
                     type="date"
+                    value={profileForm.startDate}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, startDate: e.target.value }))}
                     className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -691,6 +954,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <textarea
                   rows={2}
                   placeholder="Nhập địa chỉ thường trú"
+                  value={profileForm.address}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, address: e.target.value }))}
                   className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -699,6 +964,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <input
                   type="text"
                   placeholder="Nhập đơn vị công tác"
+                  value={profileForm.department}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, department: e.target.value }))}
                   className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -707,6 +974,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <input
                   type="text"
                   placeholder="Nhập chức vụ"
+                  value={profileForm.title}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, title: e.target.value }))}
                   className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -715,7 +984,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <DialogFooter>
             <Button
               className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => setIsProfileOpen(false)}
+              onClick={handleProfileSave}
             >
               Lưu thay đổi
             </Button>
@@ -746,7 +1015,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Thời gian</p>
-                <p className="font-semibold">{selectedNotification.time}</p>
+                <p className="font-semibold">
+                  {formatRelativeTime(selectedNotification.createdAt)}
+                </p>
               </div>
 
               {selectedNotification.type === 'feedback' && selectedNotification.detail && (
@@ -805,6 +1076,50 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedNotification(null)}>
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedMessage} onOpenChange={(open) => {
+        if (!open) setSelectedMessage(null);
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Chi tiết tin nhắn</DialogTitle>
+            <DialogDescription>
+              Nội dung trao đổi và hướng dẫn liên quan.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMessage && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Tiêu đề</p>
+                <p className="font-semibold text-foreground">{selectedMessage.title}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Từ</p>
+                <p className="font-semibold">{selectedMessage.from}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Thời gian</p>
+                <p className="font-semibold">
+                  {formatRelativeTime(selectedMessage.createdAt)}
+                </p>
+              </div>
+              <div className="rounded-md bg-muted/40 border border-border/60 p-3">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Nội dung</p>
+                <p className="text-sm text-foreground">
+                  {selectedMessage.body || selectedMessage.preview || ''}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedMessage(null)}>
               Đóng
             </Button>
           </DialogFooter>

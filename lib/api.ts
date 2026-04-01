@@ -18,6 +18,14 @@ export interface AuthUserPayload {
   roleId?: number;
   role?: number;
   isActive?: boolean;
+  phone?: string;
+  avatar?: string;
+  department?: string;
+  citizenId?: string;
+  birthDate?: string;
+  startDate?: string;
+  address?: string;
+  title?: string;
 }
 
 export interface LoginResponse {
@@ -43,6 +51,56 @@ export interface RegisterResponse {
   message: string;
   email: string;
   requiresVerification: true;
+}
+
+export interface UserProfileResponse {
+  id: number;
+  username: string;
+  fullName: string;
+  email?: string | null;
+  roleId: number;
+  isActive: boolean;
+  phone?: string | null;
+  avatar?: string | null;
+  department?: string | null;
+  citizenId?: string | null;
+  birthDate?: string | null;
+  startDate?: string | null;
+  address?: string | null;
+  title?: string | null;
+}
+
+export interface UserProfileUpdatePayload {
+  fullName?: string;
+  email?: string | null;
+  phone?: string | null;
+  avatar?: string | null;
+  department?: string | null;
+  citizenId?: string | null;
+  birthDate?: string | null;
+  startDate?: string | null;
+  address?: string | null;
+  title?: string | null;
+}
+
+export interface NotificationPayload {
+  id: number;
+  type: string;
+  title: string;
+  content?: string | null;
+  detail?: Record<string, any> | null;
+  unread: boolean;
+  createdAt: string;
+}
+
+export interface MessagePayload {
+  id: number;
+  from: string;
+  title: string;
+  preview?: string | null;
+  body?: string | null;
+  unread: boolean;
+  createdAt: string;
 }
 
 function getAccessToken(): string | null {
@@ -189,6 +247,45 @@ export const authApi = {
   me: () => apiCall<AuthUserPayload>('/auth/me'),
   logout: () => apiCall('/auth/logout', { method: 'POST' }),
   refresh: () => apiCall<{ accessToken: string }>('/auth/refresh', { method: 'POST' }),
+};
+
+export const userApi = {
+  me: () => apiCall<UserProfileResponse>('/users/me'),
+  updateMe: (payload: UserProfileUpdatePayload) =>
+    apiCall<UserProfileResponse>('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+};
+
+export const notificationsApi = {
+  list: () => apiCall<NotificationPayload[]>('/notifications'),
+  markRead: (id: number) =>
+    apiCall('/notifications/mark-read', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    }),
+  markAllRead: () =>
+    apiCall('/notifications/mark-all-read', {
+      method: 'POST',
+    }),
+  clearAll: () =>
+    apiCall('/notifications', {
+      method: 'DELETE',
+    }),
+};
+
+export const messagesApi = {
+  list: () => apiCall<MessagePayload[]>('/messages'),
+  markRead: (id: number) =>
+    apiCall('/messages/mark-read', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    }),
+  markAllRead: () =>
+    apiCall('/messages/mark-all-read', {
+      method: 'POST',
+    }),
 };
 
 // ============== HỒ SƠ NGHIỆP VỤ ==============
