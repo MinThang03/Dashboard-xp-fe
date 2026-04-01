@@ -278,6 +278,103 @@ export const vanBanApi = {
 // ============== USERS ==============
 export const usersApi = {
   getList: () => apiCall('/users'),
+  create: (data: {
+    username: string;
+    fullName: string;
+    email?: string | null;
+    roleId?: number;
+    isActive?: boolean;
+    password?: string;
+    department?: string | null;
+  }) => apiCall('/users', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: {
+    username?: string;
+    fullName?: string;
+    email?: string | null;
+    roleId?: number;
+    isActive?: boolean;
+    password?: string;
+    phone?: string | null;
+    department?: string | null;
+  }) => apiCall(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/users/${id}`, { method: 'DELETE' }),
+};
+
+// ============== VAI TRO ==============
+export const vaiTroApi = {
+  getList: () => apiCall('/vai-tro'),
+  create: (data: {
+    name: string;
+    code?: string;
+    description?: string | null;
+    order?: number;
+    isActive?: boolean;
+    permissions?: string[];
+  }) => apiCall('/vai-tro', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: {
+    name?: string;
+    code?: string;
+    description?: string | null;
+    order?: number;
+    isActive?: boolean;
+    permissions?: string[];
+  }) => apiCall(`/vai-tro/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/vai-tro/${id}`, { method: 'DELETE' }),
+};
+
+// ============== DON VI HANH CHINH ==============
+export const donViHanhChinhApi = {
+  getList: () => apiCall('/don-vi-hanh-chinh'),
+};
+
+// ============== QUAN HUYEN ==============
+export const quanHuyenApi = {
+  getList: () => apiCall('/quan-huyen'),
+};
+
+// ============== XA PHUONG ==============
+export const xaPhuongApi = {
+  getList: () => apiCall('/xa-phuong'),
+  create: (data: {
+    name: string;
+    districtId?: number | null;
+    population?: number;
+    area?: number | null;
+    dvhcCode?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    mayor?: string | null;
+    isActive?: boolean;
+  }) => apiCall('/xa-phuong', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: {
+    name?: string;
+    districtId?: number | null;
+    population?: number;
+    area?: number | null;
+    dvhcCode?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    mayor?: string | null;
+    isActive?: boolean;
+  }) => apiCall(`/xa-phuong/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => apiCall(`/xa-phuong/${id}`, { method: 'DELETE' }),
+};
+
+// ============== SYSTEM SETTINGS ==============
+export const systemSettingsApi = {
+  get: () => apiCall('/system-settings'),
+  update: (data: {
+    systemName?: string;
+    adminEmail?: string | null;
+    defaultExpiryDays?: number;
+    overdueWarningDays?: number;
+    notificationsEnabled?: boolean;
+    autoUpdateEnabled?: boolean;
+    autoUpdateInterval?: number;
+    avatarUrl?: string | null;
+  }) => apiCall('/system-settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // ============== QUYẾT ĐỊNH ==============
@@ -1091,6 +1188,11 @@ export const api = {
   hoSo: hoSoApi,
   vanBan: vanBanApi,
   users: usersApi,
+  vaiTro: vaiTroApi,
+  donViHanhChinh: donViHanhChinhApi,
+  quanHuyen: quanHuyenApi,
+  xaPhuong: xaPhuongApi,
+  systemSettings: systemSettingsApi,
   quyetDinh: quyetDinhApi,
   phanAnh: phanAnhApi,
   taiLieu: taiLieuApi,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,57 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Shield, Check, X, Edit2, Save, Plus, Trash2 } from 'lucide-react';
-
-// Fake data for role permissions
-const rolePermissions = {
-  ADMIN: {
-    name: 'Quản trị viên',
-    color: 'bg-red-500/10 text-red-700 border-red-200',
-    permissions: [
-      'Quản lý người dùng',
-      'Cấu hình hệ thống',
-      'Xem báo cáo',
-      'Quản lý quyền',
-      'Quản lý ngân sách',
-      'Xem lịch sử',
-      'Quản lý hồ sơ',
-      'Xóa dữ liệu',
-    ],
-  },
-  LANHDAO: {
-    name: 'Lãnh đạo',
-    color: 'bg-purple-500/10 text-purple-700 border-purple-200',
-    permissions: [
-      'Xem bảng điều khiển',
-      'Phê duyệt hồ sơ',
-      'Xem báo cáo',
-      'Gửi thông báo',
-      'Quản lý cảnh báo',
-      'Xem lịch sử',
-    ],
-  },
-  CANBO: {
-    name: 'Cán bộ chuyên môn',
-    color: 'bg-blue-500/10 text-blue-700 border-blue-200',
-    permissions: [
-      'Xử lý hồ sơ',
-      'Upload tài liệu',
-      'Xem báo cáo cá nhân',
-      'Gửi phản ánh',
-      'Quản lý hồ sơ',
-    ],
-  },
-  CONGDAN: {
-    name: 'Công dân',
-    color: 'bg-green-500/10 text-green-700 border-green-200',
-    permissions: [
-      'Nộp hồ sơ',
-      'Tra cứu hồ sơ',
-      'Đánh giá dịch vụ',
-      'Gửi phản ánh',
-    ],
-  },
-};
+import { vaiTroApi } from '@/lib/api';
 
 const allAvailablePermissions = [
   'Quản lý người dùng',
@@ -90,96 +40,137 @@ const allAvailablePermissions = [
   'Đánh giá dịch vụ',
 ];
 
-interface RolePermissionsState {
-  [key: string]: string[];
-}
+const roleColorByCode: Record<string, string> = {
+  ADMIN: 'bg-red-500/10 text-red-700 border-red-200',
+  LANHDAO: 'bg-purple-500/10 text-purple-700 border-purple-200',
+  CANBO: 'bg-blue-500/10 text-blue-700 border-blue-200',
+  CONGDAN: 'bg-green-500/10 text-green-700 border-green-200',
+};
 
-interface RoleData {
-  [key: string]: {
-    name: string;
-    color: string;
-    permissions: string[];
-  };
+const fallbackRoleColors = [
+  'bg-orange-500/10 text-orange-700 border-orange-200',
+  'bg-pink-500/10 text-pink-700 border-pink-200',
+  'bg-indigo-500/10 text-indigo-700 border-indigo-200',
+  'bg-cyan-500/10 text-cyan-700 border-cyan-200',
+  'bg-teal-500/10 text-teal-700 border-teal-200',
+];
+
+interface RoleItem {
+  id: number;
+  name: string;
+  code: string;
+  description?: string | null;
+  permissions?: string[] | null;
+  isActive?: boolean;
 }
 
 export default function RolesPage() {
-  const [roleData, setRoleData] = useState<RoleData>(rolePermissions);
-  const [editingRole, setEditingRole] = useState<string | null>(null);
-  const [permissions, setPermissions] = useState<RolePermissionsState>(
-    Object.fromEntries(
-      Object.entries(rolePermissions).map(([key, val]) => [key, val.permissions])
-    )
-  );
+  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
+  const [permissions, setPermissions] = useState<Record<number, string[]>>({});
   const [addRoleDialogOpen, setAddRoleDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSavingRoleId, setIsSavingRoleId] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [newRoleForm, setNewRoleForm] = useState({
     name: '',
     selectedPermissions: [] as string[],
   });
 
-  // Get all unique permissions
-  const allPermissions = Array.from(
-    new Set(Object.values(roleData).flatMap(r => r.permissions))
-  );
+  const loadRoles = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    const result = await vaiTroApi.getList();
+    if (result?.success && Array.isArray(result.data)) {
+      const mapped = result.data.map((role: any) => ({
+        id: role.id ?? role.MaVaiTro,
+        name: role.name ?? role.TenVaiTro,
+        code: role.code ?? role.MaCode,
+        description: role.description ?? role.MoTa ?? null,
+        permissions: Array.isArray(role.permissions)
+          ? role.permissions
+          : Array.isArray(role.DanhSachQuyen)
+            ? role.DanhSachQuyen
+            : [],
+        isActive: role.isActive ?? role.TrangThai,
+      }));
 
-  const handlePermissionToggle = (roleKey: string, permission: string) => {
+      setRoles(mapped);
+      setPermissions(
+        Object.fromEntries(mapped.map((role) => [role.id, role.permissions ?? []]))
+      );
+    } else {
+      setErrorMessage(result?.message || 'Không thể tải danh sách vai trò');
+    }
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!active) return;
+      await loadRoles();
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [loadRoles]);
+
+  const allPermissions = useMemo(() => {
+    const rolePermissions = roles.flatMap((role) => role.permissions ?? []);
+    return Array.from(new Set([...allAvailablePermissions, ...rolePermissions]));
+  }, [roles]);
+
+  const handlePermissionToggle = (roleId: number, permission: string) => {
     setPermissions(prev => {
-      const rolePerms = prev[roleKey] || [];
+      const rolePerms = prev[roleId] || [];
       if (rolePerms.includes(permission)) {
         return {
           ...prev,
-          [roleKey]: rolePerms.filter(p => p !== permission),
+          [roleId]: rolePerms.filter(p => p !== permission),
         };
       } else {
         return {
           ...prev,
-          [roleKey]: [...rolePerms, permission],
+          [roleId]: [...rolePerms, permission],
         };
       }
     });
   };
 
-  const handleSave = (roleKey: string) => {
-    console.log(`Saved permissions for ${roleKey}:`, permissions[roleKey]);
-    setEditingRole(null);
+  const handleSave = async (roleId: number) => {
+    setIsSavingRoleId(roleId);
+    const result = await vaiTroApi.update(roleId, {
+      permissions: permissions[roleId] || [],
+    });
+
+    if (result?.success) {
+      setEditingRoleId(null);
+      await loadRoles();
+    } else {
+      setErrorMessage(result?.message || 'Không thể lưu quyền vai trò');
+    }
+    setIsSavingRoleId(null);
   };
 
-  const handleAddRole = () => {
+  const handleAddRole = async () => {
     if (newRoleForm.name.trim()) {
-      const roleKey = newRoleForm.name
-        .toUpperCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^A-Z0-9_]/g, '');
-
-      const colorOptions = [
-        'bg-orange-500/10 text-orange-700 border-orange-200',
-        'bg-pink-500/10 text-pink-700 border-pink-200',
-        'bg-indigo-500/10 text-indigo-700 border-indigo-200',
-        'bg-cyan-500/10 text-cyan-700 border-cyan-200',
-        'bg-teal-500/10 text-teal-700 border-teal-200',
-      ];
-      const randomColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
-
-      const newRole = {
-        name: newRoleForm.name,
-        color: randomColor,
+      setIsCreating(true);
+      const result = await vaiTroApi.create({
+        name: newRoleForm.name.trim(),
         permissions: newRoleForm.selectedPermissions,
-      };
+      });
 
-      setRoleData(prev => ({
-        ...prev,
-        [roleKey]: newRole,
-      }));
-
-      setPermissions(prev => ({
-        ...prev,
-        [roleKey]: newRoleForm.selectedPermissions,
-      }));
-
-      console.log('Added new role:', roleKey, newRole);
-
-      // Reset form
-      setNewRoleForm({ name: '', selectedPermissions: [] });
-      setAddRoleDialogOpen(false);
+      if (result?.success) {
+        setNewRoleForm({ name: '', selectedPermissions: [] });
+        setAddRoleDialogOpen(false);
+        await loadRoles();
+      } else {
+        setErrorMessage(result?.message || 'Không thể thêm vai trò');
+      }
+      setIsCreating(false);
     }
   };
 
@@ -200,22 +191,21 @@ export default function RolesPage() {
     });
   };
 
-  const handleDeleteRole = (roleKey: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa vai trò này?')) {
-      setRoleData(prev => {
-        const updated = { ...prev };
-        delete updated[roleKey];
-        return updated;
-      });
-
-      setPermissions(prev => {
-        const updated = { ...prev };
-        delete updated[roleKey];
-        return updated;
-      });
-
-      console.log('Deleted role:', roleKey);
+  const handleDeleteRole = async (roleId: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa vai trò này?')) {
+      return;
     }
+
+    const result = await vaiTroApi.delete(roleId);
+    if (result?.success) {
+      await loadRoles();
+    } else {
+      setErrorMessage(result?.message || 'Không thể xóa vai trò');
+    }
+  };
+
+  const getRoleColor = (role: RoleItem, index: number) => {
+    return roleColorByCode[role.code] || fallbackRoleColors[index % fallbackRoleColors.length];
   };
 
   return (
@@ -241,37 +231,49 @@ export default function RolesPage() {
         </div>
       </div>
 
+      {errorMessage && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Summary */}
       <Card className="border-0 shadow-lg p-6 bg-slate-50">
         <h3 className="font-semibold mb-4">Tóm tắt quyền hạn</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {Object.entries(rolePermissions).map(([roleKey, roleData]) => (
-            <div key={roleKey} className="p-4 bg-white rounded-lg border border-border">
-              <p className="font-medium text-sm mb-2">{roleData.name}</p>
+          {roles.map((role) => (
+            <div key={role.id} className="p-4 bg-white rounded-lg border border-border">
+              <p className="font-medium text-sm mb-2">{role.name}</p>
               <p className="text-2xl font-bold">
-                {permissions[roleKey]?.length || 0}
+                {permissions[role.id]?.length || 0}
               </p>
               <p className="text-xs text-muted-foreground mt-1">quyền được gán</p>
             </div>
           ))}
+          {!roles.length && !isLoading && (
+            <div className="col-span-full text-sm text-muted-foreground">
+              Chưa có vai trò nào. Hãy thêm vai trò mới để bắt đầu.
+            </div>
+          )}
         </div>
       </Card>
 
       {/* Role Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {Object.entries(roleData).map(([roleKey, roleInfo]) => {
-          const isEditing = editingRole === roleKey;
-          const currentPerms = permissions[roleKey] || [];
+        {roles.map((role, index) => {
+          const isEditing = editingRoleId === role.id;
+          const currentPerms = permissions[role.id] || [];
+          const roleColor = getRoleColor(role, index);
 
           return (
-            <Card key={roleKey} className="border-0 shadow-lg p-6">
+            <Card key={role.id} className="border-0 shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-lg ${roleInfo.color}`}>
+                  <div className={`p-3 rounded-lg ${roleColor}`}>
                     <Shield className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">{roleInfo.name}</h3>
+                    <h3 className="font-semibold text-lg">{role.name}</h3>
                     <p className="text-xs text-muted-foreground">
                       {currentPerms.length}/{allPermissions.length} quyền
                     </p>
@@ -283,11 +285,12 @@ export default function RolesPage() {
                     variant={isEditing ? 'default' : 'outline'}
                     onClick={() => {
                       if (isEditing) {
-                        handleSave(roleKey);
+                        handleSave(role.id);
                       } else {
-                        setEditingRole(roleKey);
+                        setEditingRoleId(role.id);
                       }
                     }}
+                    disabled={isSavingRoleId === role.id}
                   >
                     {isEditing ? (
                       <>
@@ -305,7 +308,7 @@ export default function RolesPage() {
                     size="sm"
                     variant="outline"
                     className="text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => handleDeleteRole(roleKey)}
+                    onClick={() => handleDeleteRole(role.id)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -320,17 +323,17 @@ export default function RolesPage() {
                       return (
                         <div key={permission} className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
                           <Checkbox
-                            id={`${roleKey}-${permission}`}
+                            id={`${role.id}-${permission}`}
                             checked={isChecked}
                             disabled={!isEditing}
                             onCheckedChange={() => {
                               if (isEditing) {
-                                handlePermissionToggle(roleKey, permission);
+                                handlePermissionToggle(role.id, permission);
                               }
                             }}
                           />
                           <Label
-                            htmlFor={`${roleKey}-${permission}`}
+                            htmlFor={`${role.id}-${permission}`}
                             className={`cursor-pointer flex-1 text-sm ${isEditing ? 'cursor-pointer' : ''}`}
                           >
                             {permission}
@@ -365,7 +368,7 @@ export default function RolesPage() {
                 <span className="text-xs text-muted-foreground">
                   Cập nhật lần cuối: Hôm nay 10:30 AM
                 </span>
-                <Badge className={roleInfo.color}>{roleInfo.name}</Badge>
+                <Badge className={roleColor}>{role.name}</Badge>
               </div>
             </Card>
           );
@@ -419,9 +422,9 @@ export default function RolesPage() {
             <Button variant="outline" onClick={() => setAddRoleDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleAddRole}>
+            <Button onClick={handleAddRole} disabled={isCreating}>
               <Plus className="w-4 h-4 mr-2" />
-              Thêm vai trò
+              {isCreating ? 'Đang thêm...' : 'Thêm vai trò'}
             </Button>
           </DialogFooter>
         </DialogContent>

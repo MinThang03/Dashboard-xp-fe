@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,55 +33,7 @@ import {
   Eye,
   X,
 } from 'lucide-react';
-
-// Mock users from database
-const mockUsers = [
-  {
-    id: 1,
-    name: 'Nguyễn Văn Admin',
-    email: 'admin@ubnd.vn',
-    role: 'ADMIN',
-    department: 'Hệ thống',
-    status: 'active',
-    lastLogin: '2024-01-17 10:30',
-  },
-  {
-    id: 2,
-    name: 'Trần Thị Lãnh Đạo',
-    email: 'leader@ubnd.vn',
-    role: 'LANHDAO',
-    department: 'Chủ tịch UBND',
-    status: 'active',
-    lastLogin: '2024-01-17 09:15',
-  },
-  {
-    id: 3,
-    name: 'Lê Văn Cán Bộ 1',
-    email: 'officer1@ubnd.vn',
-    role: 'CANBO',
-    department: 'Địa chính - Xây dựng',
-    status: 'active',
-    lastLogin: '2024-01-17 08:45',
-  },
-  {
-    id: 4,
-    name: 'Phạm Thị Cán Bộ 2',
-    email: 'officer2@ubnd.vn',
-    role: 'CANBO',
-    department: 'Tư pháp - Hộ tịch',
-    status: 'inactive',
-    lastLogin: '2024-01-15 14:20',
-  },
-  {
-    id: 5,
-    name: 'Võ Công Dân 1',
-    email: 'citizen1@ubnd.vn',
-    role: 'CONGDAN',
-    department: '-',
-    status: 'active',
-    lastLogin: '2024-01-17 07:30',
-  },
-];
+import { usersApi, vaiTroApi } from '@/lib/api';
 
 const roleConfig = {
   ADMIN: { name: 'Quản trị viên', color: 'from-red-500 to-red-600', badge: 'bg-red-500/10 text-red-700' },
@@ -90,8 +42,11 @@ const roleConfig = {
   CONGDAN: { name: 'Công dân', color: 'from-green-500 to-green-600', badge: 'bg-green-500/10 text-green-700' },
 };
 
+const DEFAULT_ROLE_ORDER = ['ADMIN', 'LANHDAO', 'CANBO', 'CONGDAN'];
+
 interface User {
   id: number;
+  username: string;
   name: string;
   email: string;
   role: string;
@@ -100,27 +55,124 @@ interface User {
   lastLogin: string;
 }
 
+interface RoleItem {
+  id: number;
+  name: string;
+  code: string;
+  permissions?: string[];
+}
+
 interface FormData {
   name: string;
   email: string;
   role: string;
   department: string;
+  status: string;
 }
 
 export default function AdminPage() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<RoleItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     role: 'CANBO',
     department: '',
+    status: 'active',
   });
+
+  const roleById = useMemo(() => {
+    const map = new Map<number, RoleItem>();
+    roles.forEach((role) => map.set(role.id, role));
+    return map;
+  }, [roles]);
+
+  const roleByCode = useMemo(() => {
+    const map = new Map<string, RoleItem>();
+    roles.forEach((role) => map.set(role.code, role));
+    return map;
+  }, [roles]);
+
+  const buildUsername = (name: string, email: string) => {
+    if (email.includes('@')) {
+      return email.split('@')[0];
+    }
+    const normalized = name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, '');
+    return normalized || `user${Date.now()}`;
+  };
+
+  const mapRoleCodeFromId = (roleId?: number) => {
+    if (roleId && roleById.has(roleId)) {
+      return roleById.get(roleId)?.code || 'CONGDAN';
+    }
+    return 'CONGDAN';
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const [rolesRes, usersRes] = await Promise.all([
+        vaiTroApi.getList(),
+        usersApi.getList(),
+      ]);
+
+      if (rolesRes?.success && Array.isArray(rolesRes.data)) {
+        const mappedRoles = rolesRes.data.map((role: any) => ({
+          id: role.id ?? role.MaVaiTro,
+          name: role.name ?? role.TenVaiTro,
+          code: role.code ?? role.MaCode,
+          permissions: role.permissions ?? role.DanhSachQuyen ?? [],
+        })) as RoleItem[];
+        mappedRoles.sort((a, b) => {
+          const aIndex = DEFAULT_ROLE_ORDER.indexOf(a.code);
+          const bIndex = DEFAULT_ROLE_ORDER.indexOf(b.code);
+          if (aIndex === -1 && bIndex === -1) return a.code.localeCompare(b.code);
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        });
+        setRoles(mappedRoles);
+      }
+
+      if (usersRes?.success && Array.isArray(usersRes.data)) {
+        const mappedUsers = usersRes.data.map((user: any) => ({
+          id: user.id,
+          username: user.username,
+          name: user.fullName || user.username,
+          email: user.email || '',
+          role: mapRoleCodeFromId(user.roleId),
+          department: user.department || '-',
+          status: user.isActive ? 'active' : 'inactive',
+          lastLogin: user.lastLogin || 'Chưa cập nhật',
+        })) as User[];
+        setUsers(mappedUsers);
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Không thể tải dữ liệu');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredUsers = users.filter(u => {
     const matchSearch = 
@@ -131,25 +183,77 @@ export default function AdminPage() {
   });
 
   const handleAddUser = () => {
-    if (formData.name && formData.email && formData.role) {
-      const newUser: User = {
-        id: users.length + 1,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        department: formData.department,
-        status: 'active',
-        lastLogin: 'Chưa đăng nhập',
-      };
-      setUsers([...users, newUser]);
-      setFormData({ name: '', email: '', role: 'CANBO', department: '' });
+    setEditingUserId(null);
+    setFormData({ name: '', email: '', role: 'CANBO', department: '', status: 'active' });
+    setDialogOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department === '-' ? '' : user.department,
+      status: user.status,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!formData.name.trim()) {
+      setErrorMessage('Vui lòng nhập họ và tên.');
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMessage(null);
+
+    try {
+      const roleId = roleByCode.get(formData.role)?.id ?? 4;
+      const username = buildUsername(formData.name, formData.email);
+
+      if (editingUserId) {
+        await usersApi.update(editingUserId, {
+          username,
+          fullName: formData.name,
+          email: formData.email || null,
+          roleId,
+          isActive: formData.status === 'active',
+          department: formData.department || null,
+        });
+      } else {
+        await usersApi.create({
+          username,
+          fullName: formData.name,
+          email: formData.email || null,
+          roleId,
+          isActive: formData.status === 'active',
+          department: formData.department || null,
+        });
+      }
+
+      await loadData();
       setDialogOpen(false);
-      console.log('Added new user:', newUser);
+      setEditingUserId(null);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Không thể lưu người dùng');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDeleteUser = (id: number) => {
-    setUsers(users.filter(u => u.id !== id));
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+      return;
+    }
+
+    try {
+      await usersApi.delete(id);
+      await loadData();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Không thể xóa người dùng');
+    }
   };
 
   const handleViewUser = (user: User) => {
@@ -202,7 +306,7 @@ export default function AdminPage() {
               </div>
               <p className="text-white/90">Quản lý tài khoản người dùng và phân quyền</p>
             </div>
-            <Button className="w-full sm:w-auto bg-white text-primary hover:bg-white/90" onClick={() => setDialogOpen(true)}>
+            <Button className="w-full sm:w-auto bg-white text-primary hover:bg-white/90" onClick={handleAddUser}>
               <Plus className="w-4 h-4 mr-2" />
               Thêm người dùng
             </Button>
@@ -258,7 +362,7 @@ export default function AdminPage() {
       {/* Users List */}
       <div className="space-y-3">
         {filteredUsers.map(user => {
-          const roleInfo = roleConfig[user.role as keyof typeof roleConfig];
+          const roleInfo = roleConfig[user.role as keyof typeof roleConfig] || roleConfig.CONGDAN;
           return (
             <Card key={user.id} className="border-0 shadow-lg p-4 hover:shadow-xl transition-shadow">
               <div className="flex items-center gap-4">
@@ -294,6 +398,7 @@ export default function AdminPage() {
                     variant="ghost"
                     size="sm"
                     title="Chỉnh sửa"
+                    onClick={() => handleEditUser(user)}
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
@@ -317,7 +422,7 @@ export default function AdminPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Thêm người dùng mới</DialogTitle>
+            <DialogTitle>{editingUserId ? 'Cập nhật người dùng' : 'Thêm người dùng mới'}</DialogTitle>
             <DialogDescription>
               Nhập thông tin người dùng từ cơ sở dữ liệu
             </DialogDescription>
@@ -352,10 +457,24 @@ export default function AdminPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">Quản trị viên</SelectItem>
-                  <SelectItem value="LANHDAO">Lãnh đạo</SelectItem>
-                  <SelectItem value="CANBO">Cán bộ chuyên môn</SelectItem>
-                  <SelectItem value="CONGDAN">Công dân</SelectItem>
+                  {(roles.length ? roles : DEFAULT_ROLE_ORDER.map((code) => ({ code } as RoleItem))).map((roleItem) => (
+                    <SelectItem key={roleItem.code} value={roleItem.code}>
+                      {roleItem.name || roleConfig[roleItem.code as keyof typeof roleConfig]?.name || roleItem.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Trạng thái</Label>
+              <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Hoạt động</SelectItem>
+                  <SelectItem value="inactive">Không hoạt động</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -371,13 +490,15 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {errorMessage && <div className="text-sm text-red-600">{errorMessage}</div>}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleAddUser}>
+            <Button onClick={handleSaveUser} disabled={isSaving}>
               <Plus className="w-4 h-4 mr-2" />
-              Thêm người dùng
+              {isSaving ? 'Đang lưu...' : 'Lưu người dùng'}
             </Button>
           </DialogFooter>
         </DialogContent>

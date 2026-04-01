@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Bell, User, RotateCw, Upload, Check } from 'lucide-react';
+import { Settings, Bell, User, RotateCw, Upload, Check, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,29 +16,77 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { systemSettingsApi } from '@/lib/api';
 
 export default function SettingsPage() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true);
-  const [autoUpdateInterval, setAutoUpdateInterval] = useState(5);
-  const [avatar, setAvatar] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=admin');
+  const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin';
+  const [settings, setSettings] = useState({
+    systemName: 'Dashboard Xa/Phuong Smart',
+    adminEmail: 'admin@ubnd.vn',
+    defaultExpiryDays: 15,
+    overdueWarningDays: 3,
+    notificationsEnabled: true,
+    autoUpdateEnabled: true,
+    autoUpdateInterval: 5,
+    avatarUrl: defaultAvatar,
+  });
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
-  const [tempAvatar, setTempAvatar] = useState(avatar);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [tempAvatar, setTempAvatar] = useState(defaultAvatar);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSettings = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      const result = await systemSettingsApi.get();
+
+      if (!active) return;
+
+      if (result?.success && result.data) {
+        const data: any = result.data;
+        const nextSettings = {
+          systemName: data.systemName ?? data.TenHeThong ?? 'Dashboard Xa/Phuong Smart',
+          adminEmail: data.adminEmail ?? data.EmailQuanTri ?? 'admin@ubnd.vn',
+          defaultExpiryDays: Number(data.defaultExpiryDays ?? data.HanXuLyMacDinh ?? 15),
+          overdueWarningDays: Number(data.overdueWarningDays ?? data.CanhBaoTreHan ?? 3),
+          notificationsEnabled: Boolean(data.notificationsEnabled ?? data.ThongBao ?? true),
+          autoUpdateEnabled: Boolean(data.autoUpdateEnabled ?? data.TuDongCapNhat ?? true),
+          autoUpdateInterval: Number(data.autoUpdateInterval ?? data.ChuKyCapNhat ?? 5),
+          avatarUrl: data.avatarUrl ?? data.AvatarUrl ?? defaultAvatar,
+        };
+        setSettings(nextSettings);
+        setTempAvatar(nextSettings.avatarUrl);
+      } else {
+        setErrorMessage(result?.message || 'Không thể tải cài đặt hệ thống');
+      }
+      setIsLoading(false);
+    };
+
+    loadSettings();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Auto-update data every 5 minutes
   useEffect(() => {
-    if (!autoUpdateEnabled) return;
+    if (!settings.autoUpdateEnabled) return;
 
     const interval = setInterval(() => {
       setLastUpdated(new Date());
       console.log(`Auto-updated data at ${new Date().toLocaleTimeString()}`);
-    }, autoUpdateInterval * 60 * 1000);
+    }, settings.autoUpdateInterval * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [autoUpdateEnabled, autoUpdateInterval]);
+  }, [settings.autoUpdateEnabled, settings.autoUpdateInterval]);
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,29 +101,43 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveAvatar = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setAvatar(tempAvatar);
+  const handleSaveAvatar = async () => {
+    setIsSavingAvatar(true);
+    setErrorMessage(null);
+    const result = await systemSettingsApi.update({ avatarUrl: tempAvatar });
+    if (result?.success) {
+      setSettings((prev) => ({ ...prev, avatarUrl: tempAvatar }));
       setShowAvatarDialog(false);
-      setIsSaving(false);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }, 1000);
+      setSaveMessage('Ảnh đại diện đã được cập nhật');
+      setTimeout(() => setSaveMessage(null), 3000);
+    } else {
+      setErrorMessage(result?.message || 'Không thể lưu ảnh đại diện');
+    }
+    setIsSavingAvatar(false);
   };
 
-  const handleSaveSettings = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      setSaveSuccess(true);
-      console.log('Settings saved:', {
-        notifications: notificationsEnabled,
-        autoUpdate: autoUpdateEnabled,
-        autoUpdateInterval,
-      });
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }, 1000);
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    setErrorMessage(null);
+    const result = await systemSettingsApi.update({
+      systemName: settings.systemName,
+      adminEmail: settings.adminEmail || null,
+      defaultExpiryDays: settings.defaultExpiryDays,
+      overdueWarningDays: settings.overdueWarningDays,
+      notificationsEnabled: settings.notificationsEnabled,
+      autoUpdateEnabled: settings.autoUpdateEnabled,
+      autoUpdateInterval: settings.autoUpdateInterval,
+      avatarUrl: settings.avatarUrl || null,
+    });
+
+    if (result?.success) {
+      setSaveMessage('Cài đặt đã được lưu thành công');
+      setLastUpdated(new Date());
+      setTimeout(() => setSaveMessage(null), 3000);
+    } else {
+      setErrorMessage(result?.message || 'Không thể lưu cài đặt');
+    }
+    setIsSavingSettings(false);
   };
 
   return (
@@ -93,10 +155,23 @@ export default function SettingsPage() {
       </div>
 
       {/* Success Message */}
-      {saveSuccess && (
+      {saveMessage && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
           <Check className="w-5 h-5 text-green-600" />
-          <p className="text-sm text-green-700">Cài đặt đã được lưu thành công</p>
+          <p className="text-sm text-green-700">{saveMessage}</p>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+          Đang tải cài đặt hệ thống...
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600" />
+          <p className="text-sm text-red-700">{errorMessage}</p>
         </div>
       )}
 
@@ -110,14 +185,17 @@ export default function SettingsPage() {
         <div className="flex items-center gap-6">
           <div className="relative">
             <img
-              src={avatar}
+              src={settings.avatarUrl}
               alt="Avatar"
               className="w-24 h-24 rounded-full border-4 border-primary"
             />
             <Button
               size="sm"
               className="absolute bottom-0 right-0 rounded-full"
-              onClick={() => setShowAvatarDialog(true)}
+              onClick={() => {
+                setTempAvatar(settings.avatarUrl);
+                setShowAvatarDialog(true);
+              }}
             >
               <Upload className="w-4 h-4" />
             </Button>
@@ -156,12 +234,14 @@ export default function SettingsPage() {
               </p>
             </div>
             <Switch
-              checked={notificationsEnabled}
-              onCheckedChange={setNotificationsEnabled}
+              checked={settings.notificationsEnabled}
+              onCheckedChange={(value) =>
+                setSettings((prev) => ({ ...prev, notificationsEnabled: value }))
+              }
             />
           </div>
 
-          {notificationsEnabled && (
+          {settings.notificationsEnabled && (
             <div className="space-y-3 mt-4 pl-4 border-l-2 border-primary">
               <label className="flex items-center gap-3 p-3 rounded hover:bg-slate-50 cursor-pointer">
                 <input type="checkbox" defaultChecked className="w-4 h-4" />
@@ -200,12 +280,14 @@ export default function SettingsPage() {
               </p>
             </div>
             <Switch
-              checked={autoUpdateEnabled}
-              onCheckedChange={setAutoUpdateEnabled}
+              checked={settings.autoUpdateEnabled}
+              onCheckedChange={(value) =>
+                setSettings((prev) => ({ ...prev, autoUpdateEnabled: value }))
+              }
             />
           </div>
 
-          {autoUpdateEnabled && (
+          {settings.autoUpdateEnabled && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <Label className="text-sm">Cập nhật dữ liệu mỗi (phút)</Label>
               <div className="flex gap-3 mt-3">
@@ -213,12 +295,17 @@ export default function SettingsPage() {
                   type="number"
                   min="1"
                   max="60"
-                  value={autoUpdateInterval}
-                  onChange={(e) => setAutoUpdateInterval(parseInt(e.target.value) || 5)}
+                  value={settings.autoUpdateInterval}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      autoUpdateInterval: parseInt(e.target.value) || 5,
+                    }))
+                  }
                   className="flex-1"
                 />
                 <Button variant="outline" size="sm">
-                  {autoUpdateInterval} phút
+                  {settings.autoUpdateInterval} phút
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
@@ -237,7 +324,10 @@ export default function SettingsPage() {
           <div>
             <Label className="text-sm">Tên hệ thống</Label>
             <Input
-              defaultValue="Dashboard Xã/Phường Smart"
+              value={settings.systemName}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, systemName: e.target.value }))
+              }
               className="mt-2"
             />
           </div>
@@ -245,11 +335,31 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm">Thời gian hết hạn hồ sơ (ngày)</Label>
-              <Input type="number" defaultValue="15" className="mt-2" />
+              <Input
+                type="number"
+                value={settings.defaultExpiryDays}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    defaultExpiryDays: parseInt(e.target.value) || 0,
+                  }))
+                }
+                className="mt-2"
+              />
             </div>
             <div>
               <Label className="text-sm">Cảnh báo trễ hạn (ngày)</Label>
-              <Input type="number" defaultValue="3" className="mt-2" />
+              <Input
+                type="number"
+                value={settings.overdueWarningDays}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    overdueWarningDays: parseInt(e.target.value) || 0,
+                  }))
+                }
+                className="mt-2"
+              />
             </div>
           </div>
 
@@ -257,7 +367,10 @@ export default function SettingsPage() {
             <Label className="text-sm">Email quản trị</Label>
             <Input
               type="email"
-              defaultValue="admin@ubnd.vn"
+              value={settings.adminEmail}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, adminEmail: e.target.value }))
+              }
               className="mt-2"
             />
           </div>
@@ -275,8 +388,8 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex gap-3 mt-6">
-          <Button onClick={handleSaveSettings} disabled={isSaving}>
-            {isSaving ? 'Đang lưu...' : 'Lưu cài đặt'}
+          <Button onClick={handleSaveSettings} disabled={isSavingSettings || isLoading}>
+            {isSavingSettings ? 'Đang lưu...' : 'Lưu cài đặt'}
           </Button>
           <Button variant="outline">Đặt lại mặc định</Button>
         </div>
@@ -326,8 +439,8 @@ export default function SettingsPage() {
             >
               Hủy
             </Button>
-            <Button onClick={handleSaveAvatar} disabled={isSaving}>
-              {isSaving ? 'Đang lưu...' : 'Lưu ảnh'}
+            <Button onClick={handleSaveAvatar} disabled={isSavingAvatar}>
+              {isSavingAvatar ? 'Đang lưu...' : 'Lưu ảnh'}
             </Button>
           </DialogFooter>
         </DialogContent>

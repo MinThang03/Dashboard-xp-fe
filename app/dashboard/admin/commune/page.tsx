@@ -6,6 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Search,
   Plus,
@@ -23,120 +31,179 @@ import {
   Users,
   AlertTriangle,
 } from 'lucide-react';
+import { donViHanhChinhApi, quanHuyenApi, xaPhuongApi } from '@/lib/api';
 
-// Mock data
-const mockCommuneInfo = [
-  {
-    id: 1,
-    name: 'Xã Hòa Bình',
-    code: 'XA001',
-    district: 'Huyện A',
-    province: 'Tỉnh B',
-    mayor: 'Trần Văn C',
-    phone: '0901234567',
-    email: 'hoabinh@ubnd.vn',
-    address: 'Trung tâm Xã Hòa Bình',
-    population: 8500,
-    area: 45.5,
-    status: 'active',
-  },
-  {
-    id: 2,
-    name: 'Phường Thống Nhất',
-    code: 'PW002',
-    district: 'Quận 5',
-    province: 'TP.HCM',
-    mayor: 'Lê Thị D',
-    phone: '0912345678',
-    email: 'thongnhat@ubnd.vn',
-    address: 'Đường Nguyễn Huệ, Phường Thống Nhất',
-    population: 12000,
-    area: 3.2,
-    status: 'active',
-  },
-];
+interface CommuneItem {
+  id: number;
+  name: string;
+  districtId?: number | null;
+  districtName?: string | null;
+  dvhcCode?: string | null;
+  dvhcName?: string | null;
+  mayor?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  population: number;
+  area?: number | null;
+  isActive: boolean;
+}
+
+interface DistrictItem {
+  id: number;
+  name: string;
+  dvhcCode?: string | null;
+}
+
+interface DvhcItem {
+  code: string;
+  name: string;
+  level: number;
+}
 
 export default function CommunePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [communes, setCommunes] = useState(mockCommuneInfo);
+  const [communes, setCommunes] = useState<CommuneItem[]>([]);
+  const [districts, setDistricts] = useState<DistrictItem[]>([]);
+  const [dvhcs, setDvhcs] = useState<DvhcItem[]>([]);
   const [editingCommuneId, setEditingCommuneId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    code: '',
-    district: '',
-    province: '',
+    dvhcCode: '',
+    districtId: '',
     mayor: '',
     phone: '',
     email: '',
     address: '',
     population: '',
     area: '',
+    isActive: true,
   });
 
-  const handleAddOrEdit = () => {
-    if (formData.name && formData.code) {
-      if (editingCommuneId) {
-        // Edit existing
-        setCommunes(
-          communes.map((c) =>
-            c.id === editingCommuneId
-              ? {
-                  ...c,
-                  ...formData,
-                  population: parseInt(formData.population) || 0,
-                  area: parseFloat(formData.area) || 0,
-                }
-              : c
-          )
-        );
-        console.log('Updated commune:', editingCommuneId);
-      } else {
-        // Add new
-        const newCommune = {
-          id: communes.length + 1,
-          ...formData,
-          population: parseInt(formData.population) || 0,
-          area: parseFloat(formData.area) || 0,
-          status: 'active' as const,
-        };
-        setCommunes([...communes, newCommune]);
-        console.log('Added new commune:', newCommune);
-      }
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    const [communesRes, districtsRes, dvhcRes] = await Promise.all([
+      xaPhuongApi.getList(),
+      quanHuyenApi.getList(),
+      donViHanhChinhApi.getList(),
+    ]);
+
+    if (communesRes?.success && Array.isArray(communesRes.data)) {
+      setCommunes(communesRes.data as CommuneItem[]);
+    } else {
+      setErrorMessage(communesRes?.message || 'Không thể tải danh sách xã/phường');
+    }
+
+    if (districtsRes?.success && Array.isArray(districtsRes.data)) {
+      const mapped = districtsRes.data.map((item: any) => ({
+        id: item.id ?? item.MaQuanHuyen,
+        name: item.name ?? item.TenQuanHuyen,
+        dvhcCode: item.dvhcCode ?? item.MaDVHC ?? null,
+      }));
+      setDistricts(mapped);
+    }
+
+    if (dvhcRes?.success && Array.isArray(dvhcRes.data)) {
+      const mapped = dvhcRes.data.map((item: any) => ({
+        code: item.code ?? item.MaDVHC,
+        name: item.name ?? item.TenDVHC,
+        level: Number(item.level ?? item.Cap ?? 0),
+      }));
+      setDvhcs(mapped);
+    }
+
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!active) return;
+      await loadData();
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [loadData]);
+
+  const handleAddOrEdit = async () => {
+    if (!formData.name.trim()) {
+      return;
+    }
+
+    setIsSaving(true);
+    const payload = {
+      name: formData.name.trim(),
+      dvhcCode: formData.dvhcCode || null,
+      districtId: formData.districtId ? Number(formData.districtId) : null,
+      mayor: formData.mayor || null,
+      phone: formData.phone || null,
+      email: formData.email || null,
+      address: formData.address || null,
+      population: parseInt(formData.population, 10) || 0,
+      area: formData.area ? Number(formData.area) : null,
+      isActive: formData.isActive,
+    };
+
+    const result = editingCommuneId
+      ? await xaPhuongApi.update(editingCommuneId, payload)
+      : await xaPhuongApi.create(payload);
+
+    if (result?.success) {
+      await loadData();
       setFormData({
         name: '',
-        code: '',
-        district: '',
-        province: '',
+        dvhcCode: '',
+        districtId: '',
         mayor: '',
         phone: '',
         email: '',
         address: '',
         population: '',
         area: '',
+        isActive: true,
       });
       setDialogOpen(false);
       setEditingCommuneId(null);
+    } else {
+      setErrorMessage(result?.message || 'Không thể lưu thông tin xã/phường');
+    }
+
+    setIsSaving(false);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa xã/phường này?')) {
+      return;
+    }
+
+    const result = await xaPhuongApi.delete(id);
+    if (result?.success) {
+      await loadData();
+    } else {
+      setErrorMessage(result?.message || 'Không thể xóa xã/phường');
     }
   };
 
-  const handleDelete = (id: number) => {
-    setCommunes(communes.filter((c) => c.id !== id));
-    console.log('Deleted commune:', id);
-  };
-
-  const openEditDialog = (commune: typeof communes[0]) => {
+  const openEditDialog = (commune: CommuneItem) => {
     setFormData({
       name: commune.name,
-      code: commune.code,
-      district: commune.district,
-      province: commune.province,
-      mayor: commune.mayor,
-      phone: commune.phone,
-      email: commune.email,
-      address: commune.address,
-      population: commune.population.toString(),
-      area: commune.area.toString(),
+      dvhcCode: commune.dvhcCode || '',
+      districtId: commune.districtId ? String(commune.districtId) : '',
+      mayor: commune.mayor || '',
+      phone: commune.phone || '',
+      email: commune.email || '',
+      address: commune.address || '',
+      population: commune.population?.toString() || '0',
+      area: commune.area ? String(commune.area) : '',
+      isActive: commune.isActive,
     });
     setEditingCommuneId(commune.id);
     setDialogOpen(true);
@@ -145,15 +212,15 @@ export default function CommunePage() {
   const openNewDialog = () => {
     setFormData({
       name: '',
-      code: '',
-      district: '',
-      province: '',
+      dvhcCode: '',
+      districtId: '',
       mayor: '',
       phone: '',
       email: '',
       address: '',
       population: '',
       area: '',
+      isActive: true,
     });
     setEditingCommuneId(null);
     setDialogOpen(true);
@@ -162,8 +229,21 @@ export default function CommunePage() {
   const filteredCommunes = communes.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.code.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.dvhcCode || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.districtName || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getDistrictName = (commune: CommuneItem) => {
+    if (commune.districtName) return commune.districtName;
+    const match = districts.find((district) => district.id === commune.districtId);
+    return match?.name || 'Chưa cập nhật';
+  };
+
+  const getDvhcName = (commune: CommuneItem) => {
+    if (commune.dvhcName) return commune.dvhcName;
+    const match = dvhcs.find((item) => item.code === commune.dvhcCode);
+    return match?.name || 'Chưa cập nhật';
+  };
 
   return (
     <div className="space-y-6">
@@ -178,6 +258,18 @@ export default function CommunePage() {
         </p>
       </div>
 
+      {errorMessage && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+          Đang tải dữ liệu xã/phường...
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
@@ -189,13 +281,13 @@ export default function CommunePage() {
           },
           {
             label: 'Hoạt động',
-            value: communes.filter((c) => c.status === 'active').length,
+            value: communes.filter((c) => c.isActive).length,
             icon: Users,
             color: 'text-status-success',
           },
           {
             label: 'Tổng dân số',
-            value: communes.reduce((sum, c) => sum + c.population, 0).toLocaleString(),
+            value: communes.reduce((sum, c) => sum + (c.population || 0), 0).toLocaleString(),
             icon: AlertTriangle,
             color: 'text-blue-400',
           },
@@ -253,24 +345,30 @@ export default function CommunePage() {
                     {commune.name}
                   </h4>
                   <Badge className="bg-primary/20 text-primary border-primary/30">
-                    {commune.code}
+                    {commune.dvhcCode || 'N/A'}
                   </Badge>
-                  <Badge className="bg-status-success/20 text-status-success border-status-success/30">
-                    Hoạt động
+                  <Badge
+                    className={
+                      commune.isActive
+                        ? 'bg-status-success/20 text-status-success border-status-success/30'
+                        : 'bg-status-warning/20 text-status-warning border-status-warning/30'
+                    }
+                  >
+                    {commune.isActive ? 'Hoạt động' : 'Tạm dừng'}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs uppercase">Huyện/Quận</p>
-                    <p className="text-foreground font-medium">{commune.district}</p>
+                    <p className="text-foreground font-medium">{getDistrictName(commune)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs uppercase">Tỉnh/Thành phố</p>
-                    <p className="text-foreground font-medium">{commune.province}</p>
+                    <p className="text-muted-foreground text-xs uppercase">Đơn vị hành chính</p>
+                    <p className="text-foreground font-medium">{getDvhcName(commune)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs uppercase">Người đứng đầu</p>
-                    <p className="text-foreground font-medium">{commune.mayor}</p>
+                    <p className="text-foreground font-medium">{commune.mayor || 'Chưa cập nhật'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs uppercase">Dân số</p>
@@ -282,20 +380,22 @@ export default function CommunePage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs uppercase">Diện tích</p>
-                    <p className="text-foreground font-medium">{commune.area} km²</p>
+                    <p className="text-foreground font-medium">
+                      {commune.area ? `${commune.area} km²` : 'Chưa cập nhật'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs uppercase">Điện thoại</p>
-                    <p className="text-foreground font-medium">{commune.phone}</p>
+                    <p className="text-foreground font-medium">{commune.phone || 'Chưa cập nhật'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs uppercase">Email</p>
-                    <p className="text-foreground font-medium text-xs">{commune.email}</p>
+                    <p className="text-foreground font-medium text-xs">{commune.email || 'Chưa cập nhật'}</p>
                   </div>
                 </div>
                 <div className="mt-3">
                   <p className="text-muted-foreground text-xs uppercase">Địa chỉ</p>
-                  <p className="text-foreground text-sm">{commune.address}</p>
+                  <p className="text-foreground text-sm">{commune.address || 'Chưa cập nhật'}</p>
                 </div>
               </div>
 
@@ -348,33 +448,45 @@ export default function CommunePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="code">Mã xã phường *</Label>
-              <Input
-                id="code"
-                placeholder="Ví dụ: XA001"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              />
+              <Label htmlFor="code">Mã đơn vị hành chính</Label>
+              <Select
+                value={formData.dvhcCode}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, dvhcCode: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn mã DVHC" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dvhcs.map((item) => (
+                    <SelectItem key={item.code} value={item.code}>
+                      {item.name} ({item.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="district">Huyện/Quận *</Label>
-              <Input
-                id="district"
-                placeholder="Ví dụ: Huyện A"
-                value={formData.district}
-                onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="province">Tỉnh/Thành phố *</Label>
-              <Input
-                id="province"
-                placeholder="Ví dụ: Tỉnh B"
-                value={formData.province}
-                onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-              />
+              <Label htmlFor="district">Huyện/Quận</Label>
+              <Select
+                value={formData.districtId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, districtId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn huyện/quận" />
+                </SelectTrigger>
+                <SelectContent>
+                  {districts.map((district) => (
+                    <SelectItem key={district.id} value={String(district.id)}>
+                      {district.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -440,15 +552,35 @@ export default function CommunePage() {
                 onChange={(e) => setFormData({ ...formData, area: e.target.value })}
               />
             </div>
+
+            <div className="col-span-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
+              <Label htmlFor="status">Trạng thái hoạt động</Label>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="status"
+                  checked={formData.isActive}
+                  onCheckedChange={(value) =>
+                    setFormData({ ...formData, isActive: value })
+                  }
+                />
+                <span className="text-sm text-muted-foreground">
+                  {formData.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                </span>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={handleAddOrEdit}>
+            <Button onClick={handleAddOrEdit} disabled={isSaving}>
               <Plus className="w-4 h-4 mr-2" />
-              {editingCommuneId ? 'Cập nhật' : 'Thêm xã phường'}
+              {isSaving
+                ? 'Đang lưu...'
+                : editingCommuneId
+                  ? 'Cập nhật'
+                  : 'Thêm xã phường'}
             </Button>
           </DialogFooter>
         </DialogContent>
