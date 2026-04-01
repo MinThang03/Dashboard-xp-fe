@@ -640,9 +640,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <div
+        data-role={user.role}
         className={cn(
           'flex flex-col w-full min-w-0 transition-all duration-300',
-          sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'
+          sidebarOpen ? 'lg:pl-64' : 'lg:pl-20',
+          user.role === 'officer' ? 'officer-scope' : ''
         )}
       >
         {/* Top Bar - nền trắng, viền/dải rõ hơn theo palette */}
