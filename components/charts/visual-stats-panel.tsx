@@ -46,7 +46,7 @@ export function VisualStatsPanel({ title, subtitle, items, className }: VisualSt
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="space-y-2 sm:space-y-3">
           <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Tong quan</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Tổng quan</p>
             <p className="text-2xl sm:text-3xl font-bold">{total}</p>
           </div>
 
