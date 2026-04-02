@@ -327,12 +327,12 @@ export default function LangNghePage() {
   };
 
   const chartItems = [
-    { label: 'Tong lang nghe', value: stats.total, color: '#ea580c' },
-    { label: 'Tong ho nghe', value: stats.totalHo, color: '#2563eb' },
-    { label: 'Tong nghe nhan', value: stats.totalNgheNhan, color: '#9333ea' },
-    { label: 'Lao dong', value: stats.totalLabor, color: '#0d9488' },
-    { label: 'Doanh thu nam (ty)', value: Math.round(stats.totalRevenue / 1000000000), color: '#ca8a04' },
-    { label: 'Dang phat trien', value: stats.developing, color: '#16a34a' },
+    { label: 'Tổng làng nghề', value: stats.total, color: '#ea580c' },
+    { label: 'Tổng hộ nghề', value: stats.totalHo, color: '#2563eb' },
+    { label: 'Tổng nghệ nhân', value: stats.totalNgheNhan, color: '#9333ea' },
+    { label: 'Lao động', value: stats.totalLabor, color: '#0d9488' },
+    { label: 'Doanh thu năm (tỷ)', value: Math.round(stats.totalRevenue / 1000000000), color: '#ca8a04' },
+    { label: 'Đang phát triển', value: stats.developing, color: '#16a34a' },
   ];
 
   // Handlers
@@ -522,8 +522,8 @@ export default function LangNghePage() {
       </div>
 
       <FunctionStyledPanel
-        title="Nang luc phat trien lang nghe"
-        subtitle="Ket hop quy mo ho nghe, doi ngu nghe nhan va gia tri kinh te trong nam"
+        title="Năng lực phát triển làng nghề"
+        subtitle="Kết hợp quy mô hộ nghề, đội ngũ nghệ nhân và giá trị kinh tế trong năm"
         items={chartItems}
         variant="culture-craft-village"
       />

@@ -107,11 +107,11 @@ export default function ThongKeMoiTruongPage() {
   };
 
   const chartItems = [
-    { label: 'AQI trung binh', value: mockChiSoKhongKhi[0]?.ThangNay ?? 0, color: '#0ea5e9' },
-    { label: 'Rac thu gom kg/ngay', value: mockThongKeRac.tongKhoiLuong, color: '#f59e0b' },
-    { label: 'Diem thu gom hoat dong', value: mockThongKeRac.diemThuHoatDong, color: '#14b8a6' },
-    { label: 'Bao cao o nhiem', value: mockThongKeONhiem.tongBaoCao, color: '#ef4444' },
-    { label: 'Bao cao da xu ly', value: mockThongKeONhiem.daXuLy, color: '#22c55e' },
+    { label: 'AQI trung bình', value: mockChiSoKhongKhi[0]?.ThangNay ?? 0, color: '#0ea5e9' },
+    { label: 'Rác thu gom kg/ngày', value: mockThongKeRac.tongKhoiLuong, color: '#f59e0b' },
+    { label: 'Điểm thu gom hoạt động', value: mockThongKeRac.diemThuHoatDong, color: '#14b8a6' },
+    { label: 'Báo cáo ô nhiễm', value: mockThongKeONhiem.tongBaoCao, color: '#ef4444' },
+    { label: 'Báo cáo đã xử lý', value: mockThongKeONhiem.daXuLy, color: '#22c55e' },
   ];
 
   return (
@@ -180,8 +180,8 @@ export default function ThongKeMoiTruongPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Tong quan thong ke moi truong"
-        subtitle="Tap trung vao chi so khong khi, thu gom rac va tien do xu ly o nhiem"
+        title="Tổng quan thống kê môi trường"
+        subtitle="Tập trung vào chỉ số không khí, thu gom rác và tiến độ xử lý ô nhiễm"
         items={chartItems}
         variant="env-environment-overview"
       />

@@ -193,9 +193,9 @@ export default function RacThaiPage() {
   };
 
   const chartItems = [
-    { label: 'Tong diem thu gom', value: stats.total, color: '#f59e0b' },
-    { label: 'Khoi luong kg/thang', value: stats.totalKhoiLuong, color: '#d97706' },
-    { label: 'Diem binh thuong', value: stats.normal, color: '#16a34a' },
+    { label: 'Tổng điểm thu gom', value: stats.total, color: '#f59e0b' },
+    { label: 'Khối lượng kg/tháng', value: stats.totalKhoiLuong, color: '#d97706' },
+    { label: 'Điểm bình thường', value: stats.normal, color: '#16a34a' },
   ];
 
   return (
@@ -289,8 +289,8 @@ export default function RacThaiPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Buc tranh thu gom rac thai"
-        subtitle="Tong hop khoi luong thu gom theo tinh trang van hanh tung diem"
+        title="Bức tranh thu gom rác thải"
+        subtitle="Tổng hợp khối lượng thu gom theo tình trạng vận hành từng điểm"
         items={chartItems}
         variant="env-waste-management"
       />

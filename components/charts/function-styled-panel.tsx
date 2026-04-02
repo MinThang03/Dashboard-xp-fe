@@ -367,7 +367,7 @@ export function FunctionStyledPanel({ title, subtitle, items, variant }: Functio
       <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_1.25fr] gap-4">
         <div className="space-y-2">
           <div className="rounded-lg bg-white/90 border px-3 py-2">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Tong hop</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Tổng hợp</p>
             <p className="text-2xl sm:text-3xl font-bold text-slate-900">{total.toLocaleString('vi-VN')}</p>
           </div>
 

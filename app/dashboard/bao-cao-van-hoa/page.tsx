@@ -50,10 +50,10 @@ export default function BaoCaoVanHoaPage() {
   const tongKinhPhi = baoCaoThang.reduce((sum, m) => sum + m.KinhPhi, 0);
 
   const chartItems = [
-    { label: 'Le hoi/su kien', value: tongLeHoi, color: '#4f46e5' },
-    { label: 'Nguoi tham gia', value: tongNguoiThamGia, color: '#9333ea' },
-    { label: 'Luot tham quan di tich', value: tongDiTichThamQuan, color: '#db2777' },
-    { label: 'Kinh phi trieu dong', value: tongKinhPhi, color: '#16a34a' },
+    { label: 'Lễ hội/sự kiện', value: tongLeHoi, color: '#4f46e5' },
+    { label: 'Người tham gia', value: tongNguoiThamGia, color: '#9333ea' },
+    { label: 'Lượt tham quan di tích', value: tongDiTichThamQuan, color: '#db2777' },
+    { label: 'Kinh phí triệu đồng', value: tongKinhPhi, color: '#16a34a' },
   ];
 
   return (
@@ -107,8 +107,8 @@ export default function BaoCaoVanHoaPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Tong hop bao cao van hoa"
-        subtitle="Thong ke nhanh le hoi, luot tham gia, tham quan di tich va nhu cau kinh phi"
+        title="Tổng hợp báo cáo văn hóa"
+        subtitle="Thống kê nhanh lễ hội, lượt tham gia, tham quan di tích và nhu cầu kinh phí"
         items={chartItems}
         variant="culture-cultural-report"
       />

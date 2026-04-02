@@ -371,12 +371,12 @@ export default function KinhDoanhDuLichPage() {
   };
 
   const chartItems = [
-    { label: 'Co so kinh doanh', value: stats.total, color: '#0891b2' },
-    { label: 'Phong luu tru', value: stats.totalRooms, color: '#2563eb' },
-    { label: 'Khach/thang', value: stats.totalGuests, color: '#0d9488' },
-    { label: 'Doanh thu/thang', value: Math.round(stats.totalRevenue / 1000000), color: '#16a34a' },
-    { label: 'Co so hoat dong', value: stats.active, color: '#22c55e' },
-    { label: 'Danh gia x10', value: Math.round(Number(stats.avgRating) * 10), color: '#eab308' },
+    { label: 'Cơ sở kinh doanh', value: stats.total, color: '#0891b2' },
+    { label: 'Phòng lưu trú', value: stats.totalRooms, color: '#2563eb' },
+    { label: 'Khách/tháng', value: stats.totalGuests, color: '#0d9488' },
+    { label: 'Doanh thu/tháng', value: Math.round(stats.totalRevenue / 1000000), color: '#16a34a' },
+    { label: 'Cơ sở hoạt động', value: stats.active, color: '#22c55e' },
+    { label: 'Đánh giá x10', value: Math.round(Number(stats.avgRating) * 10), color: '#eab308' },
   ];
 
   // Handlers
@@ -577,8 +577,8 @@ export default function KinhDoanhDuLichPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Toan canh kinh doanh du lich"
-        subtitle="Tong hop nang luc phuc vu, doanh thu va chat luong van hanh co so du lich"
+        title="Toàn cảnh kinh doanh du lịch"
+        subtitle="Tổng hợp năng lực phục vụ, doanh thu và chất lượng vận hành cơ sở du lịch"
         items={chartItems}
         variant="culture-tourism-business"
       />

@@ -187,11 +187,11 @@ export default function BaoCaoONhiemPage() {
   };
 
   const chartItems = [
-    { label: 'Tong bao cao', value: stats.tongBaoCao, color: '#ef4444' },
-    { label: 'Moi tiep nhan', value: stats.tiepNhan, color: '#3b82f6' },
-    { label: 'Dang xu ly', value: stats.dangXuLy, color: '#f59e0b' },
-    { label: 'Da xu ly', value: stats.daXuLy, color: '#22c55e' },
-    { label: 'Muc do nghiem trong', value: stats.nghiemTrong, color: '#991b1b' },
+    { label: 'Tổng báo cáo', value: stats.tongBaoCao, color: '#ef4444' },
+    { label: 'Mới tiếp nhận', value: stats.tiepNhan, color: '#3b82f6' },
+    { label: 'Đang xử lý', value: stats.dangXuLy, color: '#f59e0b' },
+    { label: 'Đã xử lý', value: stats.daXuLy, color: '#22c55e' },
+    { label: 'Mức độ nghiêm trọng', value: stats.nghiemTrong, color: '#991b1b' },
   ];
 
   const getMucDoBadge = (mucDo: string) => {
@@ -308,8 +308,8 @@ export default function BaoCaoONhiemPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Tien do xu ly bao cao o nhiem"
-        subtitle="Phan tach bao cao theo trang thai tiep nhan va muc do uu tien"
+        title="Tiến độ xử lý báo cáo ô nhiễm"
+        subtitle="Phân tách báo cáo theo trạng thái tiếp nhận và mức độ ưu tiên"
         items={chartItems}
         variant="env-pollution-report"
       />

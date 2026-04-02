@@ -248,12 +248,12 @@ export default function LeHoiPage() {
   const tongKinhPhi = leHoiList.reduce((sum, lh) => sum + lh.KinhPhi, 0);
 
   const chartItems = [
-    { label: 'Tong le hoi', value: tongLeHoi, color: '#db2777' },
-    { label: 'Sap dien ra', value: sapDienRa, color: '#9333ea' },
-    { label: 'Tong nguoi tham gia', value: tongNguoiThamGia, color: '#2563eb' },
-    { label: 'Tong kinh phi trieu', value: Math.round(tongKinhPhi / 1000000), color: '#16a34a' },
+    { label: 'Tổng lễ hội', value: tongLeHoi, color: '#db2777' },
+    { label: 'Sắp diễn ra', value: sapDienRa, color: '#9333ea' },
+    { label: 'Tổng người tham gia', value: tongNguoiThamGia, color: '#2563eb' },
+    { label: 'Tổng kinh phí triệu', value: Math.round(tongKinhPhi / 1000000), color: '#16a34a' },
     {
-      label: 'Du kien tham gia',
+      label: 'Dự kiến tham gia',
       value: leHoiList.reduce((sum, lh) => sum + lh.DuKien, 0),
       color: '#f59e0b',
     },
@@ -367,8 +367,8 @@ export default function LeHoiPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Nhip do le hoi - su kien"
-        subtitle="So sanh quy mo to chuc, luot tham gia va phan bo kinh phi tren toan xa"
+        title="Nhịp độ lễ hội - sự kiện"
+        subtitle="So sánh quy mô tổ chức, lượt tham gia và phân bổ kinh phí trên toàn xã"
         items={chartItems}
         variant="culture-festival"
       />

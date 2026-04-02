@@ -245,11 +245,11 @@ export default function DiTichPage() {
   const tongKhach = diTichList.reduce((sum, dt) => sum + dt.LuotKhachThang, 0);
 
   const chartItems = [
-    { label: 'Tong di tich', value: tongDiTich, color: '#d97706' },
-    { label: 'Cap quoc gia', value: capQuocGia, color: '#dc2626' },
-    { label: 'Cap tinh', value: capTinh, color: '#2563eb' },
-    { label: 'Can tu bo', value: xuongCap, color: '#f97316' },
-    { label: 'Luot khach/thang', value: tongKhach, color: '#16a34a' },
+    { label: 'Tổng di tích', value: tongDiTich, color: '#d97706' },
+    { label: 'Cấp quốc gia', value: capQuocGia, color: '#dc2626' },
+    { label: 'Cấp tỉnh', value: capTinh, color: '#2563eb' },
+    { label: 'Cần tu bổ', value: xuongCap, color: '#f97316' },
+    { label: 'Lượt khách/tháng', value: tongKhach, color: '#16a34a' },
   ];
 
   // Lọc
@@ -361,8 +361,8 @@ export default function DiTichPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Thong ke di tich theo cap xep hang"
-        subtitle="Theo doi nhanh nhom di tich quan trong, tinh trang bao ton va luot tham quan"
+        title="Thống kê di tích theo cấp xếp hạng"
+        subtitle="Theo dõi nhanh nhóm di tích quan trọng, tình trạng bảo tồn và lượt tham quan"
         items={chartItems}
         variant="culture-heritage"
       />

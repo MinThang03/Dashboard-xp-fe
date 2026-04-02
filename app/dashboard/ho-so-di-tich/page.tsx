@@ -222,11 +222,11 @@ export default function HoSoDiTichPage() {
   const canBoSung = hoSoList.filter(hs => hs.TrangThai === 'Cần bổ sung').length;
 
   const chartItems = [
-    { label: 'Tong ho so', value: tongHoSo, color: '#d97706' },
-    { label: 'Da nop', value: daNop, color: '#2563eb' },
-    { label: 'Dang xu ly', value: dangXuLy, color: '#eab308' },
-    { label: 'Hoan thanh', value: hoanThanh, color: '#16a34a' },
-    { label: 'Can bo sung', value: canBoSung, color: '#dc2626' },
+    { label: 'Tổng hồ sơ', value: tongHoSo, color: '#d97706' },
+    { label: 'Đã nộp', value: daNop, color: '#2563eb' },
+    { label: 'Đang xử lý', value: dangXuLy, color: '#eab308' },
+    { label: 'Hoàn thành', value: hoanThanh, color: '#16a34a' },
+    { label: 'Cần bổ sung', value: canBoSung, color: '#dc2626' },
   ];
 
   // Lọc
@@ -332,8 +332,8 @@ export default function HoSoDiTichPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Tien do xu ly ho so di tich"
-        subtitle="Do luong trang thai tham dinh va cac ho so can bo sung trong ky"
+        title="Tiến độ xử lý hồ sơ di tích"
+        subtitle="Đo lường trạng thái thẩm định và các hồ sơ cần bổ sung trong kỳ"
         items={chartItems}
         variant="culture-heritage-dossier"
       />

@@ -252,8 +252,8 @@ export default function ChatLuongMoiTruongPage() {
       </div>
 
       <FunctionStyledPanel
-        title="Toan canh van hanh tram quan trac"
-        subtitle="Theo doi nhanh so luong tram hoat dong va cac diem can bao tri"
+        title="Toàn cảnh vận hành trạm quan trắc"
+        subtitle="Theo dõi nhanh số lượng trạm hoạt động và các điểm cần bảo trì"
         items={chartItems}
         variant="env-air-quality"
       />
