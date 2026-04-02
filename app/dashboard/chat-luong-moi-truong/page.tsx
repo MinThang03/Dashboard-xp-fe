@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Activity, AlertTriangle, CheckCircle2, Eye, Edit, MapPin, Plus, Search, Trash2 } from 'lucide-react';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { tramQuanTracMTApi } from '@/lib/api';
 
 interface TramQuanTracRecord {
@@ -166,6 +167,12 @@ export default function ChatLuongMoiTruongPage() {
     warning: records.filter((x) => x.TrangThai === 'Bảo trì' || x.TrangThai === 'Tạm dừng').length,
   };
 
+  const chartItems = [
+    { label: 'Tổng trạm', value: stats.total, color: '#0284c7' },
+    { label: 'Đang hoạt động', value: stats.active, color: '#16a34a' },
+    { label: 'Cần kiểm tra', value: stats.warning, color: '#f59e0b' },
+  ];
+
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       <div className="bg-gradient-to-r from-status-success via-secondary to-status-success rounded-lg p-4 sm:p-5 xl:p-6 text-white">
@@ -244,20 +251,12 @@ export default function ChatLuongMoiTruongPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Tổng trạm</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Hoạt động</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-status-success">{stats.active}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cần kiểm tra</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-status-warning">{stats.warning}</div></CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Toan canh van hanh tram quan trac"
+        subtitle="Theo doi nhanh so luong tram hoat dong va cac diem can bao tri"
+        items={chartItems}
+        variant="env-air-quality"
+      />
 
       <Card>
         <CardContent className="pt-6">

@@ -16,6 +16,7 @@ import {
   MapPin, Brain, ShieldAlert, Lightbulb, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { ruiRoQuyHoachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data phân tích rủi ro quy hoạch
 interface RuiRoQuyHoach {
@@ -455,80 +456,19 @@ export default function RuiRoQuyHoachPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng phân tích</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Rủi ro cao</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.ruiRoCao}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Rủi ro TB</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.ruiRoTB}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cần xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-orange-500" />
-              <span className="text-2xl font-bold">{stats.canXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Độ tin cậy AI</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.doTinCayTB}%</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Phân bổ rủi ro quy hoạch bằng AI"
+        subtitle="Biểu đồ vòng tròn thể hiện mức rủi ro, ưu tiên xử lý và độ tin cậy kết quả phân tích"
+        variant="land-risk-ai"
+        items={[
+          { label: 'Tổng phân tích', value: stats.total, color: '#8b5cf6' },
+          { label: 'Rủi ro cao', value: stats.ruiRoCao, color: '#ef4444' },
+          { label: 'Rủi ro TB', value: stats.ruiRoTB, color: '#f59e0b' },
+          { label: 'Cần xử lý', value: stats.canXuLy, color: '#f97316' },
+          { label: 'Đã xử lý', value: stats.daXuLy, color: '#22c55e' },
+          { label: 'Độ tin cậy AI (%)', value: stats.doTinCayTB, color: '#3b82f6' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

@@ -15,6 +15,7 @@ import {
   Calendar, Building2, Target, Info
 } from 'lucide-react';
 import { anNinhTratTuApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data tổng hợp ANTT
 const mockThongKeThang = [
@@ -167,91 +168,19 @@ export default function AnNinhTratTuPage() {
       </div>
 
       {/* Thống kê tổng quan */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng sự kiện</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{tongSuKien}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">6 tháng gần nhất</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{tongXuLyXong}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{tyLeXuLy}% tỷ lệ</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{tongDangXuLy}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Cần theo dõi</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Điểm nóng</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{tongDiemNong}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Đang giám sát</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đối tượng</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{tongDoiTuong}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Đang theo dõi</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`border-l-4 ${parseFloat(soSanh) < 0 ? 'border-l-green-500' : 'border-l-red-500'}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">So với tháng trước</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {parseFloat(soSanh) < 0 ? (
-                <TrendingDown className="h-5 w-5 text-green-500" />
-              ) : (
-                <TrendingUp className="h-5 w-5 text-red-500" />
-              )}
-              <span className={`text-2xl font-bold ${parseFloat(soSanh) < 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {soSanh}%
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{parseFloat(soSanh) < 0 ? 'Giảm' : 'Tăng'} sự kiện</p>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Mạch vận hành an ninh trật tự"
+        subtitle="Đường xu hướng nhấn vào nhịp xử lý sự kiện và mức biến động rủi ro"
+        variant="sec-order"
+        items={[
+          { label: 'Tổng sự kiện', value: tongSuKien, color: '#3b82f6' },
+          { label: 'Đã xử lý', value: tongXuLyXong, color: '#22c55e' },
+          { label: 'Đang xử lý', value: tongDangXuLy, color: '#f59e0b' },
+          { label: 'Điểm nóng', value: tongDiemNong, color: '#ef4444' },
+          { label: 'Đối tượng', value: tongDoiTuong, color: '#a855f7' },
+          { label: 'Biến động %', value: Math.abs(Number.parseFloat(soSanh) || 0), color: Number.parseFloat(soSanh) < 0 ? '#16a34a' : '#dc2626' },
+        ]}
+      />
 
       {/* Tabs nội dung chi tiết */}
       <Tabs defaultValue="tong-hop" className="space-y-4">

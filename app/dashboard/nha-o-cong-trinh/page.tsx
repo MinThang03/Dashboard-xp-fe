@@ -15,6 +15,7 @@ import {
   Building2, MapPin, Ruler, Calendar, Clock, Warehouse, Trash2
 } from 'lucide-react';
 import { nhaOCongTrinhApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data nhà ở, công trình
 interface NhaOCongTrinh {
@@ -494,80 +495,19 @@ export default function NhaOCongTrinhPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-indigo-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng công trình</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-indigo-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Nhà ở</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Home className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.nhaO}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Công trình CC</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Warehouse className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.congTrinh}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">KT đạt chuẩn</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.dat}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cần kiểm tra</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.khongDat}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng DT (m²)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Ruler className="h-5 w-5 text-teal-500" />
-              <span className="text-2xl font-bold">{stats.tongDienTich.toLocaleString()}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Cấu trúc nhà ở và công trình"
+        subtitle="Biểu đồ kết hợp cột - đường để theo dõi loại công trình, chất lượng và tổng diện tích"
+        variant="infra-housing"
+        items={[
+          { label: 'Tổng công trình', value: stats.total, color: '#4f46e5' },
+          { label: 'Nhà ở', value: stats.nhaO, color: '#3b82f6' },
+          { label: 'Công trình CC', value: stats.congTrinh, color: '#8b5cf6' },
+          { label: 'KT đạt chuẩn', value: stats.dat, color: '#22c55e' },
+          { label: 'Cần kiểm tra', value: stats.khongDat, color: '#ef4444' },
+          { label: 'Tổng DT (m²)', value: stats.tongDienTich, color: '#0ea5e9' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

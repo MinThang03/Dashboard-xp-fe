@@ -29,6 +29,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { bienDongDatApi, thuaDatApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 interface BaoCaoDatDaiItem {
   MaBaoCao: string;
@@ -323,45 +324,17 @@ export default function BaoCaoDatDaiPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-lime-100 rounded-xl">
-              <LandPlot className="w-6 h-6 text-lime-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{thongKeDatDai.TongDienTich.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">Tổng diện tích (ha)</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <FileCheck className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-green-600">{thongKeDatDai.DaCapGCN.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">Đã cấp GCN</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-amber-600">{thongKeDatDai.ChuaCapGCN.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">Chưa cấp GCN</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Layers className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-blue-600">{thongKeDatDai.SoThua.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">Tổng số thửa</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Toàn cảnh báo cáo đất đai"
+        subtitle="Biểu đồ tròn tổng hợp diện tích, số thửa và mức độ cấp GCN trên toàn địa bàn"
+        variant="land-reporting"
+        items={[
+          { label: 'Tổng diện tích', value: thongKeDatDai.TongDienTich, color: '#65a30d' },
+          { label: 'Đã cấp GCN', value: thongKeDatDai.DaCapGCN, color: '#22c55e' },
+          { label: 'Chưa cấp GCN', value: thongKeDatDai.ChuaCapGCN, color: '#f59e0b' },
+          { label: 'Tổng số thửa', value: thongKeDatDai.SoThua, color: '#3b82f6' },
+        ]}
+      />
 
       <Tabs defaultValue="bao-cao" className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
         <TabsList className="bg-muted/50">

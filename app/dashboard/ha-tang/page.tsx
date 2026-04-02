@@ -47,6 +47,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { haTangDoThiApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 interface HaTang {
   MaHaTang: string;
@@ -284,63 +285,18 @@ export default function HaTangPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng hạng mục</CardTitle>
-            <Construction className="h-4 w-4 text-slate-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-600">{tongHangMuc}</div>
-            <p className="text-xs text-muted-foreground">Đang quản lý</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tốt</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{tot}</div>
-            <p className="text-xs text-muted-foreground">Hoạt động tốt</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Trung bình</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{trungBinh}</div>
-            <p className="text-xs text-muted-foreground">Cần theo dõi</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Xuống cấp</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{xuongCap}</div>
-            <p className="text-xs text-muted-foreground">Cần sửa chữa</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nguy hiểm</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{nguyHiem}</div>
-            <p className="text-xs text-muted-foreground">Ưu tiên xử lý</p>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Phân bố chất lượng hạ tầng"
+        subtitle="Biểu đồ donut thể hiện tỷ trọng hiện trạng toàn bộ hạng mục đang quản lý"
+        variant="infra-infra"
+        items={[
+          { label: 'Tổng hạng mục', value: tongHangMuc, color: '#475569' },
+          { label: 'Tốt', value: tot, color: '#22c55e' },
+          { label: 'Trung bình', value: trungBinh, color: '#eab308' },
+          { label: 'Xuống cấp', value: xuongCap, color: '#f97316' },
+          { label: 'Nguy hiểm', value: nguyHiem, color: '#ef4444' },
+        ]}
+      />
 
       {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">

@@ -37,6 +37,7 @@ import { nguoiCoCongApi } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { Edit, Trash2, X } from 'lucide-react';
 
 export default function NguoiCoCongPage() {
@@ -224,45 +225,17 @@ export default function NguoiCoCongPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-yellow-100 rounded-xl">
-              <Award className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.tongNCC}</p>
-          <p className="text-sm text-muted-foreground">Người có công</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-100 rounded-xl">
-              <Heart className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.thuongBinh}</p>
-          <p className="text-sm text-muted-foreground">Thương binh</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.giaDinhLietSi}</p>
-          <p className="text-sm text-muted-foreground">Gia đình LS/VNAH</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Coins className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.dangHuong}</p>
-          <p className="text-sm text-muted-foreground">Chế độ đang hưởng</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Cơ cấu chính sách người có công"
+        subtitle="Biểu đồ donut tập trung vào phân nhóm đối tượng ưu đãi và số hồ sơ đang hưởng chế độ"
+        variant="social-meritorious"
+        items={[
+          { label: 'Người có công', value: stats.tongNCC, color: '#eab308' },
+          { label: 'Thương binh', value: stats.thuongBinh, color: '#ef4444' },
+          { label: 'Gia đình LS/VNAH', value: stats.giaDinhLietSi, color: '#3b82f6' },
+          { label: 'Chế độ đang hưởng', value: stats.dangHuong, color: '#22c55e' },
+        ]}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="danh-sach" className="space-y-4">

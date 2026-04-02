@@ -15,6 +15,7 @@ import {
   Trash2, CheckCircle2, Scale, Users, FileText, Calendar, Gavel, MessageSquare
 } from 'lucide-react';
 import { bienDongDatApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data tranh chấp đất đai
 interface TranhChapDat {
@@ -529,80 +530,19 @@ export default function TranhChapPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng vụ việc</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Scale className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chờ xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.choXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang giải quyết</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.dangGiaiQuyet}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã giải quyết</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daGiaiQuyet}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Phức tạp</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              <span className="text-2xl font-bold">{stats.phucTap}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng DT (m²)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-teal-500" />
-              <span className="text-2xl font-bold">{stats.tongDienTich.toLocaleString()}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Cường độ tranh chấp đất đai"
+        subtitle="Biểu đồ diện tích cho thấy áp lực xử lý hồ sơ tranh chấp theo mức độ và quy mô diện tích"
+        variant="land-dispute"
+        items={[
+          { label: 'Tổng vụ việc', value: stats.total, color: '#ef4444' },
+          { label: 'Chờ xử lý', value: stats.choXuLy, color: '#f59e0b' },
+          { label: 'Đang giải quyết', value: stats.dangGiaiQuyet, color: '#3b82f6' },
+          { label: 'Đã giải quyết', value: stats.daGiaiQuyet, color: '#22c55e' },
+          { label: 'Phức tạp', value: stats.phucTap, color: '#f97316' },
+          { label: 'Tổng DT (m²)', value: stats.tongDienTich, color: '#14b8a6' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

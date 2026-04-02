@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
 import { hoTichApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 import {
   FileText,
   Search,
@@ -253,24 +254,16 @@ export default function HoTichPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <p className="text-3xl font-bold">{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Tổng hồ sơ</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <p className="text-3xl font-bold">{stats.active}</p>
-          <p className="text-sm text-muted-foreground">Đang hoạt động</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <p className="text-3xl font-bold">{stats.khaiSinh}</p>
-          <p className="text-sm text-muted-foreground">Khai sinh</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <p className="text-3xl font-bold">{stats.ketHon}</p>
-          <p className="text-sm text-muted-foreground">Kết hôn</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ theo dõi hồ sơ hộ tịch"
+        subtitle="Phân bổ hồ sơ theo trạng thái và nhóm thủ tục"
+        items={[
+          { label: 'Tổng hồ sơ', value: stats.total, color: '#3b82f6' },
+          { label: 'Đang hoạt động', value: stats.active, color: '#22c55e' },
+          { label: 'Khai sinh', value: stats.khaiSinh, color: '#8b5cf6' },
+          { label: 'Kết hôn', value: stats.ketHon, color: '#f59e0b' },
+        ]}
+      />
 
       <Card className="p-4 border-0 shadow-lg">
         <div className="flex gap-4">

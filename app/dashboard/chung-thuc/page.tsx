@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/mock-data';
 import { chungThucApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Interface cho Hồ sơ nghiệp vụ (Chứng thực)
 interface HoSoNghiepVu {
@@ -315,47 +316,16 @@ export default function ChungThucPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-primary/10 rounded-xl">
-              <FileCheck className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.total}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Tổng hồ sơ</p>
-        </Card>
-
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-warning/10 rounded-xl">
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-status-warning" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.pending}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Chờ xử lý</p>
-        </Card>
-
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-primary/10 rounded-xl">
-              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.processing}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Đang xử lý</p>
-        </Card>
-
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-success/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-status-success" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.completed}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Hoàn thành</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ tiến độ hồ sơ chứng thực"
+        subtitle="Theo dõi tổng quan hồ sơ chờ duyệt, đang xử lý và hoàn thành"
+        items={[
+          { label: 'Tổng hồ sơ', value: stats.total, color: '#2563eb' },
+          { label: 'Chờ xử lý', value: stats.pending, color: '#f59e0b' },
+          { label: 'Đang xử lý', value: stats.processing, color: '#06b6d4' },
+          { label: 'Hoàn thành', value: stats.completed, color: '#22c55e' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

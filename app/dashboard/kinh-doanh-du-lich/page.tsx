@@ -45,6 +45,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { coSoKinhDoanhDuLichApi } from '@/lib/api';
 
 // Mock data cho kinh doanh du lịch
@@ -369,6 +370,15 @@ export default function KinhDoanhDuLichPage() {
       : '0.0',
   };
 
+  const chartItems = [
+    { label: 'Co so kinh doanh', value: stats.total, color: '#0891b2' },
+    { label: 'Phong luu tru', value: stats.totalRooms, color: '#2563eb' },
+    { label: 'Khach/thang', value: stats.totalGuests, color: '#0d9488' },
+    { label: 'Doanh thu/thang', value: Math.round(stats.totalRevenue / 1000000), color: '#16a34a' },
+    { label: 'Co so hoat dong', value: stats.active, color: '#22c55e' },
+    { label: 'Danh gia x10', value: Math.round(Number(stats.avgRating) * 10), color: '#eab308' },
+  ];
+
   // Handlers
   const handleView = (record: DuLich) => {
     setSelectedRecord(record);
@@ -566,80 +576,12 @@ export default function KinhDoanhDuLichPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-cyan-500/10 rounded-xl">
-              <Palmtree className="w-5 h-5 text-cyan-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Cơ sở KD</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <Hotel className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.totalRooms}</p>
-              <p className="text-xs text-muted-foreground">Phòng lưu trú</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-teal-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-teal-600">{stats.totalGuests.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Khách/tháng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <DollarSign className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-green-600">{(stats.totalRevenue / 1000000).toFixed(0)}M</p>
-              <p className="text-xs text-muted-foreground">DT/tháng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-emerald-600">{stats.active}</p>
-              <p className="text-xs text-muted-foreground">Đang hoạt động</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <Star className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.avgRating}</p>
-              <p className="text-xs text-muted-foreground">Đánh giá TB</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Toan canh kinh doanh du lich"
+        subtitle="Tong hop nang luc phuc vu, doanh thu va chat luong van hanh co so du lich"
+        items={chartItems}
+        variant="culture-tourism-business"
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

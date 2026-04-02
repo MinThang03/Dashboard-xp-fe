@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
 import { hoTroDoanhNghiepApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho hỗ trợ doanh nghiệp
 const mockHoTroDN = [
@@ -412,79 +413,19 @@ export default function HoTroDoanhNghiepPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <FileText className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Tổng yêu cầu</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-              <p className="text-xs text-muted-foreground">Hoàn thành</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-cyan-500/10 rounded-xl">
-              <Clock className="w-5 h-5 text-cyan-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-cyan-600">{stats.processing}</p>
-              <p className="text-xs text-muted-foreground">Đang xử lý</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <HelpCircle className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-              <p className="text-xs text-muted-foreground">Chờ xử lý</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-xl">
-              <DollarSign className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-amber-600">{(stats.totalValue / 1000000).toFixed(0)}M</p>
-              <p className="text-xs text-muted-foreground">Giá trị hỗ trợ</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-emerald-600">{stats.successRate}%</p>
-              <p className="text-xs text-muted-foreground">Tỷ lệ thành công</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Hiệu quả hỗ trợ doanh nghiệp"
+        subtitle="Composed chart nhấn mạnh chất lượng xử lý và giá trị hỗ trợ đã giải ngân"
+        variant="eco-sme"
+        items={[
+          { label: 'Tổng yêu cầu', value: stats.total, color: '#3b82f6' },
+          { label: 'Hoàn thành', value: stats.completed, color: '#22c55e' },
+          { label: 'Đang xử lý', value: stats.processing, color: '#06b6d4' },
+          { label: 'Chờ xử lý', value: stats.pending, color: '#f59e0b' },
+          { label: 'Giá trị hỗ trợ triệu', value: Number((stats.totalValue / 1000000).toFixed(0)), color: '#d97706' },
+          { label: 'Tỷ lệ thành công', value: stats.successRate, color: '#10b981' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

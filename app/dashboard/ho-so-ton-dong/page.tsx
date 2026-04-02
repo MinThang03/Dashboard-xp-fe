@@ -41,6 +41,7 @@ import {
   type SharedAlertSignal,
   filterSignalsByCommonFilters,
 } from '@/lib/frontend-dss';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 interface HoSoTonDongItem {
   MaHoSo: string;
@@ -400,45 +401,18 @@ export default function HoSoTonDongPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-100 rounded-xl">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{backlogSnapshot.tongHoSoTonDong}</p>
-          <p className="text-sm text-muted-foreground">Hồ sơ tồn đọng</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-100 rounded-xl">
-              <XCircle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-red-600">{backlogSnapshot.quaHan}</p>
-          <p className="text-sm text-muted-foreground">Quá hạn xử lý</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-amber-600">{backlogSnapshot.trongHan}</p>
-          <p className="text-sm text-muted-foreground">Trong hạn xử lý</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <TrendingDown className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-green-600">{backlogSnapshot.trendDelta}%</p>
-          <p className="text-sm text-muted-foreground">Giảm so tháng trước</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Áp lực hồ sơ tồn đọng địa chính"
+        subtitle="Biểu đồ kết hợp biểu diễn tổng tồn đọng, quá hạn và xu hướng biến động theo chu kỳ"
+        variant="land-backlog"
+        items={[
+          { label: 'Hồ sơ tồn đọng', value: backlogSnapshot.tongHoSoTonDong, color: '#ef4444' },
+          { label: 'Quá hạn xử lý', value: backlogSnapshot.quaHan, color: '#dc2626' },
+          { label: 'Trong hạn xử lý', value: backlogSnapshot.trongHan, color: '#f59e0b' },
+          { label: 'Xu hướng giảm (%)', value: backlogSnapshot.trendDelta, color: '#22c55e' },
+          { label: 'Độ tin cậy dự báo', value: backlogSnapshot.doTinCayDuBao, color: '#3b82f6' },
+        ]}
+      />
 
       <Card className="p-4 border-0 shadow-lg">
         <div className="flex flex-col md:flex-row gap-3">

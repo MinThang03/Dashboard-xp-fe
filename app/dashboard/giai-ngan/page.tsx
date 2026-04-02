@@ -16,6 +16,7 @@ import {
   DollarSign, Calendar, Building2, Target, AlertTriangle, Percent
 } from 'lucide-react';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data giải ngân
 interface GiaiNgan {
@@ -408,80 +409,19 @@ export default function GiaiNganPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng kế hoạch</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-500" />
-              <span className="text-xl font-bold">{formatShortCurrency(stats.tongKeHoach)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã giải ngân</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
-              <span className="text-xl font-bold">{formatShortCurrency(stats.tongGiaiNgan)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tỷ lệ giải ngân</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Percent className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.tyLeGiaiNgan}%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-cyan-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Số dự án</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-cyan-500" />
-              <span className="text-2xl font-bold">{stats.soDuAn}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-indigo-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang thực hiện</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-indigo-500" />
-              <span className="text-2xl font-bold">{stats.dangThucHien}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chậm tiến độ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.chamTienDo}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tiến độ giải ngân theo dự án"
+        subtitle="Biểu đồ tròn tổng hợp quy mô kế hoạch, thực chi và nhóm dự án chậm tiến độ"
+        variant="finance-disbursement"
+        items={[
+          { label: 'Tổng kế hoạch', value: stats.tongKeHoach, color: '#3b82f6' },
+          { label: 'Đã giải ngân', value: stats.tongGiaiNgan, color: '#22c55e' },
+          { label: 'Tỷ lệ giải ngân (%)', value: stats.tyLeGiaiNgan, color: '#8b5cf6' },
+          { label: 'Số dự án', value: stats.soDuAn, color: '#06b6d4' },
+          { label: 'Đang thực hiện', value: stats.dangThucHien, color: '#6366f1' },
+          { label: 'Chậm tiến độ', value: stats.chamTienDo, color: '#ef4444' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

@@ -36,6 +36,7 @@ import { hoNgheoApi } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { Edit, Trash2, X } from 'lucide-react';
 
 export default function HoNgheoPage() {
@@ -228,45 +229,17 @@ export default function HoNgheoPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-100 rounded-xl">
-              <Users className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.hoNgheo}</p>
-          <p className="text-sm text-muted-foreground">Hộ nghèo</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Users className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.hoCanNgheo}</p>
-          <p className="text-sm text-muted-foreground">Hộ cận nghèo</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Award className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.daThoatNgheo}</p>
-          <p className="text-sm text-muted-foreground">Đã thoát nghèo</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.dangHuong}</p>
-          <p className="text-sm text-muted-foreground">Đang hưởng chính sách</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Bức tranh giảm nghèo theo nhóm hộ"
+        subtitle="Radar thể hiện tương quan giữa hộ nghèo, cận nghèo, thoát nghèo và nhóm đang hưởng chính sách"
+        variant="social-poverty"
+        items={[
+          { label: 'Hộ nghèo', value: stats.hoNgheo, color: '#ef4444' },
+          { label: 'Hộ cận nghèo', value: stats.hoCanNgheo, color: '#f59e0b' },
+          { label: 'Đã thoát nghèo', value: stats.daThoatNgheo, color: '#22c55e' },
+          { label: 'Đang hưởng chính sách', value: stats.dangHuong, color: '#3b82f6' },
+        ]}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="danh-sach" className="space-y-4">

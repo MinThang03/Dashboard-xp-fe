@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/mock-data';
 import { tiemChungApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Extended mock data
 const mockTiemChungFull = [
@@ -438,57 +439,17 @@ export default function TiemChungPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <Syringe className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Tổng số lượt tiêm</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-emerald-500/10 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.completed}</p>
-          <p className="text-sm text-muted-foreground">Đã tiêm</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-yellow-500/10 rounded-xl">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.waiting}</p>
-          <p className="text-sm text-muted-foreground">Chờ tiêm</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-xl">
-              <Baby className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.children}</p>
-          <p className="text-sm text-muted-foreground">Trẻ em</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-teal-500/10 rounded-xl">
-              <Activity className="w-6 h-6 text-teal-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.rate}%</p>
-          <p className="text-sm text-muted-foreground">Tỷ lệ tiêm</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ tiến độ tiêm chủng"
+        subtitle="Theo dõi khối lượng tiêm, đối tượng ưu tiên và tỷ lệ bao phủ"
+        items={[
+          { label: 'Tổng số lượt tiêm', value: stats.total, color: '#16a34a' },
+          { label: 'Đã tiêm', value: stats.completed, color: '#10b981' },
+          { label: 'Chờ tiêm', value: stats.waiting, color: '#f59e0b' },
+          { label: 'Trẻ em', value: stats.children, color: '#3b82f6' },
+          { label: 'Tỷ lệ tiêm (%)', value: stats.rate, color: '#14b8a6' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

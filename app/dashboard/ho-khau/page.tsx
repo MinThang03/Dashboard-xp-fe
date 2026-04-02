@@ -30,6 +30,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { hoKhauApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 interface HoKhau {
   id: string;
@@ -353,47 +354,16 @@ export default function HoKhauPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-indigo-500/10 rounded-xl">
-              <Users className="w-6 h-6 text-indigo-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Tổng hộ khẩu</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <Home className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.thuongTru}</p>
-          <p className="text-sm text-muted-foreground">Thường trú</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-xl">
-              <MapPin className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.tamTru}</p>
-          <p className="text-sm text-muted-foreground">Tạm trú</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-500/10 rounded-xl">
-              <Calendar className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.tamVang}</p>
-          <p className="text-sm text-muted-foreground">Tạm vắng</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ phân loại hộ khẩu"
+        subtitle="Theo dõi nhanh thường trú, tạm trú và tạm vắng"
+        items={[
+          { label: 'Tổng hộ khẩu', value: stats.total, color: '#4f46e5' },
+          { label: 'Thường trú', value: stats.thuongTru, color: '#22c55e' },
+          { label: 'Tạm trú', value: stats.tamTru, color: '#3b82f6' },
+          { label: 'Tạm vắng', value: stats.tamVang, color: '#f59e0b' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

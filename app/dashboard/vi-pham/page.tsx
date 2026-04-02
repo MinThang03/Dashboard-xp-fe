@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
 import { viPhamApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho vi phạm
 const mockViPham = [
@@ -437,79 +438,19 @@ export default function ViPhamPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 rounded-xl">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Tổng vụ việc</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.processing}</p>
-              <p className="text-xs text-muted-foreground">Đang xử lý</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
-              <p className="text-xs text-muted-foreground">Đã xử lý</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <Eye className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
-              <p className="text-xs text-muted-foreground">Chờ xác minh</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-xl">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-emerald-600">{formatCurrency(stats.totalFine)}</p>
-              <p className="text-xs text-muted-foreground">Tổng tiền phạt</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-rose-500/10 rounded-xl">
-              <RefreshCcw className="w-5 h-5 text-rose-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-rose-600">{stats.reoffend}</p>
-              <p className="text-xs text-muted-foreground">Tái phạm</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Phổ vi phạm theo mức độ xử lý"
+        subtitle="Biểu đồ phân tán cho thấy mật độ vụ việc và điểm nghẽn xử lý"
+        variant="sec-violation"
+        items={[
+          { label: 'Tổng vụ việc', value: stats.total, color: '#ef4444' },
+          { label: 'Đang xử lý', value: stats.processing, color: '#f59e0b' },
+          { label: 'Đã xử lý', value: stats.resolved, color: '#22c55e' },
+          { label: 'Chờ xác minh', value: stats.pending, color: '#3b82f6' },
+          { label: 'Tiền phạt triệu', value: Number((stats.totalFine / 1000000).toFixed(0)), color: '#10b981' },
+          { label: 'Tái phạm', value: stats.reoffend, color: '#e11d48' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

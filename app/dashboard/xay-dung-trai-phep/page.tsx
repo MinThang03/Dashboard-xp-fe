@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { xayDungTraiPhepApi } from "@/lib/api";
+import { FunctionStyledPanel } from "@/components/charts/function-styled-panel";
 
 interface XayDungTraiPhep {
   MaViPham?: number | string;
@@ -519,79 +520,19 @@ export default function XayDungTraiPhepPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-status-danger">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng vụ việc</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileX className="h-5 w-5 text-status-danger" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-status-warning">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Mới phát hiện</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-status-warning" />
-              <span className="text-2xl font-bold">{stats.moiPhatHien}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-primary">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              <span className="text-2xl font-bold">{stats.dangXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-status-success">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-status-success" />
-              <span className="text-2xl font-bold">{stats.daXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-secondary">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cưỡng chế</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Gavel className="h-5 w-5 text-secondary" />
-              <span className="text-2xl font-bold">{stats.cuongChe}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng tiền phạt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-teal-500" />
-              <span className="text-lg font-bold">{(stats.tongTienPhat / 1000000).toFixed(0)}tr</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Cường độ xử lý công trình trái phép"
+        subtitle="Biểu đồ diện tích nhấn mạnh mức vi phạm mới, tiến độ xử lý và mức phạt"
+        variant="infra-illegal"
+        items={[
+          { label: "Tổng vụ việc", value: stats.total, color: "#ef4444" },
+          { label: "Mới phát hiện", value: stats.moiPhatHien, color: "#f59e0b" },
+          { label: "Đang xử lý", value: stats.dangXuLy, color: "#3b82f6" },
+          { label: "Đã xử lý", value: stats.daXuLy, color: "#22c55e" },
+          { label: "Cưỡng chế", value: stats.cuongChe, color: "#8b5cf6" },
+          { label: "Tiền phạt (triệu)", value: Math.round(stats.tongTienPhat / 1000000), color: "#0ea5e9" },
+        ]}
+      />
 
       <Card>
         <CardContent className="pt-6">

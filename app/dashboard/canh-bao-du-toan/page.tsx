@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, AlertCircle, XCircle, Bell, CheckCircle2, Download, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 type WarningItem = {
   id: number;
@@ -162,12 +163,18 @@ export default function CanhBaoDuToanPage() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard title="Nghiêm trọng" value={stats.nghiemTrong} className="text-red-600" icon={<XCircle className="h-5 w-5 text-red-600" />} />
-        <StatCard title="Trung bình" value={stats.trungBinh} className="text-amber-600" icon={<AlertCircle className="h-5 w-5 text-amber-500" />} />
-        <StatCard title="Theo dõi" value={stats.theoDoi} className="text-blue-600" icon={<Bell className="h-5 w-5 text-blue-500" />} />
-        <StatCard title="An toàn" value={stats.anToan} className="text-green-600" icon={<CheckCircle2 className="h-5 w-5 text-green-500" />} />
-      </div>
+      <FunctionStyledPanel
+        title="Mức cảnh báo vượt dự toán"
+        subtitle="Biểu đồ đường cho thấy tương quan giữa mức cảnh báo và số khoản mục đang theo dõi"
+        variant="finance-overrun-alert"
+        items={[
+          { label: 'Nghiêm trọng', value: stats.nghiemTrong, color: '#ef4444' },
+          { label: 'Trung bình', value: stats.trungBinh, color: '#f59e0b' },
+          { label: 'Theo dõi', value: stats.theoDoi, color: '#3b82f6' },
+          { label: 'An toàn', value: stats.anToan, color: '#22c55e' },
+          { label: 'Vượt dự toán', value: items.filter((x) => x.tyLe > 100).length, color: '#dc2626' },
+        ]}
+      />
 
       <Card>
         <CardHeader>

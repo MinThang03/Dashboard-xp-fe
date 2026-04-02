@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
 import { coSoGiaoDucApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Mock data cho cơ sở giáo dục
 const mockCoSoGD = [
@@ -412,57 +413,17 @@ export default function CoSoGiaoDucPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-xl">
-              <School className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Cơ sở giáo dục</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-cyan-500/10 rounded-xl">
-              <Building2 className="w-6 h-6 text-cyan-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.totalRooms}</p>
-          <p className="text-sm text-muted-foreground">Phòng học</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-indigo-500/10 rounded-xl">
-              <Users className="w-6 h-6 text-indigo-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.totalStudents.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">Học sinh</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-purple-500/10 rounded-xl">
-              <GraduationCap className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.totalTeachers}</p>
-          <p className="text-sm text-muted-foreground">Giáo viên</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.standard}/{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Đạt chuẩn QG</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ năng lực cơ sở giáo dục"
+        subtitle="Theo dõi quy mô trường học, lớp học, giáo viên và mức đạt chuẩn"
+        items={[
+          { label: 'Cơ sở giáo dục', value: stats.total, color: '#3b82f6' },
+          { label: 'Phòng học', value: stats.totalRooms, color: '#06b6d4' },
+          { label: 'Học sinh', value: stats.totalStudents, color: '#6366f1' },
+          { label: 'Giáo viên', value: stats.totalTeachers, color: '#a855f7' },
+          { label: 'Đạt chuẩn QG', value: stats.standard, color: '#22c55e' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

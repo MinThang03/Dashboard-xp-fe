@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileSearch, MapPin, Users, CheckCircle2, Search, Download, Eye, FileText, Layers, Home, Clock, TreePine } from 'lucide-react';
 import { thuaDatApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 type TraCuuDatRecord = {
   MaThua: string;
@@ -184,79 +185,19 @@ export default function TraCuuDatPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng hồ sơ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-teal-500" />
-              <span className="text-2xl font-bold">{stats.tongHoSo}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã có sổ đỏ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daCo}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chưa có sổ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.chuaCo}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chủ sở hữu</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.chuSoHuu}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-rose-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đất ở đô thị</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Home className="h-5 w-5 text-rose-500" />
-              <span className="text-2xl font-bold">{stats.datO}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng DT (m2)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Layers className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.tongDienTich.toLocaleString('vi-VN')}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tổng quan hồ sơ địa chính"
+        subtitle="Biểu đồ thanh ngang thể hiện trạng thái cấp GCN, mật độ chủ sở hữu và quy mô diện tích"
+        variant="land-search"
+        items={[
+          { label: 'Tổng hồ sơ', value: stats.tongHoSo, color: '#0d9488' },
+          { label: 'Đã có sổ đỏ', value: stats.daCo, color: '#22c55e' },
+          { label: 'Chưa có sổ', value: stats.chuaCo, color: '#f59e0b' },
+          { label: 'Chủ sở hữu', value: stats.chuSoHuu, color: '#3b82f6' },
+          { label: 'Đất ở đô thị', value: stats.datO, color: '#f43f5e' },
+          { label: 'Tổng DT (m2)', value: stats.tongDienTich, color: '#8b5cf6' },
+        ]}
+      />
 
       <Card>
         <CardHeader>

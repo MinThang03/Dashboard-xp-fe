@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
 import { vanBanApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 import {
   FileText,
   Download,
@@ -161,51 +162,16 @@ export default function VanBanPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-danger/10 rounded-xl">
-              <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-status-danger" />
-            </div>
-            <Badge className="bg-status-danger/10 text-status-danger border-0 text-xs sm:text-sm">Đến</Badge>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.den}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">VB đến</p>
-        </Card>
-
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-success/10 rounded-xl">
-              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-status-success" />
-            </div>
-            <Badge className="bg-status-success/10 text-status-success border-0 text-xs sm:text-sm">Đi</Badge>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.di}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">VB đi</p>
-        </Card>
-
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-primary/10 rounded-xl">
-              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <Badge className="bg-primary/10 text-primary border-0 text-xs sm:text-sm">Đang xử lý</Badge>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.dangXuLy}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Đang xử lý</p>
-        </Card>
-
-        <Card className="p-4 sm:p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-secondary/10 rounded-xl">
-              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
-            </div>
-            <Badge className="bg-secondary/10 text-secondary border-0 text-xs sm:text-sm">Hoàn thành</Badge>
-          </div>
-          <p className="text-2xl sm:text-3xl font-bold">{stats.hoanThanh}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Hoàn thành</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ xử lý văn bản"
+        subtitle="So sánh văn bản đến/đi và tiến độ xử lý hồ sơ"
+        items={[
+          { label: 'Văn bản đến', value: stats.den, color: '#ef4444' },
+          { label: 'Văn bản đi', value: stats.di, color: '#22c55e' },
+          { label: 'Đang xử lý', value: stats.dangXuLy, color: '#3b82f6' },
+          { label: 'Hoàn thành', value: stats.hoanThanh, color: '#8b5cf6' },
+        ]}
+      />
 
       {/* Search & Filter */}
       <Card className="p-3 sm:p-4 md:p-6 border-0 shadow-lg">

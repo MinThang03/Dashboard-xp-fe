@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { formatDateTime } from '@/lib/mock-data';
 import { nhanVienYTeApi, tramYTeApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 import {
   Stethoscope,
   Users,
@@ -340,51 +341,16 @@ export default function TramYTePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-500/10 rounded-xl">
-              <Building2 className="w-6 h-6 text-red-600" />
-            </div>
-            <Badge className="bg-red-500/10 text-red-700 border-0">Tổng</Badge>
-          </div>
-          <p className="text-3xl font-bold">{tramList.length}</p>
-          <p className="text-sm text-muted-foreground">Trạm y tế</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-secondary/10 rounded-xl">
-              <Users className="w-6 h-6 text-secondary" />
-            </div>
-            <Badge className="bg-secondary/10 text-secondary border-0">Nhân sự</Badge>
-          </div>
-          <p className="text-3xl font-bold">{totalNhanVien}</p>
-          <p className="text-sm text-muted-foreground">Nhân viên y tế</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-status-success/10 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-status-success" />
-            </div>
-            <Badge className="bg-status-success/10 text-status-success border-0">Hoạt động</Badge>
-          </div>
-          <p className="text-3xl font-bold">{totalLuotKham}</p>
-          <p className="text-sm text-muted-foreground">Lượt khám/tháng</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <Stethoscope className="w-6 h-6 text-primary" />
-            </div>
-            <Badge className="bg-primary/10 text-primary border-0">Hoạt động</Badge>
-          </div>
-          <p className="text-3xl font-bold">{tramList.filter(t => t.TrangThai === 1 || t.TrangThai === true).length}</p>
-          <p className="text-sm text-muted-foreground">Trạm hoạt động</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ năng lực trạm y tế"
+        subtitle="Giám sát quy mô cơ sở, nhân lực và năng suất khám chữa bệnh"
+        items={[
+          { label: 'Trạm y tế', value: tramList.length, color: '#ef4444' },
+          { label: 'Nhân viên y tế', value: totalNhanVien, color: '#6366f1' },
+          { label: 'Lượt khám/tháng', value: totalLuotKham, color: '#10b981' },
+          { label: 'Trạm hoạt động', value: tramList.filter((t) => t.TrangThai === 1 || t.TrangThai === true).length, color: '#0ea5e9' },
+        ]}
+      />
 
       {/* Search */}
       <Card className="p-4 border-0 shadow-lg">

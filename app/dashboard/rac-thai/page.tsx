@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle2, Clock, Edit, Eye, MapPin, Plus, Scale, Search, Trash2 } from 'lucide-react';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { racThaiApi } from '@/lib/api';
 
 interface RacThaiRecord {
@@ -191,6 +192,12 @@ export default function RacThaiPage() {
     normal: records.filter((item) => item.TinhTrang === 'Bình thường').length,
   };
 
+  const chartItems = [
+    { label: 'Tong diem thu gom', value: stats.total, color: '#f59e0b' },
+    { label: 'Khoi luong kg/thang', value: stats.totalKhoiLuong, color: '#d97706' },
+    { label: 'Diem binh thuong', value: stats.normal, color: '#16a34a' },
+  ];
+
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       <div className="bg-gradient-to-r from-status-warning via-accent to-status-warning rounded-lg p-4 sm:p-5 xl:p-6 text-white">
@@ -281,20 +288,12 @@ export default function RacThaiPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Tổng điểm thu gom</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Tổng khối lượng</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-status-warning">{stats.totalKhoiLuong.toLocaleString()}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Bình thường</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-status-success">{stats.normal}</div></CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Buc tranh thu gom rac thai"
+        subtitle="Tong hop khoi luong thu gom theo tinh trang van hanh tung diem"
+        items={chartItems}
+        variant="env-waste-management"
+      />
 
       <Card>
         <CardContent className="pt-6">

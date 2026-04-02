@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Briefcase, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react';
 import { hoSoTthcApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 export default function MotCuaPage() {
   const [stats, setStats] = useState({
@@ -51,47 +52,16 @@ export default function MotCuaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-yellow-500/10 rounded-xl">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.choXuLy}</p>
-          <p className="text-sm text-muted-foreground">Chờ xử lý</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.dangXuLy}</p>
-          <p className="text-sm text-muted-foreground">Đang xử lý</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.hoanThanh}</p>
-          <p className="text-sm text-muted-foreground">Hoàn thành</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-500/10 rounded-xl">
-              <AlertCircle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.quaHan}</p>
-          <p className="text-sm text-muted-foreground">Quá hạn</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ hiệu suất Bộ phận Một cửa"
+        subtitle="Theo dõi hồ sơ chờ xử lý, đang xử lý, hoàn thành và quá hạn"
+        items={[
+          { label: 'Chờ xử lý', value: stats.choXuLy, color: '#f59e0b' },
+          { label: 'Đang xử lý', value: stats.dangXuLy, color: '#3b82f6' },
+          { label: 'Hoàn thành', value: stats.hoanThanh, color: '#22c55e' },
+          { label: 'Quá hạn', value: stats.quaHan, color: '#ef4444' },
+        ]}
+      />
 
       <Card className="p-6 border-0 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Tỷ lệ giải quyết đúng hạn</h3>

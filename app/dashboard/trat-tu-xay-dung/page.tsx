@@ -15,6 +15,7 @@ import {
   MapPin, Calendar, User, FileCheck, Ban, Gavel, Trash2
 } from 'lucide-react';
 import { theoDoiTratTuXayDungApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data trật tự xây dựng
 interface TratTuXayDung {
@@ -499,80 +500,19 @@ export default function TratTuXayDungPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng kiểm tra</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hợp lệ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.hopLe}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Vi phạm</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.viPham}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.dangXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã khắc phục</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              <span className="text-2xl font-bold">{stats.daKhacPhuc}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chờ cưỡng chế</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Gavel className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.choCuongChe}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Nhịp xử lý trật tự xây dựng"
+        subtitle="Đường xu hướng theo từng nhóm kết quả kiểm tra và trạng thái xử lý"
+        variant="infra-order"
+        items={[
+          { label: 'Tổng kiểm tra', value: stats.total, color: '#f59e0b' },
+          { label: 'Hợp lệ', value: stats.hopLe, color: '#22c55e' },
+          { label: 'Vi phạm', value: stats.viPham, color: '#ef4444' },
+          { label: 'Đang xử lý', value: stats.dangXuLy, color: '#3b82f6' },
+          { label: 'Đã khắc phục', value: stats.daKhacPhuc, color: '#10b981' },
+          { label: 'Chờ cưỡng chế', value: stats.choCuongChe, color: '#8b5cf6' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

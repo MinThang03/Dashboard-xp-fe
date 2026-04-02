@@ -38,6 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit, Trash2, X } from 'lucide-react';
 import { phanAnhApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 export default function PhanAnhPage() {
   const router = useRouter();
@@ -223,44 +224,17 @@ export default function PhanAnhPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <MessageSquare className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Tổng phản ánh</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.choXuLy}</p>
-          <p className="text-sm text-muted-foreground">Chờ/Đang xử lý</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.daXuLy}</p>
-          <p className="text-sm text-muted-foreground">Đã xử lý</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-100 rounded-xl">
-              <AlertCircle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.khanCap}</p>
-          <p className="text-sm text-muted-foreground">Khẩn cấp</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Nhiệt độ phản ánh người dân"
+        subtitle="Donut chart thể hiện áp lực xử lý phản ánh và mức ưu tiên khẩn"
+        variant="sec-feedback"
+        items={[
+          { label: 'Tổng phản ánh', value: stats.total, color: '#3b82f6' },
+          { label: 'Chờ/Đang xử lý', value: stats.choXuLy, color: '#f59e0b' },
+          { label: 'Đã xử lý', value: stats.daXuLy, color: '#22c55e' },
+          { label: 'Khẩn cấp', value: stats.khanCap, color: '#ef4444' },
+        ]}
+      />
 
       {/* Search */}
       <Card className="p-4 border-0 shadow-lg">

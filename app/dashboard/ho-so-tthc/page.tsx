@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/mock-data';
 import { hoSoTthcApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Extended mock data for TTHC
 const mockHoSoTTHC = [
@@ -610,57 +611,18 @@ export default function HoSoTTHCPage() {
           </div>
 
           {/* Stats Cards in Header */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-5 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-white/70 text-sm font-semibold mb-3">TỔNG HỒ SƠ</p>
-                  <p className="text-4xl font-bold text-white">{stats.total}</p>
-                </div>
-                <User className="w-6 h-6 text-white/50" />
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-white/70 text-sm font-semibold mb-3">CHỜ XỬ LÝ</p>
-                  <p className="text-4xl font-bold text-white">{stats.pending}</p>
-                </div>
-                <AlertCircle className="w-6 h-6 text-white/50" />
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-white/70 text-sm font-semibold mb-3">ĐANG XỬ LÝ</p>
-                  <p className="text-4xl font-bold text-white">{stats.processing}</p>
-                </div>
-                <Clock className="w-6 h-6 text-white/50" />
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-white/70 text-sm font-semibold mb-3">HOÀN THÀNH</p>
-                  <p className="text-4xl font-bold text-white">{stats.completed}</p>
-                </div>
-                <CheckCircle2 className="w-6 h-6 text-white/50" />
-              </div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-white/70 text-sm font-semibold mb-3">QUÁ HẠN</p>
-                  <p className="text-4xl font-bold text-white">{stats.overdue}</p>
-                </div>
-                <AlertCircle className="w-6 h-6 text-white/50" />
-              </div>
-            </div>
-          </div>
+          <VisualStatsPanel
+            className="bg-white/95"
+            title="Biểu đồ vận hành hồ sơ TTHC"
+            subtitle="Nắm nhanh khối lượng tiếp nhận, xử lý, hoàn thành và hồ sơ quá hạn"
+            items={[
+              { label: 'Tổng hồ sơ', value: stats.total, color: '#3b82f6' },
+              { label: 'Chờ xử lý', value: stats.pending, color: '#f59e0b' },
+              { label: 'Đang xử lý', value: stats.processing, color: '#0ea5e9' },
+              { label: 'Hoàn thành', value: stats.completed, color: '#22c55e' },
+              { label: 'Quá hạn', value: stats.overdue, color: '#ef4444' },
+            ]}
+          />
         </div>
 
         {/* Control Panel */}

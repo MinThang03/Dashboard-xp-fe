@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/mock-data';
 import { phieuKhamApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Extended mock data for PhieuKham
 const mockPhieuKhamFull = [
@@ -477,57 +478,17 @@ export default function KhamBenhPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 xl:gap-4">
-        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-secondary/10 rounded-xl">
-              <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.today}</p>
-          <p className="text-xs text-muted-foreground">Lượt khám hôm nay</p>
-        </Card>
-
-        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-warning/10 rounded-xl">
-              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-status-warning" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.waiting}</p>
-          <p className="text-xs text-muted-foreground">Đang chờ khám</p>
-        </Card>
-
-        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-primary/10 rounded-xl">
-              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.processing}</p>
-          <p className="text-xs text-muted-foreground">Đang theo dõi</p>
-        </Card>
-
-        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-success/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-status-success" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.completed}</p>
-          <p className="text-xs text-muted-foreground">Hoàn thành</p>
-        </Card>
-
-        <Card className="p-3 sm:p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 sm:p-3 bg-status-danger/10 rounded-xl">
-              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-status-danger" />
-            </div>
-          </div>
-          <p className="text-2xl sm:text-[30px] font-bold leading-tight">{stats.transferred}</p>
-          <p className="text-xs text-muted-foreground">Chuyển viện</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ điều hành khám chữa bệnh"
+        subtitle="Quan sát nhanh luồng khám trong ngày và ca chuyển tuyến"
+        items={[
+          { label: 'Lượt khám hôm nay', value: stats.today, color: '#2563eb' },
+          { label: 'Đang chờ khám', value: stats.waiting, color: '#f59e0b' },
+          { label: 'Đang theo dõi', value: stats.processing, color: '#0ea5e9' },
+          { label: 'Hoàn thành', value: stats.completed, color: '#22c55e' },
+          { label: 'Chuyển viện', value: stats.transferred, color: '#ef4444' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-3 border-0 shadow-lg">

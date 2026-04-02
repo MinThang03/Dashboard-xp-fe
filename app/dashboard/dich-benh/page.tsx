@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/mock-data';
 import { dichBenhApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Mock data cho dịch bệnh
 const mockDichBenh = [
@@ -473,57 +474,17 @@ export default function DichBenhPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-red-500/10 rounded-xl">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.total}</p>
-          <p className="text-sm text-muted-foreground">Tổng ca bệnh</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-yellow-500/10 rounded-xl">
-              <Thermometer className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.treating}</p>
-          <p className="text-sm text-muted-foreground">Đang điều trị</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.recovered}</p>
-          <p className="text-sm text-muted-foreground">Đã khỏi</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-orange-500/10 rounded-xl">
-              <Activity className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.severe}</p>
-          <p className="text-sm text-muted-foreground">Ca nặng</p>
-        </Card>
-
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-xl">
-              <Shield className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.contacts}</p>
-          <p className="text-sm text-muted-foreground">Người tiếp xúc</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ giám sát dịch bệnh"
+        subtitle="Theo dõi số ca bệnh, tiến độ điều trị và mức độ nguy cơ"
+        items={[
+          { label: 'Tổng ca bệnh', value: stats.total, color: '#ef4444' },
+          { label: 'Đang điều trị', value: stats.treating, color: '#f59e0b' },
+          { label: 'Đã khỏi', value: stats.recovered, color: '#22c55e' },
+          { label: 'Ca nặng', value: stats.severe, color: '#fb923c' },
+          { label: 'Người tiếp xúc', value: stats.contacts, color: '#3b82f6' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

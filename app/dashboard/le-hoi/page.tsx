@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { leHoiApi } from '@/lib/api';
 
 interface LeHoi {
@@ -247,12 +247,17 @@ export default function LeHoiPage() {
   const tongNguoiThamGia = leHoiList.reduce((sum, lh) => sum + lh.QuyMo, 0);
   const tongKinhPhi = leHoiList.reduce((sum, lh) => sum + lh.KinhPhi, 0);
 
-  // Dữ liệu biểu đồ quy mô
-  const chartData = leHoiList.slice(0, 6).map(lh => ({
-    name: lh.TenLeHoi.length > 15 ? lh.TenLeHoi.substring(0, 15) + '...' : lh.TenLeHoi,
-    'Dự kiến': lh.DuKien,
-    'Thực tế': lh.QuyMo
-  }));
+  const chartItems = [
+    { label: 'Tong le hoi', value: tongLeHoi, color: '#db2777' },
+    { label: 'Sap dien ra', value: sapDienRa, color: '#9333ea' },
+    { label: 'Tong nguoi tham gia', value: tongNguoiThamGia, color: '#2563eb' },
+    { label: 'Tong kinh phi trieu', value: Math.round(tongKinhPhi / 1000000), color: '#16a34a' },
+    {
+      label: 'Du kien tham gia',
+      value: leHoiList.reduce((sum, lh) => sum + lh.DuKien, 0),
+      color: '#f59e0b',
+    },
+  ];
 
   // Lọc
   const filteredLeHoi = leHoiList.filter(lh => {
@@ -361,74 +366,12 @@ export default function LeHoiPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lễ hội/năm</CardTitle>
-            <PartyPopper className="h-4 w-4 text-pink-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-pink-600">{tongLeHoi}</div>
-            <p className="text-xs text-muted-foreground">Tổng số lễ hội</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sắp diễn ra</CardTitle>
-            <Calendar className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{sapDienRa}</div>
-            <p className="text-xs text-muted-foreground">Sự kiện sắp tới</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Người tham gia</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{tongNguoiThamGia.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Tổng lượt tham gia</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kinh phí</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {(tongKinhPhi / 1000000).toFixed(0)}M
-            </div>
-            <p className="text-xs text-muted-foreground">Tổng kinh phí (VNĐ)</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quy mô lễ hội</CardTitle>
-          <CardDescription>So sánh dự kiến và thực tế người tham gia</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="Dự kiến" fill="#a855f7" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="Thực tế" fill="#ec4899" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <FunctionStyledPanel
+        title="Nhip do le hoi - su kien"
+        subtitle="So sanh quy mo to chuc, luot tham gia va phan bo kinh phi tren toan xa"
+        items={chartItems}
+        variant="culture-festival"
+      />
 
       {/* Filters and Actions */}
       <Card>

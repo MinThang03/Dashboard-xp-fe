@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { hoSoDiTichApi } from '@/lib/api';
 
 interface HoSoDiTich {
@@ -220,6 +221,14 @@ export default function HoSoDiTichPage() {
   const hoanThanh = hoSoList.filter(hs => hs.TrangThai === 'Hoàn thành').length;
   const canBoSung = hoSoList.filter(hs => hs.TrangThai === 'Cần bổ sung').length;
 
+  const chartItems = [
+    { label: 'Tong ho so', value: tongHoSo, color: '#d97706' },
+    { label: 'Da nop', value: daNop, color: '#2563eb' },
+    { label: 'Dang xu ly', value: dangXuLy, color: '#eab308' },
+    { label: 'Hoan thanh', value: hoanThanh, color: '#16a34a' },
+    { label: 'Can bo sung', value: canBoSung, color: '#dc2626' },
+  ];
+
   // Lọc
   const filteredHoSo = hoSoList.filter(hs => {
     const matchSearch = hs.TenDiTich.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -322,63 +331,12 @@ export default function HoSoDiTichPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng hồ sơ</CardTitle>
-            <FileText className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{tongHoSo}</div>
-            <p className="text-xs text-muted-foreground">Đang quản lý</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đã nộp</CardTitle>
-            <Upload className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{daNop}</div>
-            <p className="text-xs text-muted-foreground">Mới tiếp nhận</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đang xử lý</CardTitle>
-            <Calendar className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{dangXuLy}</div>
-            <p className="text-xs text-muted-foreground">Đang thẩm định</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hoàn thành</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{hoanThanh}</div>
-            <p className="text-xs text-muted-foreground">Đã phê duyệt</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cần bổ sung</CardTitle>
-            <Landmark className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{canBoSung}</div>
-            <p className="text-xs text-muted-foreground">Cần xử lý</p>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tien do xu ly ho so di tich"
+        subtitle="Do luong trang thai tham dinh va cac ho so can bo sung trong ky"
+        items={chartItems}
+        variant="culture-heritage-dossier"
+      />
 
       {/* Filters and Actions */}
       <Card>

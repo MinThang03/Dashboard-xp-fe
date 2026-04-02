@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
 import { tamTruTamVangApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho tạm trú tạm vắng
 const mockTamTruVang = [
@@ -450,79 +451,19 @@ export default function TamTruVangPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Tổng đăng ký</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <Home className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.tamTru}</p>
-              <p className="text-xs text-muted-foreground">Tạm trú</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-xl">
-              <ArrowRightLeft className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-amber-600">{stats.tamVang}</p>
-              <p className="text-xs text-muted-foreground">Tạm vắng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.valid}</p>
-              <p className="text-xs text-muted-foreground">Còn hạn</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <AlertTriangle className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.expiring}</p>
-              <p className="text-xs text-muted-foreground">Sắp hết hạn</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 rounded-xl">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
-              <p className="text-xs text-muted-foreground">Hết hạn</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Nhịp đăng ký cư trú tạm thời"
+        subtitle="Biểu đồ vòng cho thấy trạng thái hiệu lực và cơ cấu tạm trú/tạm vắng"
+        variant="sec-residence"
+        items={[
+          { label: 'Tổng đăng ký', value: stats.total, color: '#f97316' },
+          { label: 'Tạm trú', value: stats.tamTru, color: '#3b82f6' },
+          { label: 'Tạm vắng', value: stats.tamVang, color: '#f59e0b' },
+          { label: 'Còn hạn', value: stats.valid, color: '#22c55e' },
+          { label: 'Sắp hết hạn', value: stats.expiring, color: '#facc15' },
+          { label: 'Hết hạn', value: stats.expired, color: '#ef4444' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

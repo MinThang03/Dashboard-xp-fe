@@ -15,6 +15,7 @@ import {
   User, Calendar, AlertTriangle, FileCheck, Camera, Ruler
 } from 'lucide-react';
 import { bienDongDatApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data thẩm định thực địa
 interface ThamDinhThucDia {
@@ -445,80 +446,19 @@ export default function ThamDinhThucDiaPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng hồ sơ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chờ thẩm định</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.choThamDinh}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-indigo-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang thẩm định</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-indigo-500" />
-              <span className="text-2xl font-bold">{stats.dangThamDinh}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hoàn thành</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.hoanThanh}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sai lệch</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.saiLech}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hình ảnh</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.tongAnh}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Hiệu suất thẩm định thực địa"
+        subtitle="Biểu đồ phân tán phản ánh số hồ sơ theo trạng thái và bằng chứng ảnh hiện trường"
+        variant="land-field-survey"
+        items={[
+          { label: 'Tổng hồ sơ', value: stats.total, color: '#3b82f6' },
+          { label: 'Chờ thẩm định', value: stats.choThamDinh, color: '#f59e0b' },
+          { label: 'Đang thẩm định', value: stats.dangThamDinh, color: '#6366f1' },
+          { label: 'Hoàn thành', value: stats.hoanThanh, color: '#22c55e' },
+          { label: 'Sai lệch', value: stats.saiLech, color: '#ef4444' },
+          { label: 'Hình ảnh', value: stats.tongAnh, color: '#a855f7' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { mockNguoiThatNghiep, mockHoTroThatNghiep } from '@/lib/mock-data';
 import { viecLamApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 export default function ViecLamPage() {
   const router = useRouter();
@@ -242,45 +243,17 @@ export default function ViecLamPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.tongNguoiTimViec}</p>
-          <p className="text-sm text-muted-foreground">Tổng đăng ký</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Search className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.dangTimViec}</p>
-          <p className="text-sm text-muted-foreground">Đang tìm việc</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.daCoViec}</p>
-          <p className="text-sm text-muted-foreground">Đã có việc</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <DollarSign className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.dangHuongBHTN}</p>
-          <p className="text-sm text-muted-foreground">Hưởng BHTN</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Dòng chảy việc làm và thất nghiệp"
+        subtitle="Biểu đồ kết hợp giúp nhìn rõ chuyển dịch từ tìm việc sang có việc và nhóm đang hưởng BHTN"
+        variant="social-jobs"
+        items={[
+          { label: 'Tổng đăng ký', value: stats.tongNguoiTimViec, color: '#3b82f6' },
+          { label: 'Đang tìm việc', value: stats.dangTimViec, color: '#f59e0b' },
+          { label: 'Đã có việc', value: stats.daCoViec, color: '#22c55e' },
+          { label: 'Hưởng BHTN', value: stats.dangHuongBHTN, color: '#8b5cf6' },
+        ]}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="nguoi-tim-viec" className="space-y-4">

@@ -15,8 +15,7 @@ import {
   FileText,
   Eye,
   Edit,
-  Trash2,
-  BarChart3
+  Trash2
 } from 'lucide-react';
 import {
   Table,
@@ -43,7 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { diTichApi } from '@/lib/api';
 
 interface DiTich {
@@ -245,19 +244,12 @@ export default function DiTichPage() {
   const xuongCap = diTichList.filter(dt => dt.TinhTrang === 'Xuống cấp' || dt.TinhTrang === 'Nguy cấp').length;
   const tongKhach = diTichList.reduce((sum, dt) => sum + dt.LuotKhachThang, 0);
 
-  // Dữ liệu biểu đồ theo cấp độ
-  const chartDataCapDo = [
-    { name: 'Quốc gia', value: capQuocGia, color: '#dc2626' },
-    { name: 'Tỉnh', value: capTinh, color: '#2563eb' },
-    { name: 'Huyện', value: diTichList.filter(dt => dt.CapDo === 'Huyện').length, color: '#16a34a' }
-  ];
-
-  // Dữ liệu biểu đồ theo tình trạng
-  const chartDataTinhTrang = [
-    { name: 'Tốt', value: diTichList.filter(dt => dt.TinhTrang === 'Tốt').length, color: '#16a34a' },
-    { name: 'Trung bình', value: diTichList.filter(dt => dt.TinhTrang === 'Trung bình').length, color: '#eab308' },
-    { name: 'Xuống cấp', value: diTichList.filter(dt => dt.TinhTrang === 'Xuống cấp').length, color: '#f97316' },
-    { name: 'Nguy cấp', value: diTichList.filter(dt => dt.TinhTrang === 'Nguy cấp').length, color: '#dc2626' }
+  const chartItems = [
+    { label: 'Tong di tich', value: tongDiTich, color: '#d97706' },
+    { label: 'Cap quoc gia', value: capQuocGia, color: '#dc2626' },
+    { label: 'Cap tinh', value: capTinh, color: '#2563eb' },
+    { label: 'Can tu bo', value: xuongCap, color: '#f97316' },
+    { label: 'Luot khach/thang', value: tongKhach, color: '#16a34a' },
   ];
 
   // Lọc
@@ -368,114 +360,12 @@ export default function DiTichPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng di tích</CardTitle>
-            <Landmark className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{tongDiTich}</div>
-            <p className="text-xs text-muted-foreground">Đang quản lý</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cấp quốc gia</CardTitle>
-            <FileText className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{capQuocGia}</div>
-            <p className="text-xs text-muted-foreground">Di tích quan trọng</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cấp tỉnh</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{capTinh}</div>
-            <p className="text-xs text-muted-foreground">Di tích địa phương</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Xuống cấp</CardTitle>
-            <FileText className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{xuongCap}</div>
-            <p className="text-xs text-muted-foreground">Cần tu bổ</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lượt khách/tháng</CardTitle>
-            <Users className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{tongKhach.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Tổng lượt tham quan</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-amber-600" />
-              Phân loại theo cấp độ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartDataCapDo}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {chartDataCapDo.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-amber-600" />
-              Tình trạng di tích
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartDataTinhTrang}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {chartDataTinhTrang.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Thong ke di tich theo cap xep hang"
+        subtitle="Theo doi nhanh nhom di tich quan trong, tinh trang bao ton va luot tham quan"
+        items={chartItems}
+        variant="culture-heritage"
+      />
 
       {/* Filters and Actions */}
       <Card>

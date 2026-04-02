@@ -34,6 +34,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 type BaoCaoTaiChinhRecord = {
   MaNganSach: number;
@@ -303,45 +304,17 @@ export default function BaoCaoTaiChinhPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.baoCaoThang}</p>
-          <p className="text-sm text-muted-foreground">Báo cáo tháng</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <Calendar className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.baoCaoQuy}</p>
-          <p className="text-sm text-muted-foreground">Báo cáo quý/năm</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.daDuyet}</p>
-          <p className="text-sm text-muted-foreground">Đã phê duyệt</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.choDuyet}</p>
-          <p className="text-sm text-muted-foreground">Chờ duyệt</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Trạng thái báo cáo tài chính định kỳ"
+        subtitle="Biểu đồ tròn phản ánh số lượng báo cáo theo chu kỳ và tiến độ phê duyệt"
+        variant="finance-reporting"
+        items={[
+          { label: 'Báo cáo tháng', value: stats.baoCaoThang, color: '#3b82f6' },
+          { label: 'Báo cáo quý/năm', value: stats.baoCaoQuy, color: '#8b5cf6' },
+          { label: 'Đã phê duyệt', value: stats.daDuyet, color: '#22c55e' },
+          { label: 'Chờ duyệt', value: stats.choDuyet, color: '#f59e0b' },
+        ]}
+      />
 
       {/* Search */}
       <Card className="p-4 border-0 shadow-lg">

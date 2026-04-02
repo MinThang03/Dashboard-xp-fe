@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
 import { choDiemKinhDoanhApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho chợ và điểm kinh doanh
 const mockChoKinhDoanh = [
@@ -418,79 +419,19 @@ export default function ChoKinhDoanhPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <Store className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.totalPlaces}</p>
-              <p className="text-xs text-muted-foreground">Chợ/Điểm KD</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.totalStalls}</p>
-              <p className="text-xs text-muted-foreground">Tổng gian hàng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-emerald-600">{stats.activeStalls}</p>
-              <p className="text-xs text-muted-foreground">Đang kinh doanh</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-xl">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-orange-600">{stats.emptyStalls}</p>
-              <p className="text-xs text-muted-foreground">Gian trống</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-amber-600">{(stats.totalRevenue / 1000000000).toFixed(1)}B</p>
-              <p className="text-xs text-muted-foreground">Doanh thu/tháng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-teal-500/10 rounded-xl">
-              <Coins className="w-5 h-5 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-teal-600">{(stats.totalFees / 1000000).toFixed(0)}M</p>
-              <p className="text-xs text-muted-foreground">Thu phí/tháng</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Bản đồ năng lực chợ và điểm kinh doanh"
+        subtitle="Radial chart thể hiện mức sử dụng gian hàng, doanh thu và phí thu"
+        variant="eco-market"
+        items={[
+          { label: 'Chợ/Điểm KD', value: stats.totalPlaces, color: '#16a34a' },
+          { label: 'Tổng gian hàng', value: stats.totalStalls, color: '#3b82f6' },
+          { label: 'Đang kinh doanh', value: stats.activeStalls, color: '#22c55e' },
+          { label: 'Gian trống', value: stats.emptyStalls, color: '#f97316' },
+          { label: 'Doanh thu tỷ', value: Number((stats.totalRevenue / 1000000000).toFixed(1)), color: '#d97706' },
+          { label: 'Thu phí triệu', value: Number((stats.totalFees / 1000000).toFixed(0)), color: '#14b8a6' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

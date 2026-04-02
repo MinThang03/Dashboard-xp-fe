@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { 
   BarChart3, FileText, Calendar, TrendingUp, Download, Eye, CheckCircle2, Clock, 
   Wind, Droplet, Trash2, AlertTriangle, ArrowUp, ArrowDown, Minus
@@ -105,6 +106,14 @@ export default function ThongKeMoiTruongPage() {
     }
   };
 
+  const chartItems = [
+    { label: 'AQI trung binh', value: mockChiSoKhongKhi[0]?.ThangNay ?? 0, color: '#0ea5e9' },
+    { label: 'Rac thu gom kg/ngay', value: mockThongKeRac.tongKhoiLuong, color: '#f59e0b' },
+    { label: 'Diem thu gom hoat dong', value: mockThongKeRac.diemThuHoatDong, color: '#14b8a6' },
+    { label: 'Bao cao o nhiem', value: mockThongKeONhiem.tongBaoCao, color: '#ef4444' },
+    { label: 'Bao cao da xu ly', value: mockThongKeONhiem.daXuLy, color: '#22c55e' },
+  ];
+
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
       {/* Header */}
@@ -170,60 +179,12 @@ export default function ThongKeMoiTruongPage() {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">AQI trung bình</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Wind className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">48</span>
-              <Badge className="bg-green-100 text-green-700">Tốt</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-cyan-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chất lượng nước</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Droplet className="h-5 w-5 text-cyan-500" />
-              <span className="text-2xl font-bold">pH 7.2</span>
-              <Badge className="bg-green-100 text-green-700">Đạt</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Rác thu gom</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">1.85T</span>
-              <span className="text-xs text-green-600">+5%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Báo cáo ô nhiễm</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{mockThongKeONhiem.tongBaoCao}</span>
-              <span className="text-xs text-muted-foreground">Đã XL: {mockThongKeONhiem.daXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tong quan thong ke moi truong"
+        subtitle="Tap trung vao chi so khong khi, thu gom rac va tien do xu ly o nhiem"
+        items={chartItems}
+        variant="env-environment-overview"
+      />
 
       {/* Tabs */}
       <Tabs value={currentTab} onValueChange={setCurrentTab}>

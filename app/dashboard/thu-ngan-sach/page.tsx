@@ -15,6 +15,7 @@ import {
   DollarSign, Percent, FileText, Clock, CircleDollarSign
 } from 'lucide-react';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data thu ngân sách
 interface ThuNganSach {
@@ -441,80 +442,19 @@ export default function ThuNganSachPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng thu</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Coins className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{formatShortCurrency(stats.tongThu)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Kế hoạch</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CircleDollarSign className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{formatShortCurrency(stats.tongKeHoach)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tỷ lệ đạt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Percent className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.tyLeDat}%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Số khoản thu</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-teal-500" />
-              <span className="text-2xl font-bold">{stats.soKhoanThu}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã xác nhận</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              <span className="text-2xl font-bold">{stats.daXacNhan}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chờ xác nhận</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.choXacNhan}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Nhịp tăng trưởng thu ngân sách"
+        subtitle="Biểu đồ cột ngang nhấn mạnh tiến độ thu, mức đạt kế hoạch và trạng thái xác nhận"
+        variant="finance-revenue"
+        items={[
+          { label: 'Tổng thu', value: stats.tongThu, color: '#22c55e' },
+          { label: 'Kế hoạch', value: stats.tongKeHoach, color: '#3b82f6' },
+          { label: 'Tỷ lệ đạt (%)', value: stats.tyLeDat, color: '#8b5cf6' },
+          { label: 'Số khoản thu', value: stats.soKhoanThu, color: '#0ea5e9' },
+          { label: 'Đã xác nhận', value: stats.daXacNhan, color: '#10b981' },
+          { label: 'Chờ xác nhận', value: stats.choXacNhan, color: '#f59e0b' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

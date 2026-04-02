@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
 import { lopHocApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 // Mock data cho sĩ số học sinh
 const mockSiSoHS = [
@@ -362,67 +363,18 @@ export default function SiSoHocSinhPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{stats.totalStudents}</p>
-          <p className="text-xs text-muted-foreground">Tổng học sinh</p>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-green-600">{stats.present}</p>
-          <p className="text-xs text-muted-foreground">Có mặt hôm nay</p>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <TrendingDown className="w-5 h-5 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-yellow-600">{stats.absentWithPermission}</p>
-          <p className="text-xs text-muted-foreground">Vắng có phép</p>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-red-500/10 rounded-xl">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-red-600">{stats.absentWithoutPermission}</p>
-          <p className="text-xs text-muted-foreground">Vắng không phép</p>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-indigo-500/10 rounded-xl">
-              <BarChart3 className="w-5 h-5 text-indigo-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-indigo-600">{stats.avgRate}%</p>
-          <p className="text-xs text-muted-foreground">Tỷ lệ đi học</p>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-purple-500/10 rounded-xl">
-              <School className="w-5 h-5 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{stats.totalClasses}</p>
-          <p className="text-xs text-muted-foreground">Số lớp</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ sĩ số và chuyên cần"
+        subtitle="Giám sát tình hình đi học, vắng học và quy mô lớp học"
+        items={[
+          { label: 'Tổng học sinh', value: stats.totalStudents, color: '#3b82f6' },
+          { label: 'Có mặt hôm nay', value: stats.present, color: '#22c55e' },
+          { label: 'Vắng có phép', value: stats.absentWithPermission, color: '#f59e0b' },
+          { label: 'Vắng không phép', value: stats.absentWithoutPermission, color: '#ef4444' },
+          { label: 'Tỷ lệ đi học (%)', value: Number(stats.avgRate), color: '#6366f1' },
+          { label: 'Số lớp', value: stats.totalClasses, color: '#a855f7' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

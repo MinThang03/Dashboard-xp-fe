@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/mock-data';
 import { diemNongAnNinhApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho điểm nóng ANTT
 const mockDiemNong = [
@@ -442,79 +443,19 @@ export default function DiemNongANTTPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 rounded-xl">
-              <MapPin className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Tổng điểm nóng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 rounded-xl">
-              <ShieldAlert className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{stats.high}</p>
-              <p className="text-xs text-muted-foreground">Mức độ cao</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <AlertTriangle className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.medium}</p>
-              <p className="text-xs text-muted-foreground">Mức trung bình</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <AlertCircle className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.low}</p>
-              <p className="text-xs text-muted-foreground">Mức độ thấp</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-purple-600">{stats.totalObjects}</p>
-              <p className="text-xs text-muted-foreground">Đối tượng theo dõi</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
-              <p className="text-xs text-muted-foreground">Đã xử lý</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Bản đồ rủi ro điểm nóng ANTT"
+        subtitle="Radar chart nhấn mạnh phân tầng nguy cơ và áp lực theo dõi"
+        variant="sec-hotspot"
+        items={[
+          { label: 'Tổng điểm nóng', value: stats.total, color: '#ef4444' },
+          { label: 'Mức cao', value: stats.high, color: '#dc2626' },
+          { label: 'Mức trung bình', value: stats.medium, color: '#f59e0b' },
+          { label: 'Mức thấp', value: stats.low, color: '#3b82f6' },
+          { label: 'Đối tượng theo dõi', value: stats.totalObjects, color: '#8b5cf6' },
+          { label: 'Đã xử lý', value: stats.resolved, color: '#22c55e' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
 import { thongKeKinhTeApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho thống kê kinh tế
 const mockThongKe = [
@@ -281,84 +282,19 @@ export default function ThongKeKinhTePage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-green-600">{(stats.tongDoanhThu / 1000000000).toFixed(1)}B</p>
-              <p className="text-xs text-muted-foreground">Doanh thu/tháng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <Store className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.tongHoKD}</p>
-              <p className="text-xs text-muted-foreground">Hộ kinh doanh</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 ${stats.tangTruong >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} rounded-xl`}>
-              {stats.tangTruong >= 0 ? 
-                <TrendingUp className="w-5 h-5 text-green-600" /> : 
-                <TrendingDown className="w-5 h-5 text-red-600" />
-              }
-            </div>
-            <div>
-              <p className={`text-2xl font-bold ${getTrendClass(stats.tangTruong)}`}>
-                {stats.tangTruong > 0 ? '+' : ''}{stats.tangTruong}%
-              </p>
-              <p className="text-xs text-muted-foreground">Tăng trưởng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-xl">
-              <Landmark className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-purple-600">{(stats.tongThuNganSach / 1000000000).toFixed(1)}B</p>
-              <p className="text-xs text-muted-foreground">Thu ngân sách</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-teal-500/10 rounded-xl">
-              <Users className="w-5 h-5 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-teal-600">{stats.tongLaoDong.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Lao động</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-500/10 rounded-xl">
-              <BarChart3 className="w-5 h-5 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-indigo-600">{stats.soBaoCao}</p>
-              <p className="text-xs text-muted-foreground">Báo cáo</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Động lực kinh tế theo kỳ báo cáo"
+        subtitle="Biểu đồ cột ngang tập trung vào quy mô doanh thu, tăng trưởng và nền tảng lao động"
+        variant="eco-report"
+        items={[
+          { label: 'Doanh thu tỷ/tháng', value: Number((stats.tongDoanhThu / 1000000000).toFixed(1)), color: '#16a34a' },
+          { label: 'Hộ kinh doanh', value: stats.tongHoKD, color: '#3b82f6' },
+          { label: 'Tăng trưởng', value: Number(stats.tangTruong), color: stats.tangTruong >= 0 ? '#22c55e' : '#ef4444' },
+          { label: 'Thu ngân sách tỷ', value: Number((stats.tongThuNganSach / 1000000000).toFixed(1)), color: '#9333ea' },
+          { label: 'Lao động', value: stats.tongLaoDong, color: '#0ea5e9' },
+          { label: 'Số báo cáo', value: stats.soBaoCao, color: '#6366f1' },
+        ]}
+      />
 
       {/* Thống kê theo ngành */}
       <Card className="p-6 border-0 shadow-lg">

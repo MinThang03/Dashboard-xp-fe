@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { TrendingUp, TrendingDown, Brain, Download, Eye, AlertCircle, Zap, BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 type TrendRow = {
   month: string;
@@ -256,12 +257,18 @@ export default function XuHuongTaiChinhPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Độ ổn định" value={`${Math.max(0, 100 - summary.ruiRo * 10)}%`} icon={<Zap className="h-5 w-5 text-purple-500" />} />
-        <MetricCard title="Xu hướng tháng sau" value={`${summary.duBaoThangSau >= 0 ? '+' : ''}${summary.duBaoThangSau.toLocaleString('vi-VN')}`} icon={<TrendingUp className="h-5 w-5 text-green-500" />} />
-        <MetricCard title="Cảnh báo rủi ro" value={String(canhBaoRuiRo.length)} icon={<AlertCircle className="h-5 w-5 text-amber-500" />} />
-        <MetricCard title="Bản ghi phân tích" value={String(rows.length)} icon={<BarChart3 className="h-5 w-5 text-blue-500" />} />
-      </div>
+      <FunctionStyledPanel
+        title="Tín hiệu xu hướng tài chính AI"
+        subtitle="Biểu đồ đường mô tả độ ổn định, dự báo tháng sau và mật độ cảnh báo rủi ro"
+        variant="finance-trend-ai"
+        items={[
+          { label: 'Độ ổn định (%)', value: Math.max(0, 100 - summary.ruiRo * 10), color: '#8b5cf6' },
+          { label: 'Xu hướng tháng sau', value: summary.duBaoThangSau, color: '#22c55e' },
+          { label: 'Cảnh báo rủi ro', value: canhBaoRuiRo.length, color: '#f59e0b' },
+          { label: 'Bản ghi phân tích', value: rows.length, color: '#3b82f6' },
+          { label: 'Tổng chênh lệch', value: summary.tongChenhLech, color: '#06b6d4' },
+        ]}
+      />
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>

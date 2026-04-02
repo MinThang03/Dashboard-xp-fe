@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/mock-data';
 import { hoKinhDoanhApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data cho hộ kinh doanh
 const mockHoKinhDoanh = [
@@ -465,80 +466,19 @@ export default function HoKinhDoanhPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/10 rounded-xl">
-              <Store className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Tổng hộ KD</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-emerald-600">{stats.active}</p>
-              <p className="text-xs text-muted-foreground">Đang hoạt động</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/10 rounded-xl">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.suspended}</p>
-              <p className="text-xs text-muted-foreground">Tạm ngưng</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-xl">
-              <User className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.totalLabor}</p>
-              <p className="text-xs text-muted-foreground">Lao động</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-amber-600">{(stats.totalRevenue / 1000000000).toFixed(1)}B</p>
-              <p className="text-xs text-muted-foreground">Doanh thu/năm</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-lg hover-lift">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-xl">
-              <Briefcase className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-purple-600">{(stats.totalCapital / 1000000000).toFixed(1)}B</p>
-              <p className="text-xs text-muted-foreground">Tổng vốn</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Bức tranh hộ kinh doanh"
+        subtitle="Radar phản ánh quy mô, lao động, doanh thu và năng lực vốn"
+        variant="eco-business"
+        items={[
+          { label: 'Tổng hộ KD', value: stats.total, color: '#16a34a' },
+          { label: 'Đang hoạt động', value: stats.active, color: '#22c55e' },
+          { label: 'Tạm ngưng', value: stats.suspended, color: '#f59e0b' },
+          { label: 'Lao động', value: stats.totalLabor, color: '#3b82f6' },
+          { label: 'Doanh thu tỷ', value: Number((stats.totalRevenue / 1000000000).toFixed(1)), color: '#d97706' },
+          { label: 'Tổng vốn tỷ', value: Number((stats.totalCapital / 1000000000).toFixed(1)), color: '#9333ea' },
+        ]}
+      />
 
       {/* Filters */}
       <Card className="p-4 border-0 shadow-lg">

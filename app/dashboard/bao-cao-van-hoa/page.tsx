@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FileText, Calendar, CheckCircle2, Clock, PartyPopper, Users, Landmark, BarChart3, Eye } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 interface BaoCaoVanHoa {
   Thang: string;
@@ -47,6 +48,13 @@ export default function BaoCaoVanHoaPage() {
   const tongNguoiThamGia = baoCaoThang.reduce((sum, m) => sum + m.NguoiThamGia, 0);
   const tongDiTichThamQuan = baoCaoThang.reduce((sum, m) => sum + m.DiTichThamQuan, 0);
   const tongKinhPhi = baoCaoThang.reduce((sum, m) => sum + m.KinhPhi, 0);
+
+  const chartItems = [
+    { label: 'Le hoi/su kien', value: tongLeHoi, color: '#4f46e5' },
+    { label: 'Nguoi tham gia', value: tongNguoiThamGia, color: '#9333ea' },
+    { label: 'Luot tham quan di tich', value: tongDiTichThamQuan, color: '#db2777' },
+    { label: 'Kinh phi trieu dong', value: tongKinhPhi, color: '#16a34a' },
+  ];
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-3 sm:py-4 space-y-4 sm:space-y-6">
@@ -98,52 +106,12 @@ export default function BaoCaoVanHoaPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lễ hội/sự kiện</CardTitle>
-            <PartyPopper className="h-4 w-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{tongLeHoi}</div>
-            <p className="text-xs text-muted-foreground">6 tháng đầu năm</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Người tham gia</CardTitle>
-            <Users className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{tongNguoiThamGia.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Tổng lượt</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lượt tham quan</CardTitle>
-            <Landmark className="h-4 w-4 text-pink-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-pink-600">{tongDiTichThamQuan.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Di tích văn hóa</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kinh phí</CardTitle>
-            <BarChart3 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{tongKinhPhi}M</div>
-            <p className="text-xs text-muted-foreground">Triệu đồng</p>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tong hop bao cao van hoa"
+        subtitle="Thong ke nhanh le hoi, luot tham gia, tham quan di tich va nhu cau kinh phi"
+        items={chartItems}
+        variant="culture-cultural-report"
+      />
 
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, AlertTriangle, CheckCircle2, Clock, Edit, Eye, FileText, Plus, Search, Trash2 } from 'lucide-react';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { baoCaoONhiemApi } from '@/lib/api';
 
 interface BaoCaoONhiem {
@@ -185,6 +186,14 @@ export default function BaoCaoONhiemPage() {
     nghiemTrong: records.filter((r) => r.MucDo === 'Nghiêm trọng').length,
   };
 
+  const chartItems = [
+    { label: 'Tong bao cao', value: stats.tongBaoCao, color: '#ef4444' },
+    { label: 'Moi tiep nhan', value: stats.tiepNhan, color: '#3b82f6' },
+    { label: 'Dang xu ly', value: stats.dangXuLy, color: '#f59e0b' },
+    { label: 'Da xu ly', value: stats.daXuLy, color: '#22c55e' },
+    { label: 'Muc do nghiem trong', value: stats.nghiemTrong, color: '#991b1b' },
+  ];
+
   const getMucDoBadge = (mucDo: string) => {
     switch (mucDo) {
       case 'Nhẹ': return <Badge className="bg-green-500 hover:bg-green-600">{mucDo}</Badge>;
@@ -298,68 +307,12 @@ export default function BaoCaoONhiemPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng báo cáo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.tongBaoCao}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Mới tiếp nhận</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.tiepNhan}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.dangXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-600">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Nghiêm trọng</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <span className="text-2xl font-bold">{stats.nghiemTrong}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tien do xu ly bao cao o nhiem"
+        subtitle="Phan tach bao cao theo trang thai tiep nhan va muc do uu tien"
+        items={chartItems}
+        variant="env-pollution-report"
+      />
 
       {/* Filters */}
       <Card>

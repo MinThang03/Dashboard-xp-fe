@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { mockThuPhiLePhi, mockTongHopThuPhi } from '@/lib/mock-data';
 import { thuPhiApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 export default function ThuPhiPage() {
   const router = useRouter();
@@ -201,44 +202,17 @@ export default function ThuPhiPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Coins className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{formatCurrency(tongThuThang)}</p>
-          <p className="text-sm text-muted-foreground">Thu tháng này</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{dataSource.length}</p>
-          <p className="text-sm text-muted-foreground">Loại phí/lệ phí</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <Users className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{soDoiTuong.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">Lượt thu</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-emerald-100 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{tyLeThu}%</p>
-          <p className="text-sm text-muted-foreground">Tỷ lệ hoàn thành</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Dòng chảy thu phí - lệ phí"
+        subtitle="Area chart giúp quan sát hiệu quả thu và mức hoàn thành theo quy mô phát sinh"
+        variant="eco-fee"
+        items={[
+          { label: 'Thu tháng (triệu)', value: Number((tongThuThang / 1000000).toFixed(0)), color: '#16a34a' },
+          { label: 'Loại phí/lệ phí', value: dataSource.length, color: '#3b82f6' },
+          { label: 'Lượt thu', value: soDoiTuong, color: '#9333ea' },
+          { label: 'Tỷ lệ hoàn thành', value: tyLeThu, color: '#10b981' },
+        ]}
+      />
 
       {/* Tổng hợp theo tháng */}
       <Card className="p-6 border-0 shadow-lg">

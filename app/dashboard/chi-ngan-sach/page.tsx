@@ -15,6 +15,7 @@ import {
   DollarSign, FileText, Clock, CircleDollarSign, Calendar, User
 } from 'lucide-react';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data chi ngân sách
 interface ChiNganSach {
@@ -439,80 +440,19 @@ export default function ChiNganSachPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng chi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{formatShortCurrency(stats.tongChi)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Dự toán</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CircleDollarSign className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{formatShortCurrency(stats.tongDuToan)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tỷ lệ giải ngân</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.tyLeGiaiNgan}%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-teal-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Số khoản chi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-teal-500" />
-              <span className="text-2xl font-bold">{stats.soKhoanChi}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã chi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daChi}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Vượt dự toán</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.vuotDuToan}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Áp lực chi ngân sách theo dự toán"
+        subtitle="Biểu đồ diện tích thể hiện quy mô chi thực tế, dự toán và mức vượt để cảnh báo sớm"
+        variant="finance-expense"
+        items={[
+          { label: 'Tổng chi', value: stats.tongChi, color: '#ef4444' },
+          { label: 'Dự toán', value: stats.tongDuToan, color: '#3b82f6' },
+          { label: 'Tỷ lệ giải ngân (%)', value: stats.tyLeGiaiNgan, color: '#8b5cf6' },
+          { label: 'Số khoản chi', value: stats.soKhoanChi, color: '#0ea5e9' },
+          { label: 'Đã chi', value: stats.daChi, color: '#22c55e' },
+          { label: 'Vượt dự toán', value: stats.vuotDuToan, color: '#f59e0b' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

@@ -298,6 +298,57 @@ function formatMoneyShort(value: number): string {
   return `${Math.round(value)}`;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function deriveSatisfactionFromRates(completionRate: number, onTimeRate: number) {
+  return clamp(Math.round(completionRate * 0.45 + onTimeRate * 0.55), 60, 98);
+}
+
+function deriveTrend(currentValue: number, previousValue: number): {
+  trend: number;
+  trendDirection: ModuleStats['trendDirection'];
+} {
+  if (!previousValue && !currentValue) {
+    return { trend: 0, trendDirection: 'stable' };
+  }
+
+  if (!previousValue && currentValue > 0) {
+    return { trend: 100, trendDirection: 'up' };
+  }
+
+  const delta = ((currentValue - previousValue) / Math.max(previousValue, 1)) * 100;
+  const trend = Number(Math.abs(delta).toFixed(1));
+
+  if (Math.abs(delta) < 1) {
+    return { trend: 0, trendDirection: 'stable' };
+  }
+
+  return {
+    trend,
+    trendDirection: delta > 0 ? 'up' : 'down',
+  };
+}
+
+function calculateTrendFromFieldMonthly(
+  fieldCode: string,
+  fieldMonthlyMap: Record<string, Record<string, { total: number; completed: number; onTime: number }>>,
+) {
+  const monthBuckets = buildMonthBuckets(2);
+  const previousKey = monthBuckets[0]?.key;
+  const currentKey = monthBuckets[1]?.key;
+
+  if (!previousKey || !currentKey) {
+    return { trend: 0, trendDirection: 'stable' as ModuleStats['trendDirection'] };
+  }
+
+  const previousTotal = fieldMonthlyMap[fieldCode]?.[previousKey]?.total ?? 0;
+  const currentTotal = fieldMonthlyMap[fieldCode]?.[currentKey]?.total ?? 0;
+
+  return deriveTrend(currentTotal, previousTotal);
+}
+
 function buildFieldStatistics(moduleStats: ModuleStats[]): FieldStats[] {
   return FIELD_META.map((field) => {
     const moduleId = MODULE_BY_FIELD_CODE[field.code];
@@ -311,6 +362,7 @@ function buildFieldStatistics(moduleStats: ModuleStats[]): FieldStats[] {
     const onTimeRate = completedCases
       ? Math.max(0, Math.round(((completedCases - overdueCases) / completedCases) * 100))
       : 0;
+    const satisfactionRate = deriveSatisfactionFromRates(completionRate, onTimeRate);
 
     return {
       ...field,
@@ -320,9 +372,9 @@ function buildFieldStatistics(moduleStats: ModuleStats[]): FieldStats[] {
       overdueCases,
       completionRate,
       onTimeRate,
-      satisfactionRate: 0,
-      trend: 0,
-      trendDirection: 'stable',
+      satisfactionRate,
+      trend: moduleStat?.trend ?? 0,
+      trendDirection: moduleStat?.trendDirection ?? 'stable',
       departments: [],
       alerts: [],
     };
@@ -346,6 +398,17 @@ function buildSummaryStats(moduleStats: ModuleStats[], systemAlerts: AlertItem[]
   const pendingCases = moduleStats.reduce((sum, m) => sum + m.pending, 0);
   const overdueCases = moduleStats.reduce((sum, m) => sum + m.overdue, 0);
   const onTimeRate = totalCases ? Math.round((completedCases / totalCases) * 100) : 0;
+  const avgSatisfactionPercent = moduleStats.length
+    ? Math.round(
+        moduleStats.reduce((sum, module) => {
+          const completionRate = module.total ? Math.round((module.completed / module.total) * 100) : 0;
+          const moduleOnTimeRate = module.completed
+            ? Math.max(0, Math.round(((module.completed - module.overdue) / module.completed) * 100))
+            : 0;
+          return sum + deriveSatisfactionFromRates(completionRate, moduleOnTimeRate);
+        }, 0) / moduleStats.length,
+      )
+    : 0;
   const totalAlerts = systemAlerts.filter((alert) => alert.type === 'danger' || alert.type === 'warning').length;
   const criticalAlerts = systemAlerts.filter((alert) => alert.priority === 'high').length;
 
@@ -355,7 +418,7 @@ function buildSummaryStats(moduleStats: ModuleStats[], systemAlerts: AlertItem[]
     pendingCases,
     overdueCases,
     onTimeRate,
-    avgSatisfaction: 0,
+    avgSatisfaction: Number((avgSatisfactionPercent / 20).toFixed(1)),
     totalAlerts,
     criticalAlerts,
   };
@@ -519,12 +582,19 @@ function buildOfficerKpiData(
     const completionRate = total ? Math.round((completed / total) * 100) : 0;
     const onTimeRate = completed ? Math.round(((completed - overdue) / completed) * 100) : 0;
     const qualityScore = Math.round(completionRate * 0.7 + onTimeRate * 0.3);
+    const satisfactionRate = deriveSatisfactionFromRates(completionRate, onTimeRate);
+
+    const previousMonthKey = monthBuckets[monthBuckets.length - 2]?.key;
+    const currentMonthKey = monthBuckets[monthBuckets.length - 1]?.key;
+    const previousCompleted = previousMonthKey ? stats.monthly[previousMonthKey]?.completed ?? 0 : 0;
+    const currentCompleted = currentMonthKey ? stats.monthly[currentMonthKey]?.completed ?? 0 : 0;
+    const trendInfo = deriveTrend(currentCompleted, previousCompleted);
 
     const monthlyData = monthBuckets.map((bucket) => ({
       month: bucket.label,
       completed: stats.monthly[bucket.key]?.completed ?? 0,
       onTime: stats.monthly[bucket.key]?.onTime ?? 0,
-      satisfaction: 0,
+      satisfaction: satisfactionRate,
     }));
 
     return {
@@ -540,10 +610,10 @@ function buildOfficerKpiData(
       overdueCases: overdue,
       completionRate,
       onTimeRate,
-      satisfactionRate: 0,
+      satisfactionRate,
       qualityScore,
-      trend: 0,
-      trendDirection: 'stable',
+      trend: trendInfo.trend,
+      trendDirection: trendInfo.trendDirection,
       monthlyData,
     } as OfficerKPI;
   });
@@ -953,6 +1023,10 @@ export async function fetchLeaderDashboardData(force = false): Promise<LeaderDas
   const moduleStats: ModuleStats[] = MODULE_META.map((meta) => {
     const totals = moduleTotalsById[meta.id] ?? { total: 0, completed: 0, pending: 0, overdue: 0 };
     const subStats = subStatsByModule[meta.id] ?? meta.subStats;
+    const fieldCode = FIELD_BY_MODULE_ID[meta.id];
+    const trendInfo = fieldCode
+      ? calculateTrendFromFieldMonthly(fieldCode, fieldMonthlyMap)
+      : { trend: 0, trendDirection: 'stable' as ModuleStats['trendDirection'] };
 
     return {
       ...meta,
@@ -960,8 +1034,8 @@ export async function fetchLeaderDashboardData(force = false): Promise<LeaderDas
       completed: totals.completed,
       pending: totals.pending,
       overdue: totals.overdue,
-      trend: 0,
-      trendDirection: 'stable',
+      trend: trendInfo.trend,
+      trendDirection: trendInfo.trendDirection,
       subStats,
     } as ModuleStats;
   });

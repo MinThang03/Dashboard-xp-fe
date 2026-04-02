@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart3, Download, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { nganSachApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 type Item = {
   id: string;
@@ -173,33 +174,19 @@ export default function SoSanhDuToanPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-green-600">Tổng Thu ngân sách</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>Dự toán: <strong>{formatCurrency(stats.tongThuDuToan)}</strong></div>
-            <div>Thực tế: <strong>{formatCurrency(stats.tongThuThucTe)}</strong></div>
-            <div>Chênh lệch: <strong className={stats.tongThuThucTe - stats.tongThuDuToan >= 0 ? 'text-green-600' : 'text-red-600'}>{stats.tongThuThucTe >= stats.tongThuDuToan ? '+' : ''}{formatCurrency(stats.tongThuThucTe - stats.tongThuDuToan)}</strong></div>
-            <div>Tỷ lệ thực hiện: <strong>{stats.tyLeThu.toFixed(1)}%</strong></div>
-            <Progress value={Math.min(100, stats.tyLeThu)} className="h-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-red-600">Tổng Chi ngân sách</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>Dự toán: <strong>{formatCurrency(stats.tongChiDuToan)}</strong></div>
-            <div>Thực tế: <strong>{formatCurrency(stats.tongChiThucTe)}</strong></div>
-            <div>Chênh lệch: <strong className={stats.tongChiThucTe - stats.tongChiDuToan <= 0 ? 'text-green-600' : 'text-red-600'}>{stats.tongChiThucTe >= stats.tongChiDuToan ? '+' : ''}{formatCurrency(stats.tongChiThucTe - stats.tongChiDuToan)}</strong></div>
-            <div>Tỷ lệ thực hiện: <strong>{stats.tyLeChi.toFixed(1)}%</strong></div>
-            <Progress value={Math.min(100, stats.tyLeChi)} className="h-2" />
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="So sánh thu - chi với dự toán"
+        subtitle="Biểu đồ phân tán nhấn mạnh chênh lệch giữa dự toán và thực tế cho cả hai chiều thu, chi"
+        variant="finance-budget-compare"
+        items={[
+          { label: 'Thu dự toán', value: stats.tongThuDuToan, color: '#3b82f6' },
+          { label: 'Thu thực tế', value: stats.tongThuThucTe, color: '#22c55e' },
+          { label: 'Chi dự toán', value: stats.tongChiDuToan, color: '#6366f1' },
+          { label: 'Chi thực tế', value: stats.tongChiThucTe, color: '#ef4444' },
+          { label: 'Tỷ lệ thu (%)', value: Number(stats.tyLeThu.toFixed(1)), color: '#10b981' },
+          { label: 'Tỷ lệ chi (%)', value: Number(stats.tyLeChi.toFixed(1)), color: '#f97316' },
+        ]}
+      />
 
       <Card>
         <CardHeader>

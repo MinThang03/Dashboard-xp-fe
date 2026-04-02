@@ -36,6 +36,7 @@ import { baoTroXaHoiApi } from '@/lib/api';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 import { Edit, Trash2, X } from 'lucide-react';
 
 export default function BaoTroXaHoiPage() {
@@ -221,45 +222,17 @@ export default function BaoTroXaHoiPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-pink-100 rounded-xl">
-              <Users className="w-6 h-6 text-pink-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.tongDoiTuong}</p>
-          <p className="text-sm text-muted-foreground">Tổng đối tượng</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Heart className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.dangHuong}</p>
-          <p className="text-sm text-muted-foreground">Đang hưởng trợ cấp</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Coins className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats.tongTienThang)}</p>
-          <p className="text-sm text-muted-foreground">Chi trả tháng này</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-emerald-100 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.daChiTra}</p>
-          <p className="text-sm text-muted-foreground">Đã chi trả</p>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Theo dõi chi trả bảo trợ xã hội"
+        subtitle="Biểu đồ vòng tròn thể hiện cơ cấu đối tượng, trạng thái hưởng và khối lượng chi trả"
+        variant="social-protection"
+        items={[
+          { label: 'Tổng đối tượng', value: stats.tongDoiTuong, color: '#ec4899' },
+          { label: 'Đang hưởng trợ cấp', value: stats.dangHuong, color: '#3b82f6' },
+          { label: 'Chi trả tháng (đ)', value: stats.tongTienThang, color: '#22c55e' },
+          { label: 'Đã chi trả', value: stats.daChiTra, color: '#10b981' },
+        ]}
+      />
 
       {/* Tổng hợp theo tháng */}
       <Card className="p-6 border-0 shadow-lg">

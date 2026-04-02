@@ -16,6 +16,7 @@ import {
   Merge, FileText, User, Calendar, LandPlot
 } from 'lucide-react';
 import { bienDongDatApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data biến động đất đai
 interface BienDongDat {
@@ -529,80 +530,19 @@ export default function BienDongDatPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Tổng biến động</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <span className="text-xl sm:text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-secondary">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Chuyển MĐSD</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
-              <span className="text-xl sm:text-2xl font-bold">{stats.chuyenMDSD}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-accent">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Tách/Gộp thửa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
-              <span className="text-xl sm:text-2xl font-bold">{stats.tachGop}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-status-warning">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Chuyển quyền</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-status-warning" />
-              <span className="text-xl sm:text-2xl font-bold">{stats.chuyenNhuong}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-status-warning">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Chờ duyệt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-status-warning" />
-              <span className="text-xl sm:text-2xl font-bold">{stats.choDuyet}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-status-success">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Đã duyệt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-status-success" />
-              <span className="text-xl sm:text-2xl font-bold">{stats.daDuyet}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Nhịp biến động sử dụng đất"
+        subtitle="Biểu đồ radar cho thấy cấu trúc chuyển mục đích, tách gộp và tiến độ duyệt hồ sơ"
+        variant="land-change"
+        items={[
+          { label: 'Tổng biến động', value: stats.total, color: '#0ea5e9' },
+          { label: 'Chuyển MĐSD', value: stats.chuyenMDSD, color: '#22c55e' },
+          { label: 'Tách/Gộp thửa', value: stats.tachGop, color: '#f59e0b' },
+          { label: 'Chuyển quyền', value: stats.chuyenNhuong, color: '#f97316' },
+          { label: 'Chờ duyệt', value: stats.choDuyet, color: '#eab308' },
+          { label: 'Đã duyệt', value: stats.daDuyet, color: '#16a34a' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

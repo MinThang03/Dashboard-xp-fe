@@ -25,6 +25,7 @@ import {
   getRedBookAlerts,
 } from '@/lib/frontend-dss';
 import { thuaDatApi } from '@/lib/api';
+import { FunctionStyledPanel } from '@/components/charts/function-styled-panel';
 
 // Mock data hồ sơ cấp sổ đỏ
 interface HoSoCapSoDo {
@@ -546,92 +547,20 @@ export default function CapSoDoPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-        <Card className="border-l-4 border-l-gray-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng hồ sơ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-gray-500" />
-              <span className="text-2xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chờ thẩm định</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              <span className="text-2xl font-bold">{stats.choThamDinh}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đang xử lý</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <RotateCw className="h-5 w-5 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.dangXuLy}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Bổ sung HS</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              <span className="text-2xl font-bold">{stats.boSungHS}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Đã cấp</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <span className="text-2xl font-bold">{stats.daCap}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Từ chối</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-500" />
-              <span className="text-2xl font-bold">{stats.tuChoi}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tỷ lệ HT</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-emerald-500" />
-              <span className="text-2xl font-bold">{stats.tyLeHoanThanh}%</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <FunctionStyledPanel
+        title="Tiến trình cấp giấy chứng nhận"
+        subtitle="Biểu đồ đường nhấn mạnh luồng hồ sơ từ thẩm định đến cấp sổ và tỷ lệ hoàn thành"
+        variant="land-cert"
+        items={[
+          { label: 'Tổng hồ sơ', value: stats.total, color: '#64748b' },
+          { label: 'Chờ thẩm định', value: stats.choThamDinh, color: '#f59e0b' },
+          { label: 'Đang xử lý', value: stats.dangXuLy, color: '#3b82f6' },
+          { label: 'Bổ sung HS', value: stats.boSungHS, color: '#f97316' },
+          { label: 'Đã cấp', value: stats.daCap, color: '#22c55e' },
+          { label: 'Từ chối', value: stats.tuChoi, color: '#ef4444' },
+          { label: 'Tỷ lệ HT (%)', value: Number(stats.tyLeHoanThanh), color: '#10b981' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

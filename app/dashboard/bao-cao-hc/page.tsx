@@ -32,6 +32,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { baoCaoApi } from '@/lib/api';
+import { VisualStatsPanel } from '@/components/charts/visual-stats-panel';
 
 export default function BaoCaoHCPage() {
   const router = useRouter();
@@ -314,44 +315,16 @@ export default function BaoCaoHCPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.baoCaoThang}</p>
-          <p className="text-sm text-muted-foreground">Báo cáo tháng/tuần</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Calendar className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.baoCaoQuy}</p>
-          <p className="text-sm text-muted-foreground">Báo cáo quý</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <BarChart3 className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.baoCaoNam}</p>
-          <p className="text-sm text-muted-foreground">Báo cáo năm</p>
-        </Card>
-        <Card className="p-6 border-0 shadow-lg hover-lift">
-          <div className="flex items-center justify-between mb-2">
-            <div className="p-3 bg-emerald-100 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold">{stats.daDuyet}</p>
-          <p className="text-sm text-muted-foreground">Đã phê duyệt</p>
-        </Card>
-      </div>
+      <VisualStatsPanel
+        title="Biểu đồ cơ cấu báo cáo hành chính"
+        subtitle="So sánh báo cáo tháng, quý, năm và số báo cáo đã duyệt"
+        items={[
+          { label: 'Báo cáo tháng/tuần', value: stats.baoCaoThang, color: '#3b82f6' },
+          { label: 'Báo cáo quý', value: stats.baoCaoQuy, color: '#22c55e' },
+          { label: 'Báo cáo năm', value: stats.baoCaoNam, color: '#a855f7' },
+          { label: 'Đã phê duyệt', value: stats.daDuyet, color: '#10b981' },
+        ]}
+      />
 
       {/* Search */}
       <Card className="p-4 border-0 shadow-lg">
